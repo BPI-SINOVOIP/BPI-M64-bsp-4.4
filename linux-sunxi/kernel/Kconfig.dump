@@ -1,0 +1,3 @@
+config SUNXI_DUMP
+	bool "help to dump all dram area for crash tool"
+	default y

@@ -1,0 +1,27 @@
+/*
+ * Allwinner Technology CO., Ltd. sun50iw1p1 fpga board.
+ *
+ * fpga board support.
+ */
+
+/dts-v1/;
+
+#include "sun50iw1p1.dtsi"
+
+/{
+
+	soc@01c00000 {
+
+		spi0: spi@01c68000 {
+			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
+			status = "okay";
+			nor_flash: nor_flash@0{
+					#address-cells = <1>;
+					#size-cells = <1>;
+					compatible = "st,m25p64";
+					spi-max-frequency = <50000000>;
+					reg = <0>;  /* Chip select 0 */
+			};
+		};
+	};
+};

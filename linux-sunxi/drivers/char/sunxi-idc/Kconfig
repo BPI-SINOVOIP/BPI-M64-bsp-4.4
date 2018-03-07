@@ -1,0 +1,14 @@
+
+config SUNXI_IDC
+	tristate "allwinnertech Interrupt-Defer-Controller driver"
+	depends on ARCH_SUN8IW15
+	default n
+	help
+	  This is an option for interrupt defer controller driver.
+
+config SUNXI_IDC_DEBUG
+	tristate "allwinnertech Interrupt-Defer-Controller driver debug"
+	depends on SUNXI_IDC
+	default n
+	help
+	  This is an option for debug interrupt defer controller driver.

@@ -1,0 +1,18 @@
+#
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/kconfig-language.txt.
+#
+mainmenu "Linux/$ARCH $KERNELVERSION Kernel Configuration"
+
+config VIDEO_ENCODER_DECODER_SUNXI
+        tristate "sunxi video encoder and decoder support"
+        select DMA_SHARED_BUFFER
+        default y
+        ---help---
+          This is the driver for sunxi video decoder, including h264
+
+config SRCARCH
+	string
+	option env="SRCARCH"
+
+source "arch/$SRCARCH/Kconfig"
