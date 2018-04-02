@@ -1,0 +1,117 @@
+#!/bin/bash
+
+set -e
+
+BPIMACH="tulip-m64 tulip-noma"
+SOC=a64
+MACH=sun50iw1p1
+PLATFORM=
+BOARD=
+board=
+TOPDIR=`pwd`
+TARGET_PLATFORM="tulip"
+TARGET_PRODUCT="tulip-m64"
+
+CUR_DIR=$PWD
+CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-linaro/bin
+NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/toolchain-sunxi-musl/bin
+
+list_boards() {
+	(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI* )
+}
+
+# keep the output `sh` friendly
+# i.e., no spaces around the '='
+generate_board_mk() {
+	
+	cat <<-EOT
+	BOARD=$BOARD
+	SOC=$SOC
+	MACH=$MACH
+	COMPILE_TOOL=$CROSS_COMPILE
+	NEW_COMPILE_TOOL=$NEW_CROSS_COMPILE
+	UBOOT_CONFIG=$MACH
+	KERNEL_CONFIG=${MACH}smp_${board}_defconfig
+	TARGET_PLATFORM=${TARGET_PLATFORM}
+	STAGING_DIR=$TOPDIR
+	EOT
+
+}
+
+
+generate_board_envsh() {
+	
+	cat <<-EOT
+	#export ARCH=arm64
+	export BPIMACH="$BPIMACH"
+	export BOARD=$BOARD
+	export SOC=$SOC
+	export MACH=$MACH
+	export CROSS_COMPILE=arm-linux-gnueabihf-
+	export UBOOT_CONFIG=${MACH}_config
+	export KERNEL_CONFIG=${MACH}smp_${board}_defconfig
+	export LICHEE_PLATFORM="linux"
+	export GPU_TYPE="mali400"
+	export TOPDIR=${TOPDIR}
+	export TARGET_PLATFORM=${TARGET_PLATFORM}
+	export TARGET_PRODUCT=${TARGET_PRODUCT}
+	export STAGING_DIR=$TOPDIR
+	EOT
+
+}
+
+usage() {
+	cat <<-EOT >&2
+	Usage: $0 <board>
+
+	supported boards:
+	EOT
+	list_boards  #DK, update later
+}
+
+if [ $# -eq 0 ]; then
+	usage
+	exit 1
+fi
+
+BOARD=$1
+
+case $BOARD in
+  BPI-M2P*)
+    board="bpi"
+    ;;
+  BPI-M2Z*)
+#    board="bpi-m2z"
+    board="bpi"
+    ;;
+  BPI-M2U*)
+    MACH=sun8iw11p1
+    board="bpi"
+    ;;
+  BPI-M64*)
+    MACH=sun50iw1p1
+    board="bpi-m64"
+    TARGET_PLATFORM="tulip"
+    TARGET_PRODUCT="tulip-m64"
+    ;;    
+  BPI-R18*)
+    MACH=sun50iw1p1
+    board="bpi-m64"
+    TARGET_PLATFORM="tulip"
+    TARGET_PRODUCT="tulip-noma"
+    ;;    
+  *)
+    board=$(echo $BOARD | tr '[A-Z]' '[a-z]')
+    ;;
+esac
+
+generate_board_envsh "$1" > env.sh
+
+out=chosen_board.mk
+if generate_board_mk "$1" > $out~; then
+	mv $out~ $out
+	echo "$1 configured. Now run \`make\`"
+else
+	rm $out~
+	exit 1
+fi
