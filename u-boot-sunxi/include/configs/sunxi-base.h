@@ -130,10 +130,10 @@
 #define CONFIG_SYS_LONGHELP				/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER			/* use "hush" command parser	*/
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
-#define CONFIG_SYS_PROMPT		"sunxi#"
+#define CONFIG_SYS_PROMPT		"BPI-IoT# "
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -156,6 +156,7 @@
 
 
 /* common config */
+#define CONFIG_CMDLINE_ECHO
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_USE_ARCH_MEMCPY
 #define CONFIG_USE_ARCH_MEMSET

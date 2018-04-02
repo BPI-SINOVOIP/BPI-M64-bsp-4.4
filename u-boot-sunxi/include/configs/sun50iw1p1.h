@@ -134,7 +134,7 @@
 #define CONFIG_SUNXI_ARISC_EXIST
 #define CONFIG_SUNXI_MULITCORE_BOOT
 //#define CONFIG_SUNXI_HDCP_IN_SECURESTORAGE
-#define CONFIG_GPT_SUPPORT
+//#define CONFIG_GPT_SUPPORT
 #ifdef CONFIG_GPT_SUPPORT
 #define CONFIG_SUNXI_GPT
 #define CONFIG_EFI_PARTITION
@@ -165,6 +165,7 @@
 #define CONFIG_CMD_SUNXI_MEMTEST
 #endif
 
+#define CONFIG_CMD_ECHO
 #define CONFIG_CMD_FAT			/* with this we can access bootfs in nand */
 #define CONFIG_CMD_BOOTA		/* boot android image */
 #define CONFIG_CMD_RUN			/* run a command */
