@@ -32,8 +32,7 @@ pack_bootloader()
 }
 
 echo BPIMACH=$BPIMACH
-for MACH in $BPIMACH ; do
-  TARGET_PRODUCT=$MACH
+for TARGET_PRODUCT in $BPIMACH ; do
   echo TARGET_PRODUCT=${TARGET_PRODUCT}
   BOARDS=`(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI*)`
   for IN in $BOARDS ; do
