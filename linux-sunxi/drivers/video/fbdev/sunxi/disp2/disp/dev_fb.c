@@ -1563,7 +1563,11 @@ static s32 display_fb_request(u32 fb_id, struct disp_fb_create_info *fb_para)
 			    output_height;
 
 			config.info.mode = LAYER_MODE_BUFFER;
+#ifdef BPI
 			config.info.alpha_mode = 0;
+#else
+			config.info.alpha_mode = 1;
+#endif
 			config.info.alpha_value = 0xff;
 			config.info.fb.crop.x = ((long long)0) << 32;
 			config.info.fb.crop.y = ((long long)y_offset) << 32;
