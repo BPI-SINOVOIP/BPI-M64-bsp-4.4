@@ -766,6 +766,27 @@
 #define LEFT_JUSTIFIED_FORMAT			1
 #define RIGHT_JUSTIFIED_FORMAT			2
 
+struct ac108_voltage_supply {
+	struct regulator *vcc3v3;
+};
+
+struct ac108_public_config {
+	u32 ac108_nums;
+	u32 pga_gain;
+	u32 ref_pga_gain;
+	u32 slot_width;
+	u32 i2c_bus_num;
+	u32 ref_chip_addr;
+	u32 ref_channel_num;
+	u32 pa_double_used;
+	u32 codec_mic_used;
+	u32 power_vol;
+	char *power_name;
+	struct ac108_voltage_supply vol_supply;
+	u32 power_gpio;
+	u32 debug_mode;
+};
+
 
 #endif
 

@@ -822,7 +822,8 @@
 
 		daudio0:daudio@0x01c22000 {
 			compatible = "allwinner,sunxi-daudio";
-			reg = <0x0 0x01c22000 0x0 0x58>;
+			reg = <0x0 0x01c22000 0x0 0x58>,
+			      <0x0 0x01c22c00 0x0 0x478>; /*codec digital addr*/
 			clocks = <&clk_pll_audio>,<&clk_i2s0>;
 			pinctrl-names = "default","sleep";
 			pinctrl-0 = <&daudio0_pins_a>;

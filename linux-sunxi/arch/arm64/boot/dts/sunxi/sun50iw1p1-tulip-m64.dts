@@ -9,60 +9,7 @@
 #include "sun50iw1p1.dtsi"
 
 /{
-	soc@01c00000 {
-		twi0: twi@0x01c2ac00 {
-			status = "okay";
-			tas5731-codec@1b{
-				compatible = "Allwinnertech,tas5731_PA";
-				tas5731_power = <&pio PH 8 1 1 1 1>;
-				tas5731_reset = <&pio PB 2 1 1 1 1>;
-				amp_poweren = <&r_pio PL 7 1 1 1 1>;
-				regulator_name = "vcc-amp";
-				reg = <0x1b>;
-			};
-		};
-		twi1: twi@0x01c2b000 {
-			status = "okay";
-			ac108@35{
-				compatible = "Allwinnertech,MicArray_1";
-				debug_mode = <0>;
-				pga_gain = <0x32>;
-				ref_pga_gain = <0x08>;
-				gpio-power = <&r_pio PL 12 1 1 1 1>;
-				twi_bus = <1>;
-				regulator_used = <0>;
-				voltage_enable = "nocare";
-				reg = <0x35>;
-			};
-			ac108@3b{
-				compatible = "Allwinnertech,MicArray_0";
-				reg = <0x3b>;
-				debug_mode = <0>;
-				pga_gain = <0x32>;
-				ref_pga_gain = <0x08>;
-				twi_bus = <1>;
-				regulator_used = <0>;
-				voltage_enable = "nocare";
-				gpio-power = <&r_pio PL 12 1 1 1 1>;
-			};
-		};
-		snddaudio0:sound@1 {
-			sunxi,snddaudio-codec = "ac108.1-0035";
-			sunxi,snddaudio-codec-dai = "ac108-pcm1";
-		};
-		snddaudio1:sound@2 {
-			sunxi,snddaudio-codec = "tas5731-codec.0-001b";
-			sunxi,snddaudio-codec-dai = "tas5731_audio";
-		};
-		keyboard0:keyboard {
-			key_cnt = <5>;
-			key0 = <191 115>;
-			key1 = <391 114>;
-			key2 = <600 113>;
-			key3 = <794 115>;
-			key4 = <987 114>;
-		};
-	};
+
 	wlan:wlan {
 		compatible = "allwinner,sunxi-wlan";
 		wlan_power = "vcc-wifi";

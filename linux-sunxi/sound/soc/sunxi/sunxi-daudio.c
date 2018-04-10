@@ -30,6 +30,11 @@
 #include <sound/soc.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_SND_SOC_AC108
+#include "sunxi_rw_func.h"
+#include "sun50iw1-codec.h"
+#endif
+
 #include "sunxi-daudio.h"
 #include "sunxi-pcm.h"
 
@@ -73,7 +78,35 @@ struct sunxi_daudio_info {
 	struct sunxi_daudio_platform_data *pdata;
 	unsigned int hub_mode;
 	unsigned int hdmi_en;
+#ifdef CONFIG_SND_SOC_AC108
+	void __iomem *codec_digaddr;
+#endif
 };
+
+#ifdef CONFIG_SND_SOC_AC108
+struct ac108_voltage_supply {
+	struct regulator *vcc3v3;
+};
+
+struct ac108_public_config {
+	u32 ac108_nums;
+	u32 pga_gain;
+	u32 ref_pga_gain;
+	u32 slot_width;
+	u32 i2c_bus_num;
+	u32 ref_chip_addr;
+	u32 ref_channel_num;
+	u32 pa_double_used;
+	u32 codec_mic_used;
+	u32 power_vol;
+	char *power_name;
+	struct ac108_voltage_supply vol_supply;
+	u32 power_gpio;
+	u32 debug_mode;
+};
+
+extern struct ac108_public_config ac108_pub_cfg;
+#endif
 
 static bool daudio_loop_en;
 module_param(daudio_loop_en, bool, S_IRUGO | S_IWUSR);
@@ -221,11 +254,24 @@ static void sunxi_daudio_rxctrl_enable(struct sunxi_daudio_info *sunxi_daudio,
 					int enable)
 {
 	if (enable) {
+#ifdef CONFIG_SND_SOC_AC108
+		if ((sunxi_daudio->codec_digaddr != NULL) && (ac108_pub_cfg.codec_mic_used)) {
+			codec_wr_control(sunxi_daudio->codec_digaddr + SUNXI_DA_RXCNT, 0xffffffff, RX_CNT, 0x0);
+			codec_wr_control(sunxi_daudio->codec_digaddr + SUNXI_DA_FCTL, 0x1, FRX, 0x1);
+			codec_wr_control(sunxi_daudio->codec_digaddr + SUNXI_DA_INT, 0x1, RX_DRQ, 0x1);
+		}
+#endif
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_CTL,
 				(1<<CTL_RXEN), (1<<CTL_RXEN));
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_INTCTL,
 				(1<<RXDRQEN), (1<<RXDRQEN));
 	} else {
+#ifdef CONFIG_SND_SOC_AC108
+		if ((sunxi_daudio->codec_digaddr != NULL) && (ac108_pub_cfg.codec_mic_used)) {
+			codec_wr_control(sunxi_daudio->codec_digaddr + SUNXI_DA_INT, 0x1, RX_DRQ, 0x0);
+		}
+#endif
+
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_INTCTL,
 				(1<<RXDRQEN), (0<<RXDRQEN));
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_CTL,
@@ -1167,7 +1213,11 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sunxi_daudio->regmap);
 		goto err_iounmap;
 	}
-
+#ifdef CONFIG_SND_SOC_AC108
+	sunxi_daudio->codec_digaddr = of_iomap(np, 1);
+	if (sunxi_daudio->codec_digaddr == NULL)
+		pr_err("daudio:can not map codec digitial register \n");
+#endif
 	sunxi_daudio->pllclk = of_clk_get(np, 0);
 	if (IS_ERR_OR_NULL(sunxi_daudio->pllclk)) {
 		dev_err(&pdev->dev, "pllclk get failed\n");

@@ -46,44 +46,12 @@
 #define AC108_DAPM_TEST_EN			0
 #define AC108_CODEC_RW_TEST_EN		0
 
-/* //AC108 config */
-#if (defined(CONFIG_SND_AC108_R16_ASTAR_DM) || defined(CONFIG_SND_MOZART_SINGLE_AC108))
-#define AC108_CHANNELS_MAX		4	/*range[1, 16]*/
-#else
-#define AC108_CHANNELS_MAX		8	/*range[1, 16]*/
-#endif
+#define AC108_NUM_MAX 			4
 #define AC108_SLOT_WIDTH		24
-/* //16bit or 32bit slot width, other value will be reserved */
-#define AC108_PGA_GAIN			0x32
-/* //range[0, 0x3f], eg: 0->0dB, 0x3d->30.5dB */
-#define AC108_REF_PGA_GAIN		0x08
-/* //range[0, 0x3f], eg: 0->0dB, 0x3d->30.5dB */
 #define AC108_DMIC_EN			0
 /* //0:ADC  1:DMIC */
 #define AC108_ENCODING_EN		0
 /* //TX Encoding mode enable */
-
-#if (defined(CONFIG_SND_AC108_R16_ASTAR_DM) || defined(CONFIG_SND_MOZART_SINGLE_AC108))
-#define AC108_ENCODING_CH_NUMS  4
-#else
-#define AC108_ENCODING_CH_NUMS  8
-#endif
-/* //TX Encoding channel numbers, must be dual, range[1, 16] */
-#ifdef CONFIG_SND_MOZART_SINGLE_AC108
-#define AC108_LRCK_PERIOD		(AC108_ENCODING_EN ? 32 : 48)
-#else
-#define AC108_LRCK_PERIOD		(AC108_ENCODING_EN ? 32 : 96)
-#endif
-/* //range[1, 1024] */
-
-#define AC108_MATCH_DTS_EN		1
-/* //AC108 match method select: 0: i2c_detect, 1:of_device_id */
-
-#ifdef CONFIG_SND_MOZART_SINGLE_AC108
-#define AC108_I2C_BUS_NUM		2
-#else
-#define AC108_I2C_BUS_NUM		1
-#endif
 
 #define AC108_REGULATOR_NAME	"voltage_enable"
 
@@ -91,24 +59,15 @@
 #define AC108_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | \
 		SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
-struct i2c_client *i2c_clt[(AC108_CHANNELS_MAX + 3) / 4];
+struct i2c_client *i2c_clt[AC108_NUM_MAX];
 int regulator_en;
 unsigned int ac108_bclk_div_val;
-
-struct voltage_supply {
-	struct regulator *vcc3v3;
-};
+struct ac108_public_config ac108_pub_cfg;
+EXPORT_SYMBOL(ac108_pub_cfg);
 
 struct ac108_priv {
 	struct i2c_client *i2c;
 	struct snd_soc_codec *codec;
-	struct voltage_supply vol_supply;
-	u32 power_gpio;
-	u32 regulator_used;
-	u32 twi_bus;
-	u32 pga_gain;
-	u32 ref_pga_gain;
-	u32 debug_mode;
 };
 
 static const struct regmap_config ac108_regmap_config = {
@@ -833,7 +792,7 @@ static int ac108_multi_chips_read(u8 reg, unsigned char *rt_value)
 {
 	u8 i;
 
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++)
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++)
 		ac108_read(reg, rt_value++, i2c_clt[i]);
 
 	return 0;
@@ -843,7 +802,7 @@ static int ac108_multi_chips_write(u8 reg, unsigned char value)
 {
 	u8 i;
 
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++)
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++)
 		ac108_write(reg, value, i2c_clt[i]);
 
 	return 0;
@@ -853,11 +812,28 @@ static int ac108_multi_chips_update_bits(u8 reg, u8 mask, u8 value)
 {
 	u8 i;
 
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++)
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++)
 		ac108_update_bits(reg, mask, value, i2c_clt[i]);
 
 	return 0;
 }
+
+static void ac108_set_vol(struct i2c_client *i2c)
+{
+	u32 i;
+	for (i = 0; i < 4; i++) {
+		if ((ac108_pub_cfg.ref_chip_addr == i2c->addr) && (ac108_pub_cfg.ref_channel_num == i)) {
+			ac108_write(ANA_PGA1_CTRL + i, ac108_pub_cfg.ref_pga_gain, i2c);
+			if (ac108_pub_cfg.pa_double_used == 1) {
+				i++;
+				ac108_write(ANA_PGA1_CTRL + i, ac108_pub_cfg.ref_pga_gain, i2c);
+			}
+		} else {
+			ac108_write(ANA_PGA1_CTRL + i, ac108_pub_cfg.pga_gain, i2c);
+		}
+	}
+}
+
 
 static void ac108_hw_init(struct i2c_client *i2c)
 {
@@ -896,8 +872,8 @@ static void ac108_hw_init(struct i2c_client *i2c)
 	/*SDO drive data and SDI sample data at the different BCLK edge */
 
 	ac108_update_bits(I2S_LRCK_CTRL1, 0x3 << LRCK_PERIODH,
-			((AC108_LRCK_PERIOD - 1) >> 8) << LRCK_PERIODH, i2c);
-	ac108_write(I2S_LRCK_CTRL2, (u8) (AC108_LRCK_PERIOD - 1), i2c);
+			(((ac108_pub_cfg.ac108_nums * ac108_pub_cfg.slot_width) * 2 - 1) >> 8) << LRCK_PERIODH, i2c);
+	ac108_write(I2S_LRCK_CTRL2, (u8) ((ac108_pub_cfg.ac108_nums * ac108_pub_cfg.slot_width) * 2 - 1), i2c);
 	/*config LRCK period: 16bit * 8ch = 128,
 	 * 32bit * 8ch = 256, 32bit *16ch =512 */
 
@@ -929,14 +905,14 @@ static void ac108_hw_init(struct i2c_client *i2c)
 	/*** ADC DIG part Config***/
 	ac108_write(ADC_DIG_EN, 0x1f, i2c);
 	/*0x61=0x1f: Digital part globe enable, ADCs digital part enable */
-	if (ac108->debug_mode) {
+	if (ac108_pub_cfg.debug_mode) {
 		ac108_write(HPF_EN, 0x00, i2c);
 		ac108_write(ADC_DIG_DEBUG, 0x01, i2c);
 	}
 	ac108_write(ANA_ADC4_CTRL7, 0x0f, i2c);
 	/*0xBB=0x0f: Gating ADCs CLK de-asserted (ADCs CLK Enable) */
 
-#if !AC108_DMIC_EN
+#if 0
 	/*** ADCs analog PGA gain Config***/
 	if (i2c->addr == 0x3b) {
 		ac108_write(ANA_PGA1_CTRL, ac108->pga_gain, i2c);
@@ -961,6 +937,9 @@ static void ac108_hw_init(struct i2c_client *i2c)
 		ac108_write(ANA_PGA4_CTRL, ac108->pga_gain, i2c);
 		/*0x93=0x3d: ADC4 PGA gain 30.5dB */
 	}
+#endif
+#if !AC108_DMIC_EN
+	ac108_set_vol(i2c);
 	/*** enable AAF/ADC/PGA  and UnMute Config ***/
 	ac108_write(ANA_ADC1_CTRL1, 0x07, i2c);
 	/*0xA0=0x07: ADC1 AAF & ADC enable, ADC1 PGA enable,
@@ -1136,16 +1115,12 @@ static int ac108_set_clkdiv(struct snd_soc_dai *dai, int div_id, int div)
 	if (!div_id) {
 		/* //use div_id to judge Master/Slave mode,
 		 * 0: Slave mode, 1: Master mode */
-AC108_DEBUG("AC108 work as Slave mode, don't need to config BCLK_DIV\n\n");
+		AC108_DEBUG("AC108 work as Slave mode, don't need to config BCLK_DIV\n\n");
 		return 0;
 	}
 
-	bclk_div = div / (AC108_LRCK_PERIOD * (AC108_ENCODING_EN ?\
-				(AC108_ENCODING_CH_NUMS + 1) / 2 : 1));
-	/* //default PCM mode */
-	/* //bclk_div = div/(2*AC108_LRCK_PERIOD * \
-	 * (AC108_ENCODING_EN ? (AC108_ENCODING_CH_NUMS+1)/2 : 1));
-	 * //I2S/LJ/RJ mode */
+	bclk_div = div / (ac108_pub_cfg.ac108_nums * ac108_pub_cfg.slot_width * (AC108_ENCODING_EN ?\
+				(ac108_pub_cfg.ac108_nums * 4 + 1) / 2 : 1));
 
 	for (i = 0; i < ARRAY_SIZE(ac108_bclk_div); i++) {
 		if (ac108_bclk_div[i].real_val == bclk_div) {
@@ -1196,7 +1171,7 @@ static int ac108_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 				(fmt & SND_SOC_DAIFMT_MASTER_MASK) >> 12);
 		return -EINVAL;
 	}
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++) {
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++) {
 		/* //multi_chips: only one chip set as Master,
 		 * and the others also need to set as Slave */
 		if (i2c_clt[i] == ac108->i2c)
@@ -1287,7 +1262,7 @@ static int ac108_hw_params(struct snd_pcm_substream *substream,
 	int ret = 0;
 
 	/* //AC108 hw init */
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++) {
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++) {
 		/* //(params_channels(params)+3)/4 */
 		ac108_hw_init(i2c_clt[i]);
 	}
@@ -1306,6 +1281,8 @@ static int ac108_hw_params(struct snd_pcm_substream *substream,
 
 	/* //AC108 set channels */
 	channels = params_channels(params);
+	if (channels != ac108_pub_cfg.ac108_nums * 4)
+		return -EINVAL;
 	for (i = 0; i < (channels + 3) / 4; i++) {
 		channels_en =
 			(channels >=
@@ -1316,7 +1293,7 @@ static int ac108_hw_params(struct snd_pcm_substream *substream,
 		ac108_write(I2S_TX1_CTRL2, (u8) channels_en, i2c_clt[i]);
 		ac108_write(I2S_TX1_CTRL3, channels_en >> 8, i2c_clt[i]);
 	}
-	for (; i < (AC108_CHANNELS_MAX + 3) / 4; i++) {
+	for (; i < ac108_pub_cfg.ac108_nums; i++) {
 		ac108_write(I2S_TX1_CTRL1, 0, i2c_clt[i]);
 		ac108_write(I2S_TX1_CTRL2, 0, i2c_clt[i]);
 		ac108_write(I2S_TX1_CTRL3, 0, i2c_clt[i]);
@@ -1385,17 +1362,6 @@ static int ac108_trigger(struct snd_pcm_substream *substream, int cmd,
 					0x1 << RXEN,
 					0x1 << RXEN);
 		}
-#if 0
-			AC108_ENCODING_EN
-				/* //TX Encoding mode must supply BCLK
-				 * after AC108 config
-				 * completely(enable TX block then count BCLK),
-				 * and disable BCLK at hw_free */
-				ac108_multi_chips_update_bits(I2S_BCLK_CTRL,
-						0xf << BCLKDIV,
-						ac108_bclk_div_val <<
-						BCLKDIV);
-#endif
 			break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -1446,7 +1412,7 @@ static const struct snd_soc_dai_driver ac108_dai0 = {
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
-		.channels_max = AC108_CHANNELS_MAX,
+		.channels_max = AC108_NUM_MAX * 4,
 		.rates = AC108_RATES,
 		.formats = AC108_FORMATS,
 	},
@@ -1458,7 +1424,7 @@ static const struct snd_soc_dai_driver ac108_dai1 = {
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
-		.channels_max = AC108_CHANNELS_MAX,
+		.channels_max = AC108_NUM_MAX * 4,
 		.rates = AC108_RATES,
 		.formats = AC108_FORMATS,
 	},
@@ -1470,7 +1436,7 @@ static const struct snd_soc_dai_driver ac108_dai2 = {
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
-		.channels_max = AC108_CHANNELS_MAX,
+		.channels_max = AC108_NUM_MAX * 4,
 		.rates = AC108_RATES,
 		.formats = AC108_FORMATS,
 	},
@@ -1482,7 +1448,7 @@ static const struct snd_soc_dai_driver ac108_dai3 = {
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
-		.channels_max = AC108_CHANNELS_MAX,
+		.channels_max = AC108_NUM_MAX * 4,
 		.rates = AC108_RATES,
 		.formats = AC108_FORMATS,
 	},
@@ -1490,21 +1456,13 @@ static const struct snd_soc_dai_driver ac108_dai3 = {
 };
 
 static const struct snd_soc_dai_driver *ac108_dai[] = {
-#if AC108_CHANNELS_MAX > 0
 	&ac108_dai0,
-#endif
 
-#if AC108_CHANNELS_MAX > 4
 	&ac108_dai1,
-#endif
 
-#if AC108_CHANNELS_MAX > 8
 	&ac108_dai2,
-#endif
 
-#if AC108_CHANNELS_MAX > 12
 	&ac108_dai3,
-#endif
 };
 
 static int ac108_probe(struct snd_soc_codec *codec)
@@ -1535,18 +1493,15 @@ static int ac108_suspend(struct snd_soc_codec *codec)
 {
 	struct ac108_priv *ac108 = dev_get_drvdata(codec->dev);
 
-	if (ac108->regulator_used) {
-		if (regulator_en && !IS_ERR(ac108->vol_supply.vcc3v3)) {
-			regulator_disable(ac108->vol_supply.vcc3v3);
-			regulator_en = 0;
-		}
-	} else {
-		if (regulator_en && gpio_is_valid(ac108->power_gpio)) {
-			gpio_set_value(ac108->power_gpio, 0);
-			gpio_free(ac108->power_gpio);
-			regulator_en = 0;
-		}
+	if (regulator_en && !IS_ERR(ac108_pub_cfg.vol_supply.vcc3v3)) {
+		regulator_disable(ac108_pub_cfg.vol_supply.vcc3v3);
 	}
+	if (regulator_en && gpio_is_valid(ac108_pub_cfg.power_gpio)) {
+		gpio_set_value(ac108_pub_cfg.power_gpio, 0);
+		gpio_free(ac108_pub_cfg.power_gpio);
+	}
+
+	regulator_en = 0;
 	return 0;
 }
 
@@ -1555,27 +1510,23 @@ static int ac108_resume(struct snd_soc_codec *codec)
 	struct ac108_priv *ac108 = dev_get_drvdata(codec->dev);
 	int ret;
 	u8 i;
-	if (ac108->regulator_used) {
-		if (!regulator_en && !IS_ERR(ac108->vol_supply.vcc3v3)) {
-			ret = regulator_enable(ac108->vol_supply.vcc3v3);
-			if (ret != 0)
-				pr_err("[AC108] %s: some error happen, "
-					" fail to enable regulator!\n",  __func__);
-			regulator_en = 1;
-		}
-	} else {
-		if (!regulator_en && gpio_is_valid(ac108->power_gpio)) {
-			ret = gpio_request(ac108->power_gpio, "gpio-power");
-			if (ret) {
-				pr_debug("failed to request gpio-power gpio\n");
-			} else {
-				gpio_direction_output(ac108->power_gpio, 1);
-				gpio_set_value(ac108->power_gpio, 1);
-			}
-			regulator_en = 1;
-		}
+	if (!regulator_en && !IS_ERR(ac108_pub_cfg.vol_supply.vcc3v3)) {
+		ret = regulator_enable(ac108_pub_cfg.vol_supply.vcc3v3);
+		if (ret != 0)
+			pr_err("[AC108] %s: some error happen, "
+				" fail to enable regulator!\n",  __func__);
 	}
-	for (i = 0; i < (AC108_CHANNELS_MAX + 3) / 4; i++)
+	if (!regulator_en && gpio_is_valid(ac108_pub_cfg.power_gpio)) {
+		ret = gpio_request(ac108_pub_cfg.power_gpio, "gpio-power");
+		if (ret) {
+			pr_debug("failed to request gpio-power gpio\n");
+		} else {
+				gpio_direction_output(ac108_pub_cfg.power_gpio, 1);
+				gpio_set_value(ac108_pub_cfg.power_gpio, 1);
+			}
+	}
+	regulator_en = 1;
+	for (i = 0; i < ac108_pub_cfg.ac108_nums; i++)
 		ac108_hw_init(i2c_clt[i]);
 
 	return 0;
@@ -1704,9 +1655,17 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 	struct device_node *np = i2c->dev.of_node;
 	char *regulator_name = NULL;
 	u32 temp_val;
+	u8 reg;
 	int ret = 0;
 	struct gpio_config config;
 	pr_err("%s ,line:%d\n", __func__, __LINE__);
+
+	/* ac108 detect */
+	ac108_read(CHIP_AUDIO_RST, &reg, i2c);
+	if (0x4a != reg)
+		return -EFAULT;
+	ac108_pub_cfg.ac108_nums++;
+
 	ac108 = devm_kzalloc(&i2c->dev, sizeof(struct ac108_priv), GFP_KERNEL);
 	if (ac108 == NULL) {
 		dev_err(&i2c->dev, "Unable to allocate ac108 private data\n");
@@ -1718,101 +1677,114 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 
 	ret = of_property_read_u32(np, "pga_gain", &temp_val);
 	if (ret < 0) {
-		pr_err("[ac108]regulator_used configurations missing or invalid.\n");
-		ac108->pga_gain = 0x32;
+		pr_err("[ac108]pga_gain  configurations missing or invalid.\n");
+		ac108_pub_cfg.pga_gain = 0x32;
 	} else {
-		ac108->pga_gain = temp_val;
+		ac108_pub_cfg.pga_gain = temp_val;
 	}
 
 	ret = of_property_read_u32(np, "ref_pga_gain", &temp_val);
 	if (ret < 0) {
-		pr_err("[ac108]regulator_used configurations missing or invalid.\n");
-		ac108->ref_pga_gain = 0x08;
+		pr_err("[ac108]ref_pga_gain configurations missing or invalid.\n");
+		ac108_pub_cfg.ref_pga_gain = 0x08;
 	} else {
-		ac108->ref_pga_gain = temp_val;
+		ac108_pub_cfg.ref_pga_gain = temp_val;
 	}
 
 	ret = of_property_read_u32(np, "twi_bus", &temp_val);
 	if (ret < 0) {
-		pr_err("[ac108]regulator_used configurations missing or invalid.\n");
-		ac108->twi_bus = 0;
+		pr_err("[ac108]twi_bus configurations missing or invalid.\n");
+		ac108_pub_cfg.i2c_bus_num = 0;
 	} else {
-		ac108->twi_bus = temp_val;
+		ac108_pub_cfg.i2c_bus_num = temp_val;
 	}
 
-	ret = of_property_read_u32(np, "regulator_used", &temp_val);
+	ret = of_property_read_u32(np, "debug_mode", &temp_val);
 	if (ret < 0) {
-		pr_err("[ac108]regulator_used configurations missing or invalid.\n");
-		ac108->regulator_used = 0;
+		pr_err("[ac108]debug_mode configurations missing or invalid.\n");
+		ac108_pub_cfg.debug_mode = 0;
 	} else {
-		ac108->regulator_used = temp_val;
+		ac108_pub_cfg.debug_mode = temp_val;
 	}
 
-	if (ac108->regulator_used) {
-		if (!regulator_en) {
-			ret = of_property_read_string(np, AC108_REGULATOR_NAME,\
-					&regulator_name);
-			/* //(const char**) */
-			if (ret) {
-				pr_err("get ac108 regulator name failed\n");
-			} else {
-				ac108->vol_supply.vcc3v3 =
-					regulator_get(NULL, regulator_name);
-				if (IS_ERR(ac108->vol_supply.vcc3v3)) {
-					pr_err("get ac108 audio-3v3 failed\n");
-					return -EFAULT;
-				}
+	ret = of_property_read_u32(np, "codec_mic_used", &temp_val);
+	if (ret < 0) {
+		pr_err("[ac108]codec_mic_used configurations missing or invalid.\n");
+		ac108_pub_cfg.codec_mic_used = 0;
+	} else {
+		ac108_pub_cfg.codec_mic_used = temp_val;
+	}
 
-#ifdef CONFIG_SND_MOZART_SINGLE_AC108
-				regulator_set_voltage(ac108->vol_supply.vcc3v3, 1800000,
-						1800000);
-#else
-				regulator_set_voltage(ac108->vol_supply.vcc3v3, 3300000,
-						3300000);
-#endif
-				ret = regulator_enable(ac108->vol_supply.vcc3v3);
+	ret = of_property_read_u32(np, "ref_chip_addr", &temp_val);
+	if (ret < 0) {
+		pr_err("[ac108]ref_chip_addr configurations missing or invalid.\n");
+		ac108_pub_cfg.ref_chip_addr = 0;
+	} else {
+		ac108_pub_cfg.ref_chip_addr = temp_val;
+	}
+
+	ret = of_property_read_u32(np, "slot_width", &temp_val);
+	if (ret < 0) {
+		pr_err("[ac108]slot_width configurations missing or invalid.\n");
+		ac108_pub_cfg.slot_width = 0;
+	} else {
+		ac108_pub_cfg.slot_width = temp_val;
+	}
+
+	ret = of_property_read_u32(np, "pa_double_used", &temp_val);
+	if (ret < 0) {
+		pr_err("[ac108]pa_double_used configurations missing or invalid.\n");
+		ac108_pub_cfg.pa_double_used = 0;
+	} else {
+		ac108_pub_cfg.pa_double_used = temp_val;
+	}
+
+	ret = of_property_read_u32(np, "ref_channel_num", &temp_val);
+	if (ret < 0) {
+		pr_err("[ac108]ref_channel_num configurations missing or invalid.\n");
+		ac108_pub_cfg.ref_channel_num = 0;
+	} else {
+		ac108_pub_cfg.ref_channel_num = temp_val;
+	}
+
+	if (!regulator_en) {
+		ret = of_property_read_string(np, AC108_REGULATOR_NAME,\
+				&ac108_pub_cfg.power_name);
+		/* //(const char**) */
+		if (ret) {
+			pr_err("get ac108 regulator name failed\n");
+		} else {
+			ac108_pub_cfg.vol_supply.vcc3v3 =
+				regulator_get(NULL, ac108_pub_cfg.power_name);
+			if (IS_ERR(ac108_pub_cfg.vol_supply.vcc3v3)) {
+				pr_err("get ac108 audio-3v3 failed\n");
+			} else {
+				ret = of_property_read_u32(np, "power_vol", &ac108_pub_cfg.power_vol);
+				regulator_set_voltage(ac108_pub_cfg.vol_supply.vcc3v3, ac108_pub_cfg.power_vol,
+						ac108_pub_cfg.power_vol);
+				ret = regulator_enable(ac108_pub_cfg.vol_supply.vcc3v3);
 				if (ret != 0)
 					pr_err("[AC108] %s: some error happen, "
 					"fail to enable regulator!\n", __func__);
-
-#ifdef CONFIG_SND_MOZART_SINGLE_AC108
-				ac108->power_gpio = of_get_named_gpio_flags(np, "gpio-power",
-								0, (enum of_gpio_flags *)&config);
-				if (!gpio_is_valid(ac108->power_gpio)) {
-					pr_err("failed to get power_gpio gpio from dts,power_gpio:%d\n", ac108->power_gpio);
-				} else {
-					ret = gpio_request(ac108->power_gpio, "power_gpio");
-					if (ret) {
-						pr_err("failed to request power_gpio  gpio\n");
-					} else {
-						gpio_direction_output(ac108->power_gpio, 1);
-						gpio_set_value(ac108->power_gpio, 1);
-					}
-				}
-#endif
-				regulator_en = 1;
 			}
-		}
-	} else {
-		if (!regulator_en) {
-			ac108->power_gpio = of_get_named_gpio_flags(np, "gpio-power",
+			ac108_pub_cfg.power_gpio = of_get_named_gpio_flags(np, "gpio-power",
 							0, (enum of_gpio_flags *)&config);
-			if (!gpio_is_valid(ac108->power_gpio)) {
-				pr_err("failed to get power_gpio gpio from dts,power_gpio:%d\n", ac108->power_gpio);
+			if (!gpio_is_valid(ac108_pub_cfg.power_gpio)) {
+				pr_err("failed to get power_gpio gpio from dts,power_gpio:%d\n", ac108_pub_cfg.power_gpio);
 			} else {
-				ret = gpio_request(ac108->power_gpio, "power_gpio");
+				ret = gpio_request(ac108_pub_cfg.power_gpio, "power_gpio");
 				if (ret) {
 					pr_err("failed to request power_gpio  gpio\n");
 				} else {
-					gpio_direction_output(ac108->power_gpio, 1);
-					gpio_set_value(ac108->power_gpio, 1);
+					gpio_direction_output(ac108_pub_cfg.power_gpio, 1);
+					gpio_set_value(ac108_pub_cfg.power_gpio, 1);
 				}
 			}
+			regulator_en = 1;
 		}
 	}
-	pr_err("i2c_id->driver_data : %d\n", i2c_id->driver_data);
-	if (i2c_id->driver_data < (AC108_CHANNELS_MAX + 3) / 4) {
-		i2c_clt[i2c_id->driver_data] = i2c;
+	if (i2c_id->driver_data < AC108_NUM_MAX) {
+		i2c_clt[ac108_pub_cfg.ac108_nums - 1] = i2c;
 		pr_err("%s,line:%d\n", __func__, __LINE__);
 		ret = snd_soc_register_codec(&i2c->dev,\
 				&ac108_soc_codec_driver,\
@@ -1826,25 +1798,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 		pr_err("The wrong i2c_id"
 			"number :%d\n", (int)(i2c_id->driver_data));
 	}
-
-#if 0
-	if (i2c_id->driver_data == 0) {
-		ret = snd_soc_register_codec(&i2c->dev,\
-				&ac108_soc_codec_driver, &ac108_dai0, 1);
-		/* //(struct snd_soc_dai_driver *) */
-		i2c_clt[0] = i2c;
-	} else if (i2c_id->driver_data == 1) {
-		ret = snd_soc_register_codec(&i2c->dev,\
-				&ac108_soc_codec_driver, &ac108_dai1, 1);
-		/* //(struct snd_soc_dai_driver *) */
-		i2c_clt[1] = i2c;
-	} else {
-		pr_err("The wrong i2c_id number :%d\n",
-				(int)(i2c_id->driver_data));
-	}
-	if (ret < 0)
-		dev_err(&i2c->dev, "Failed to register ac108: %d\n", ret);
-#endif
 
 	ret = sysfs_create_group(&i2c->dev.kobj, &ac108_debug_attr_group);
 	if (ret)
@@ -1860,120 +1813,37 @@ static int ac108_i2c_remove(struct i2c_client *i2c)
 	return 0;
 }
 
-static int ac108_i2c_detect(struct i2c_client *client,
-		struct i2c_board_info *info)
-{
-	struct ac108_priv *ac108 = dev_get_drvdata(&client->dev);
-	struct i2c_adapter *adapter = client->adapter;
-	pr_err("%s:---%d, adapter-nr = %d", __func__, __LINE__, adapter->nr);
-	if (adapter->nr == ac108->twi_bus) {
-		if (client->addr == 0x3b) {
-			strlcpy(info->type, "MicArray_0", I2C_NAME_SIZE);
-			return 0;
-		} else if (client->addr == 0x35) {
-			strlcpy(info->type, "MicArray_1", I2C_NAME_SIZE);
-			return 0;
-		} else if (client->addr == 0x3c) {
-			strlcpy(info->type, "MicArray_2", I2C_NAME_SIZE);
-			return 0;
-		} else if (client->addr == 0x36) {
-			strlcpy(info->type, "MicArray_3", I2C_NAME_SIZE);
-			return 0;
-		}
-	}
-
-	return -ENODEV;
-}
-
-static const unsigned short ac108_i2c_addr[] = {
-#if AC108_CHANNELS_MAX > 0
-	0x3b,
-#endif
-
-#if AC108_CHANNELS_MAX > 4
-	0x35,
-#endif
-
-#if AC108_CHANNELS_MAX > 8
-	0x3c,
-#endif
-
-#if AC108_CHANNELS_MAX > 12
-	0x36,
-#endif
-
-	I2C_CLIENT_END,
-};
-
-/* //device tree source or i2c_board_info both use to transfer
- * hardware information to linux kernel, use one of them wil be OK */
-static struct i2c_board_info ac108_i2c_board_info[] = {
-#if AC108_CHANNELS_MAX > 0
-	{I2C_BOARD_INFO("MicArray_0", 0x3b),},
-	/* //ac108_0 */
-#endif
-
-#if AC108_CHANNELS_MAX > 4
-	{I2C_BOARD_INFO("MicArray_1", 0x35),},
-	/* //ac108_1 */
-#endif
-
-#if AC108_CHANNELS_MAX > 8
-	{I2C_BOARD_INFO("MicArray_2", 0x3c),},
-	/* //ac108_2 */
-#endif
-
-#if AC108_CHANNELS_MAX > 12
-	{I2C_BOARD_INFO("MicArray_3", 0x36),},
-	/* //ac108_3 */
-#endif
-};
+static const unsigned short ac108_i2c_addr[] = {0x3b, 0x35, 0x3c, 0x36, I2C_CLIENT_END,};
 
 static const struct i2c_device_id ac108_i2c_id[] = {
-#if AC108_CHANNELS_MAX > 0
 	{"MicArray_0", 0},
 	/* //ac108_0 */
-#endif
 
-#if AC108_CHANNELS_MAX > 4
 	{"MicArray_1", 1},
 	/* //ac108_1 */
-#endif
 
-#if AC108_CHANNELS_MAX > 8
 	{"MicArray_2", 2},
 	/* //ac108_2 */
-#endif
 
-#if AC108_CHANNELS_MAX > 12
 	{"MicArray_3", 3},
 	/* //ac108_3 */
-#endif
 	{}
 };
 
 MODULE_DEVICE_TABLE(i2c, ac108_i2c_id);
 
 static const struct of_device_id ac108_dt_ids[] = {
-#if AC108_CHANNELS_MAX > 0
 	{.compatible = "MicArray_0",},
 	/* //ac108_0 */
-#endif
 
-#if AC108_CHANNELS_MAX > 4
 	{.compatible = "MicArray_1",},
 	/* //ac108_1 */
-#endif
 
-#if AC108_CHANNELS_MAX > 8
 	{.compatible = "MicArray_2",},
 	/* //ac108_2 */
-#endif
 
-#if AC108_CHANNELS_MAX > 12
 	{.compatible = "MicArray_3",},
 	/* //ac108_3 */
-#endif
 	{}
 };
 
@@ -1984,23 +1854,18 @@ static struct i2c_driver ac108_i2c_driver = {
 	.driver = {
 		.name = "ac108",
 		.owner = THIS_MODULE,
-#if AC108_MATCH_DTS_EN
 		.of_match_table = ac108_dt_ids,
-#endif
 	},
 	.probe = ac108_i2c_probe,
 	.remove = ac108_i2c_remove,
 	.id_table = ac108_i2c_id,
-#if !AC108_MATCH_DTS_EN
-	.address_list = ac108_i2c_addr,
-	.detect = ac108_i2c_detect,
-#endif
 };
 
 static int __init ac108_init(void)
 {
 	int ret;
 	pr_err("Enter ac108_init\n");
+
 	ret = i2c_add_driver(&ac108_i2c_driver);
 	if (ret != 0)
 		pr_err("Failed to register ac108 i2c driver : %d\n", ret);

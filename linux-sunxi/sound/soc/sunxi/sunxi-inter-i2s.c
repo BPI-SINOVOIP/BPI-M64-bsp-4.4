@@ -34,6 +34,10 @@
 #include "sunxi-inter-i2s.h"
 #include "sunxi_rw_func.h"
 
+#ifdef CONFIG_SND_SOC_AC108
+#include "../codecs/ac108.h"
+#endif
+
 #ifdef CONFIG_ARCH_SUN8IW12
 #include "sun8iw12-codec.h"
 #endif
@@ -48,6 +52,10 @@
 
 #define DRV_NAME "sunxi-internal-i2s"
 #define SUNXI_PCM_RATES (SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT)
+#ifdef CONFIG_SND_SOC_AC108
+extern struct ac108_public_config ac108_pub_cfg;
+#endif
+
 
 static bool  i2s_suspend;
 static struct sunxi_i2s *sunxi_i2s_global;
@@ -72,7 +80,12 @@ static void sunxi_snd_txctrl(struct snd_pcm_substream *substream, int on, struct
 
 static void sunxi_snd_rxctrl(struct snd_pcm_substream *substream, int on, struct snd_soc_dai *dai)
 {
+
 	struct sunxi_i2s *sunxi_i2s = snd_soc_dai_get_drvdata(dai);
+#ifdef CONFIG_SND_SOC_AC108
+	if (ac108_pub_cfg.codec_mic_used)
+		return;
+#endif
 	/*clear RX counter*/
 	codec_wr_control(sunxi_i2s->sunxi_i2s_membase+SUNXI_DA_RXCNT, 0xffffffff, RX_CNT, 0);
 	/*flush RX FIFO*/
