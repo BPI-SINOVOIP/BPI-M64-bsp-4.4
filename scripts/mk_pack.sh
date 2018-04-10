@@ -28,7 +28,8 @@ pack_bootloader()
   scripts/pack_img.sh -c ${MACH} -p ${PLATFORM} -b ${TARGET_PRODUCT} -d uart0 -s none -m normal -v none -t $TOPDIR
 #  scripts/pack_img.sh -c $chip -p $platform -b $board -d $debug -s $sigmode -m $mode -v $securemode -t $T
   )
-  $TOPDIR/scripts/bootloader.sh $BOARD
+  echo bootloader.sh $BOARD ${TARGET_PRODUCT}
+  $TOPDIR/scripts/bootloader.sh $BOARD ${TARGET_PRODUCT}
 }
 
 echo BPIMACH=$BPIMACH

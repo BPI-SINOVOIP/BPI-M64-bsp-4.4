@@ -13,6 +13,10 @@ O=$1
 if [ ! -z $O ] ; then
 	BOARD=$O
 fi
+T=$2
+if [ ! -z $T ] ; then
+	TARGET_PRODUCT=$T
+fi
 P=$TOPDIR/out/${TARGET_PRODUCT}/image/
 #U=$TOPDIR/out/${TARGET_PRODUCT}/100MB
 U=$TOPDIR/out/100MB
