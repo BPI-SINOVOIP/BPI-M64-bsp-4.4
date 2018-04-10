@@ -20,8 +20,14 @@
 
 #include "ion.h"
 #include "compat_ion.h"
+#include "../uapi/ion_sunxi.h"
 
 /* See drivers/staging/android/uapi/ion.h for the definition of these structs */
+struct compat_sunxi_cache_range {
+	compat_uint_t start;
+	compat_uint_t end;
+};
+
 struct compat_ion_allocation_data {
 	compat_size_t len;
 	compat_size_t align;
@@ -45,6 +51,36 @@ struct compat_ion_handle_data {
 				      struct compat_ion_handle_data)
 #define COMPAT_ION_IOC_CUSTOM	_IOWR(ION_IOC_MAGIC, 6, \
 				      struct compat_ion_custom_data)
+
+static int compat_get_sunxi_cache_range(
+			struct compat_sunxi_cache_range __user *data32,
+			struct sunxi_cache_range __user *data)
+{
+	compat_ulong_t l;
+	int err;
+
+	err = get_user(l, &data32->start);
+	err |= put_user(l, &data->start);
+	err |= get_user(l, &data32->end);
+	err |= put_user(l, &data->end);
+
+	return err;
+}
+
+static int compat_put_sunxi_cache_range(
+			struct compat_sunxi_cache_range __user *data32,
+			struct sunxi_cache_range __user *data)
+{
+	compat_ulong_t l;
+	int err;
+
+	err = get_user(l, &data->start);
+	err |= put_user(l, &data32->start);
+	err |= get_user(l, &data->end);
+	err |= put_user(l, &data32->end);
+
+	return err;
+}
 
 static int compat_get_ion_allocation_data(
 			struct compat_ion_allocation_data __user *data32,
@@ -189,6 +225,26 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case ION_IOC_SYNC:
 		return filp->f_op->unlocked_ioctl(filp, cmd,
 						(unsigned long)compat_ptr(arg));
+	case ION_IOC_SUNXI_FLUSH_RANGE:
+	{
+		struct compat_sunxi_cache_range __user *data32;
+		struct sunxi_cache_range __user *data;
+		int err;
+
+		data32 = compat_ptr(arg);
+		data = compat_alloc_user_space(sizeof(*data));
+		if (data == NULL)
+			return -EFAULT;
+
+		err = compat_get_sunxi_cache_range(data32, data);
+		if (err)
+			return err;
+
+		ret = filp->f_op->unlocked_ioctl(filp, ION_IOC_SUNXI_FLUSH_RANGE,
+							(unsigned long)data);
+		err = compat_put_sunxi_cache_range(data32, data);
+		return ret ? ret : err;
+	}
 	default:
 		return -ENOIOCTLCMD;
 	}

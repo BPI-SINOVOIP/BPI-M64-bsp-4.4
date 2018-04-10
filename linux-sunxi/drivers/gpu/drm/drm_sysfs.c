@@ -280,7 +280,7 @@ static ssize_t modes_show(struct device *device,
 			   char *buf)
 {
 	struct drm_connector *connector = to_drm_connector(device);
-	struct drm_display_mode *mode;
+	struct drm_display_mode *mode = NULL;
 	int written = 0;
 
 	list_for_each_entry(mode, &connector->modes, head) {
@@ -516,6 +516,7 @@ int drm_sysfs_connector_add(struct drm_connector *connector)
 
 	return 0;
 }
+EXPORT_SYMBOL(drm_sysfs_connector_add);
 
 /**
  * drm_sysfs_connector_remove - remove an connector device from sysfs
@@ -540,6 +541,7 @@ void drm_sysfs_connector_remove(struct drm_connector *connector)
 	device_unregister(connector->kdev);
 	connector->kdev = NULL;
 }
+EXPORT_SYMBOL(drm_sysfs_connector_remove);
 
 /**
  * drm_sysfs_hotplug_event - generate a DRM uevent

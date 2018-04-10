@@ -603,6 +603,7 @@ void drm_framebuffer_remove(struct drm_framebuffer *fb)
 		return;
 
 	dev = fb->dev;
+	crtc = NULL;
 
 	WARN_ON(!list_empty(&fb->filp_head));
 
@@ -744,6 +745,8 @@ unsigned int drm_crtc_index(struct drm_crtc *crtc)
 	unsigned int index = 0;
 	struct drm_crtc *tmp;
 
+	tmp = NULL;
+
 	drm_for_each_crtc(tmp, crtc->dev) {
 		if (tmp == crtc)
 			return index;
@@ -880,7 +883,8 @@ int drm_connector_init(struct drm_device *dev,
 
 	drm_modeset_lock_all(dev);
 
-	ret = drm_mode_object_get_reg(dev, &connector->base, DRM_MODE_OBJECT_CONNECTOR, false);
+	ret = drm_mode_object_get_reg(dev, &connector->base,
+			DRM_MODE_OBJECT_CONNECTOR, true);
 	if (ret)
 		goto out_unlock;
 
@@ -993,6 +997,8 @@ unsigned int drm_connector_index(struct drm_connector *connector)
 	unsigned int index = 0;
 	struct drm_connector *tmp;
 	struct drm_mode_config *config = &connector->dev->mode_config;
+
+	tmp = NULL;
 
 	WARN_ON(!drm_modeset_is_locked(&config->connection_mutex));
 
@@ -1288,6 +1294,8 @@ unsigned int drm_plane_index(struct drm_plane *plane)
 	unsigned int index = 0;
 	struct drm_plane *tmp;
 
+	tmp = NULL;
+
 	drm_for_each_plane(tmp, plane->dev) {
 		if (tmp == plane)
 			return index;
@@ -1312,6 +1320,8 @@ drm_plane_from_index(struct drm_device *dev, int idx)
 {
 	struct drm_plane *plane;
 	unsigned int i = 0;
+
+	plane = NULL;
 
 	drm_for_each_plane(plane, dev) {
 		if (i == idx)
@@ -1765,6 +1775,7 @@ int drm_mode_getresources(struct drm_device *dev, void *data,
 
 	/* handle this in 4 parts */
 	/* FBs */
+	fb = NULL;
 	if (card_res->count_fbs >= fb_count) {
 		copied = 0;
 		fb_id = (uint32_t __user *)(unsigned long)card_res->fb_id_ptr;
@@ -2107,6 +2118,8 @@ static struct drm_crtc *drm_encoder_get_crtc(struct drm_encoder *encoder)
 	struct drm_device *dev = encoder->dev;
 	bool uses_atomic = false;
 
+	connector = NULL;
+
 	/* For atomic drivers only state objects are synchronously updated and
 	 * protected by modeset locks, so check those first. */
 	drm_for_each_connector(connector, dev) {
@@ -2193,6 +2206,8 @@ int drm_mode_getplane_res(struct drm_device *dev, void *data,
 	uint32_t __user *plane_ptr;
 	int copied = 0;
 	unsigned num_planes;
+
+	plane = NULL;
 
 	if (!drm_core_check_feature(dev, DRIVER_MODESET))
 		return -EINVAL;
@@ -3561,6 +3576,9 @@ void drm_fb_release(struct drm_file *priv)
 
 	INIT_LIST_HEAD(&arg.fbs);
 
+	fb = NULL;
+	tfb = NULL;
+
 	/*
 	 * When the file gets released that means no one else can access the fb
 	 * list any more, so no need to grab fpriv->fbs_lock. And we need to
@@ -3904,6 +3922,8 @@ int drm_property_add_enum(struct drm_property *property, int index,
 {
 	struct drm_property_enum *prop_enum;
 
+	prop_enum = NULL;
+
 	if (!(drm_property_type_is(property, DRM_MODE_PROP_ENUM) ||
 			drm_property_type_is(property, DRM_MODE_PROP_BITMASK)))
 		return -EINVAL;
@@ -3951,6 +3971,9 @@ EXPORT_SYMBOL(drm_property_add_enum);
 void drm_property_destroy(struct drm_device *dev, struct drm_property *property)
 {
 	struct drm_property_enum *prop_enum, *pt;
+
+	prop_enum = NULL;
+	pt = NULL;
 
 	list_for_each_entry_safe(prop_enum, pt, &property->enum_list, head) {
 		list_del(&prop_enum->head);
@@ -4296,6 +4319,9 @@ void drm_property_destroy_user_blobs(struct drm_device *dev,
 {
 	struct drm_property_blob *blob, *bt;
 
+	blob = NULL;
+	bt = NULL;
+
 	mutex_lock(&dev->mode_config.blob_lock);
 
 	list_for_each_entry_safe(blob, bt, &file_priv->blobs, head_file) {
@@ -4561,7 +4587,7 @@ int drm_mode_destroyblob_ioctl(struct drm_device *dev,
 			       void *data, struct drm_file *file_priv)
 {
 	struct drm_mode_destroy_blob *out_resp = data;
-	struct drm_property_blob *blob = NULL, *bt;
+	struct drm_property_blob *blob = NULL, *bt = NULL;
 	bool found = false;
 	int ret = 0;
 
@@ -5787,7 +5813,7 @@ void drm_mode_config_cleanup(struct drm_device *dev)
 {
 	struct drm_connector *connector, *ot;
 	struct drm_crtc *crtc, *ct;
-	struct drm_encoder *encoder, *enct;
+	struct drm_encoder *encoder = NULL, *enct = NULL;
 	struct drm_framebuffer *fb, *fbt;
 	struct drm_property *property, *pt;
 	struct drm_property_blob *blob, *bt;
@@ -5905,6 +5931,10 @@ struct drm_tile_group *drm_mode_get_tile_group(struct drm_device *dev,
 {
 	struct drm_tile_group *tg;
 	int id;
+
+	tg = NULL;
+	id = 0;
+
 	mutex_lock(&dev->mode_config.idr_mutex);
 	idr_for_each_entry(&dev->mode_config.tile_idr, tg, id) {
 		if (!memcmp(tg->group_data, topology, 8)) {

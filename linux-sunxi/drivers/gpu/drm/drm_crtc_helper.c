@@ -80,7 +80,7 @@ MODULE_LICENSE("GPL and additional rights");
  */
 void drm_helper_move_panel_connectors_to_head(struct drm_device *dev)
 {
-	struct drm_connector *connector, *tmp;
+	struct drm_connector *connector = NULL, *tmp = NULL;
 	struct list_head panel_list;
 
 	INIT_LIST_HEAD(&panel_list);
@@ -116,15 +116,18 @@ bool drm_helper_encoder_in_use(struct drm_encoder *encoder)
 	 * We can expect this mutex to be locked if we are not panicking.
 	 * Locking is currently fubar in the panic handler.
 	 */
+	/*
 	if (!oops_in_progress) {
 		WARN_ON(!mutex_is_locked(&dev->mode_config.mutex));
 		WARN_ON(!drm_modeset_is_locked(&dev->mode_config.connection_mutex));
 	}
+	*/
 
-	drm_for_each_connector(connector, dev)
+	list_for_each_entry(connector, &dev->mode_config.connector_list, head)
 		if (connector->encoder == encoder)
 			return true;
 	return false;
+
 }
 EXPORT_SYMBOL(drm_helper_encoder_in_use);
 
@@ -175,7 +178,7 @@ drm_encoder_disable(struct drm_encoder *encoder)
 
 static void __drm_helper_disable_unused_functions(struct drm_device *dev)
 {
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 	struct drm_crtc *crtc;
 
 	drm_warn_on_modeset_not_all_locked(dev);
@@ -228,7 +231,7 @@ static void
 drm_crtc_prepare_encoders(struct drm_device *dev)
 {
 	const struct drm_encoder_helper_funcs *encoder_funcs;
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 
 	drm_for_each_encoder(encoder, dev) {
 		encoder_funcs = encoder->helper_private;
@@ -273,7 +276,7 @@ bool drm_crtc_helper_set_mode(struct drm_crtc *crtc,
 	const struct drm_encoder_helper_funcs *encoder_funcs;
 	int saved_x, saved_y;
 	bool saved_enabled;
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 	bool ret = true;
 
 	drm_warn_on_modeset_not_all_locked(dev);
@@ -415,7 +418,7 @@ drm_crtc_helper_disable(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
 	struct drm_connector *connector;
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 
 	/* Decouple all encoders and their attached connectors from this crtc */
 	drm_for_each_encoder(encoder, dev) {
@@ -858,7 +861,7 @@ EXPORT_SYMBOL(drm_helper_mode_fill_fb_struct);
  */
 void drm_helper_resume_force_mode(struct drm_device *dev)
 {
-	struct drm_crtc *crtc;
+	struct drm_crtc *crtc = NULL;
 	struct drm_encoder *encoder;
 	const struct drm_crtc_helper_funcs *crtc_funcs;
 	int encoder_dpms;
