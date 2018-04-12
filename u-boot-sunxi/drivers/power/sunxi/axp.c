@@ -327,6 +327,7 @@ int axp_set_power_supply_output(void)
 			}
 
 			pr_msg("%s = %d, onoff=%d\n", power_name, power_vol_d, onoff);
+			printf("%s = %d, onoff=%d\n", power_name, power_vol_d, onoff);
 
 			if(sunxi_axp_dev[0]->set_supply_status_byname(power_name, power_vol_d, onoff))
 			{

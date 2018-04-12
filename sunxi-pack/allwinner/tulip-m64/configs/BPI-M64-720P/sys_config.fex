@@ -56,6 +56,7 @@ eldo2_vol                  = 1800
 eldo3_vol                  = 1001500
 fldo2_vol                  = 1001100
 gpio0_vol                  = 1003300
+dc1sw_vol                  = 1002500
 
 [card_boot]
 logical_start   = 40960
@@ -198,8 +199,8 @@ gmac_crs           = port:PD19<4><default><default><default>
 gmac_ecol          = port:PD21<4><default><default><default>
 ;gmac_txerr        = port:PD21<4><default><default><default>
 phy-rst            = port:PD14<1><default><default><0>
-gmac-power0        = "ephy-vdd25:2500000"
-gmac-power1        = "ephy-dvdd33:0"
+gmac-power0        = "vcc-ephy0"
+gmac-power1        = "vcc-ephy1"
 gmac-power2        = ""
 tx-delay           = 0
 rx-delay           = 0
@@ -483,7 +484,7 @@ fb1_height               = 0
 ;lcd_cmap_en           lcd color map function enable
 ;----------------------------------------------------------------------------------
 [lcd0]
-lcd_used            = 1
+lcd_used            = 0
 lcd_driver_name     = "S070WV20_MIPI_RGB"
 
 lcd_bl_0_percent    = 0
@@ -1473,11 +1474,11 @@ regulator15     = "axp803_dldo4 none vcc-wifi-io vcc-pg"
 regulator16     = "axp803_eldo1 none vcc-cpvdd vcc-pc vcc-emmcvq18"
 regulator17     = "axp803_eldo2 none vcc-mipi vcc-lcd-0"
 regulator18     = "axp803_eldo3 none dvdd-csi-18"
-regulator19     = "axp803_fldo1 none vcc-hsic-12"
+regulator19     = "axp803_fldo1 none vcc-hsic-12 vcc-ephy1"
 regulator20     = "axp803_fldo2 none vdd-cpus";
 regulator21     = "axp803_gpio0ldo none vcc-ctp"
 regulator22     = "axp803_gpio1ldo none "
-regulator23     = "axp803_dc1sw none vcc-wifi-8089 vcc-gmac-33 vcc-pd"
+regulator23     = "axp803_dc1sw none vcc-wifi-8089 vcc-gmac-33 vcc-pd vcc-ephy0"
 ;--------------------------------------------------------------------------------------------------------
 ;compatible                  ---axp_gpio0 name, support:axp803-gpio
 ;--------------------------------------------------------------------------------------------------------
