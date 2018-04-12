@@ -125,7 +125,11 @@ static struct axp_regulator_info axp803_regulator_info[] = {
 			0x00,     0,    0,   0,      0, 0, 0, 0, 0),
 	AXP803_LDO(IO1,  700, 3300, 100, LDOIO1, 0, 5, LDOIO1EN, 0x07, 0x03,
 			0x00,     0,    0,   0,      0, 0, 0, 0, 0),
+#ifdef BPI
 	AXP803_SW(1,    1600, 3400, 100,  DC1SW, 0, 0,  DC1SWEN, 0x80, 0x80,
+#else
+	AXP803_SW(1,    2500, 3400, 100,  DC1SW, 0, 0,  DC1SWEN, 0x80, 0x80,
+#endif
 			0x00,     0,    0,   0,      0, 0, 0, 0, 0),
 };
 

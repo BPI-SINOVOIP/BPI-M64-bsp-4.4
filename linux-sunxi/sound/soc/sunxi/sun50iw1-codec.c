@@ -821,7 +821,9 @@ static const struct snd_kcontrol_new sunxi_codec_controls[] = {
 	SOC_SINGLE_TLV("ADC input gain control", ADC_CTRL, ADCG, 0x7, 0, adc_input_vol_tlv),
 
 	SOC_SINGLE_TLV("Phoneout gain control", PHONEOUT_CTRL, PHONEOUTGAIN, 0x7, 0, phoneout_vol_tlv),
+#if 0 //BPI
 	SOC_SINGLE_BOOL_EXT("SRC FUCTION",	0, get_src_function,	set_src_function),
+#endif
 };
 
 /*0x244:AIF1 AD0 OUT */

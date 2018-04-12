@@ -29,6 +29,7 @@
 #include <linux/err.h>
 #include <linux/scatterlist.h>
 #include <linux/regulator/consumer.h>
+#include <linux/of_address.h>
 #include <linux/of_net.h>
 #include <linux/of_gpio.h>
 #include <linux/io.h>
@@ -1664,7 +1665,7 @@ static int geth_hw_init(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	priv->base = devm_ioremap_resource(&pdev->dev, res);
+	priv->base = of_iomap(np, 0);
 	if (!priv->base) {
 		pr_err("%s: ERROR: gmac memory mapping failed", __func__);
 		return -ENOMEM;
@@ -1677,7 +1678,7 @@ static int geth_hw_init(struct platform_device *pdev)
 		goto mem_err;
 	}
 
-	priv->base_phy = devm_ioremap_resource(&pdev->dev, res);
+	priv->base_phy = of_iomap(np, 1);
 	if (unlikely(!priv->base_phy)) {
 		pr_err("%s: ERROR: phy memory mapping failed", __func__);
 		ret = -ENOMEM;
@@ -1796,9 +1797,9 @@ pin_err:
 clk_err:
 	free_irq(ndev->irq, ndev);
 irq_err:
-	devm_iounmap(&pdev->dev, priv->base_phy);
+	iounmap(priv->base_phy);
 mem_err:
-	devm_iounmap(&pdev->dev, priv->base);
+	iounmap(priv->base);
 
 	return ret;
 }
@@ -1809,8 +1810,8 @@ static void geth_hw_release(struct platform_device *pdev)
 	struct geth_priv *priv = netdev_priv(ndev);
 	int i;
 
-	devm_iounmap(&pdev->dev, (priv->base_phy));
-	devm_iounmap(&pdev->dev, priv->base);
+	iounmap(priv->base_phy);
+	iounmap(priv->base);
 	free_irq(ndev->irq, ndev);
 	if (priv->geth_clk)
 		clk_put(priv->geth_clk);
