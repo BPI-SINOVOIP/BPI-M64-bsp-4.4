@@ -1281,8 +1281,12 @@ static int ac108_hw_params(struct snd_pcm_substream *substream,
 
 	/* //AC108 set channels */
 	channels = params_channels(params);
+#ifdef BPI
 	if (channels != ac108_pub_cfg.ac108_nums * 4)
 		return -EINVAL;
+#else
+	printk("BPI: channels = %d\n", channels);
+#endif
 	for (i = 0; i < (channels + 3) / 4; i++) {
 		channels_en =
 			(channels >=
