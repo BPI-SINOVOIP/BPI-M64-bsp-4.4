@@ -202,7 +202,7 @@ phy-rst            = port:PD14<1><default><default><0>
 gmac-power0        = "vcc-ephy0"
 gmac-power1        = "vcc-ephy1"
 gmac-power2        = ""
-tx-delay           = 0
+tx-delay           = 4
 rx-delay           = 0
 
 ;----------------------------------------------------------------------------------
