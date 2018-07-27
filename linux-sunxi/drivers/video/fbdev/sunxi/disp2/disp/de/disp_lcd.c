@@ -780,6 +780,8 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 
 	disp_al_lcd_io_cfg(lcd->hwdev_index, bon, &lcdp->panel_info);
 
+/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
+#if 0
 	if (bon == 0) {
 		for (i = LCD_GPIO_REGU_NUM - 1; i >= 0; i--) {
 			if (!
@@ -790,6 +792,7 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 						       lcd_pin_power[i]);
 		}
 	}
+#endif
 
 	return DIS_SUCCESS;
 }
@@ -1684,6 +1687,7 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 		return DIS_FAIL;
 #endif
 
+/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
 #if 0
 	/* init fix power */
 	for (i = 0; i < LCD_POWER_NUM; i++) {
