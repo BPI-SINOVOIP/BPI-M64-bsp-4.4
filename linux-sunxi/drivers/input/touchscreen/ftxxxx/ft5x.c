@@ -43,10 +43,6 @@
 #include <linux/uaccess.h>
 #include "../../init-input.h"
 
-
-
-#define CONFIG_SUPPORT_FTS_CTP_UPG
-
 #define FOR_TSLIB_TEST
 #ifdef TOUCH_KEY_SUPPORT
 #define TOUCH_KEY_FOR_EVB13
@@ -131,6 +127,7 @@ enum{
 
 #define dprintk(level_mask,fmt,arg...)    if(unlikely(debug_mask & level_mask)) \
         printk("***CTP***"fmt, ## arg)
+        
 module_param_named(debug_mask,debug_mask,int,S_IRUGO | S_IWUSR | S_IWGRP);
 /*********************************************************************************************/
 /*------------------------------------------------------------------------------------------*/
@@ -185,7 +182,7 @@ static int ctp_detect(struct i2c_client *client, struct i2c_board_info *info)
  * return value:
  *
  */
-void ctp_print_info(struct ctp_config_info info,int debug_level)
+static void ctp_print_info(struct ctp_config_info info,int debug_level)
 {
 	if(debug_level == DEBUG_INIT)
 	{
@@ -205,7 +202,7 @@ void ctp_print_info(struct ctp_config_info info,int debug_level)
  * ctp_wakeup - function
  *
  */
-int ctp_wakeup(int status,int ms)
+static int ctp_wakeup(int status,int ms)
 {
 	dprintk(DEBUG_INIT,"***CTP*** %s:status:%d,ms = %d\n",__func__,status,ms);
 
@@ -1492,8 +1489,9 @@ standby_with_power_on:
 }
 
 
-static int ft5x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
+static int ft5x_ts_suspend(struct device *dev, pm_message_t mesg)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct ft5x_ts_data *data = i2c_get_clientdata(client);
 	int ret = 0;
 	dprintk(DEBUG_SUSPEND,"==ft5x_ts_suspend=\n");
@@ -1502,7 +1500,7 @@ static int ft5x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	data->is_suspended = true;
 #endif
 	if (data->is_suspended == true) {
-	//	ft5x_ts_release();
+		//ft5x_ts_release();
 		flush_workqueue(ft5x_resume_wq);
 		ret = input_set_int_enable(&(config_info.input_type), 0);
 		if (ret < 0)
@@ -1516,8 +1514,9 @@ static int ft5x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	return 0;
 }
 
-static int ft5x_ts_resume(struct i2c_client *client)
+static int ft5x_ts_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct ft5x_ts_data *data = i2c_get_clientdata(client);
 	dprintk(DEBUG_SUSPEND,"==CONFIG_PM:ft5x_ts_resume== \n");
 	data->is_suspended = true;
@@ -1817,11 +1816,11 @@ static struct i2c_driver ft5x_ts_driver = {
 	.probe		= ft5x_ts_probe,
 	.remove		= ft5x_ts_remove,
 	.id_table	= ft5x_ts_id,
-	.suspend        = ft5x_ts_suspend,
-	.resume         = ft5x_ts_resume,
 	.driver	= {
 		.name	= CTP_NAME,
 		.owner	= THIS_MODULE,
+		.suspend        = ft5x_ts_suspend,
+		.resume         = ft5x_ts_resume,
 	},
 	.address_list	= normal_i2c,
 
@@ -1871,7 +1870,9 @@ static long aw_ioctl(struct file *file, unsigned int cmd,unsigned long arg )
 	switch (cmd) {
 	case UPGRADE:
 	        dprintk(DEBUG_OTHERS_INFO,"==UPGRADE_WORK=\n");
+#ifdef CONFIG_SUPPORT_FTS_CTP_UPG
 		fts_ctpm_fw_upgrade_with_i_file();
+#endif
 		// calibrate();
 		break;
 	default:
@@ -1941,7 +1942,8 @@ static int __init ft5x_ts_init(void)
 	input_set_power_enable(&(config_info.input_type), 1);
 	msleep(10);
 	ctp_wakeup(0, 10);
-
+	
+	msleep(10);
 	ft5x_ts_driver.detect = ctp_detect;
 
 	ret= register_chrdev(I2C_MAJOR,"aw_i2c_ts",&aw_i2c_ts_fops );

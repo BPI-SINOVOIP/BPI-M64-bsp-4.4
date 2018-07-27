@@ -336,7 +336,7 @@ rtp_exchange_x_y_flag = 0
 ;----------------------------------------------------------------------------------
 [ctp]
 compatible	    = "allwinner,sun50i-ctp-para"
-ctp_used            = 0
+ctp_used            = 1
 ctp_name	    = "ft5x_ts"
 ctp_twi_id          = 0
 ctp_twi_addr        = 0x38
@@ -347,7 +347,7 @@ ctp_revert_y_flag   = 0
 ctp_exchange_x_y_flag = 0
 
 ctp_int_port        = port:PH04<6><default><default><default>
-ctp_wakeup          = port:PH08<1><default><default><1>
+ctp_wakeup          = port:PH08<1><default><default><default>
 ctp_power_ldo       = "vcc-ctp"
 ctp_power_ldo_vol   = 3300
 ctp_power_io        =
@@ -359,14 +359,14 @@ ctp_power_io        =
 ;--------------------------------------------------------------------------------
 [ctp_list]
 compatible		  = "allwinner,sun50i-ctp-list"
-ctp_list_used         	  = 0
+ctp_list_used         	  = 1
+ft5x16_ts                 = 1
 gslX680new		  = 0
 gt9xx_ts                  = 0
 gt9xxnew_ts		  = 0
 gt82x                     = 0
 zet622x                   = 0
 aw5306_ts                 = 0
-ft5x                      = 1
 
 ;----------------------------------------------------------------------------------
 ;touch key configuration
