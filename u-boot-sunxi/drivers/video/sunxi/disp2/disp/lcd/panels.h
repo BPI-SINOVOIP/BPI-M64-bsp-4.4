@@ -93,6 +93,7 @@ extern __lcd_panel_t S6D7AA0X01_panel;
 extern __lcd_panel_t gg1p4062utsw_panel;
 extern __lcd_panel_t vr_sharp_panel;
 extern __lcd_panel_t he0801a068_panel;
+extern __lcd_panel_t S070WV20_MIPI_RGB_panel;
 #endif /*endif CONFIG_ARCH_SUN8IW12P1 */
 #endif /*endif CONFIG_ARCH_SUN50IW3P1 */
 

@@ -29,6 +29,7 @@ struct __lcd_panel *panel_array[] = {
 	&lq101r1sx03_panel,
 	/* add new panel below */
 	&WilliamLcd_panel,
+	&S070WV20_MIPI_RGB_panel,
 	NULL,
 };
 

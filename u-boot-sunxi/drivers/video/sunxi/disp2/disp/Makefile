@@ -26,7 +26,8 @@ disp-objs += lcd/default_panel.o \
 	lcd/lt070me05000.o lcd/wtq05027d01.o lcd/t27p06.o \
 	lcd/dx0960be40a1.o lcd/tft720x1280.o lcd/S6D7AA0X01.o \
 	lcd/inet_dsi_panel.o lcd/cpu_gg1p4062utsw.o lcd/vr_sharp.o \
-	lcd/he0801a068.o lcd/WilliamLcd.o lcd/tm_dsi_panel.o
+	lcd/he0801a068.o lcd/WilliamLcd.o lcd/tm_dsi_panel.o \
+	lcd/S070WV20_MIPI_RGB.o
 endif
 endif
 

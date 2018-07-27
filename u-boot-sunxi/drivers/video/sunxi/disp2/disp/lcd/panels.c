@@ -38,6 +38,7 @@ __lcd_panel_t* panel_array[] = {
 	&vr_sharp_panel,
 	&he0801a068_panel,
 	&WilliamLcd_panel,
+	&S070WV20_MIPI_RGB_panel,
 #endif
 #endif /*endif CONFIG_ARCH_SUN50IW3P1 */
 	/* add new panel below */

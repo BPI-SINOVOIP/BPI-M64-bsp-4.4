@@ -17,6 +17,7 @@ typedef struct
 
 	bool                  lcd_bl_en_used;
 	disp_gpio_set_t       lcd_bl_en;
+	u32					  lcd_bl_hdl;
 	char                  lcd_bl_en_power[LCD_POWER_STR_LEN];
 
 	u32                   lcd_power_used[LCD_POWER_NUM];
