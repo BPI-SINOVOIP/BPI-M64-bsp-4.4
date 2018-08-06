@@ -1158,6 +1158,7 @@ sndcodec_used = 0x1
 aif2fmt = 0x3
 aif3fmt = 0x3
 aif2master = 0x1
+linein_detect = 
 hp_detect_case = 0x1
 ;------------------------------------------------------------------------------
 [i2s]
@@ -1181,7 +1182,7 @@ aif1_lrlk_div = 0x40
 aif2_lrlk_div = 0x40
 pa_sleep_time = 0x0a
 dac_digital_vol = 0x9898
-gpio-spk = port:PD14<1><0><default><0>
+gpio-spk =
 
 ;----------------------------------------------------------------------------------
 ;ir --- infra remote configuration
