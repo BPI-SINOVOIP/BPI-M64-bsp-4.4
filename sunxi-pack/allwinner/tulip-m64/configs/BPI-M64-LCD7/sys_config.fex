@@ -618,7 +618,7 @@ csi0_sck                = port:PE12<2><default><default><default>
 csi0_sda                = port:PE13<2><default><default><default>
 
 [csi0/csi0_dev0]
-csi0_dev0_used          = 0
+csi0_dev0_used          = 1
 csi0_dev0_mname         = "ov5640"
 csi0_dev0_twi_addr      = 0x78
 csi0_dev0_pos           = "rear"
