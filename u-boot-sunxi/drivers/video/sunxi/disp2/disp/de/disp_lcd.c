@@ -660,6 +660,8 @@ static void lcd_get_sys_config(u32 disp, disp_lcd_cfg *lcd_cfg)
     ret = disp_sys_script_get_item(primary_key,"lcd_bl_en", (int *)gpio_info, 3);
     if (ret == 3)
     {
+	gpio_info->data = 0;
+	gpio_info->mul_sel = 1;
     	lcd_cfg->lcd_bl_hdl = disp_sys_gpio_request(gpio_info, 1);
         lcd_cfg->lcd_bl_en_used = 1;
     }
@@ -1041,9 +1043,9 @@ static s32 disp_lcd_tcon_disable(struct disp_device *lcd)
 
 static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 {
-	int  i;
+	//int  i;
 	struct disp_lcd_private_data *lcdp = disp_lcd_get_priv(lcd);
-	char dev_name[25];
+	//char dev_name[25];
 
 	if ((NULL == lcd) || (NULL == lcdp)) {
 		DE_WRN("NULL hdl!\n");
@@ -1051,6 +1053,8 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 	}
 	DE_INF("lcd %d pin config, state %s, %d\n", lcd->disp, (bon)? "on":"off", bon);
 
+/* lcd_pin_power already on in sw_enable, comment here to fix white screen before logo display */
+#if 0
 	//io-pad
 	if (bon == 1) {
 		for (i=0; i<LCD_GPIO_REGU_NUM; i++) {
@@ -1070,6 +1074,9 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 				disp_sys_power_disable(lcdp->lcd_cfg.lcd_pin_power[i]);
 		}
 	}
+#else
+	disp_al_lcd_io_cfg(lcd->hwdev_index, bon, &lcdp->panel_info);
+#endif
 
 	return DIS_SUCCESS;
 }
@@ -1132,9 +1139,13 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 			if (!((!strcmp(lcdp->lcd_cfg.lcd_bl_en_power, "")) || (!strcmp(lcdp->lcd_cfg.lcd_bl_en_power, "none"))))
 				disp_sys_power_enable(lcdp->lcd_cfg.lcd_bl_en_power);
 
-			memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_bl_en), sizeof(disp_gpio_set_t));
-
-			disp_sys_gpio_request_simple(gpio_info, 1);
+			if(!lcdp->lcd_cfg.lcd_bl_hdl) {
+				memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_bl_en), sizeof(disp_gpio_set_t));
+				disp_sys_gpio_request_simple(gpio_info, 1);
+			} 
+			else {
+				disp_sys_gpio_set_value(lcdp->lcd_cfg.lcd_bl_hdl, 1, "lcd_bl_en");
+			}
 		}
 		bl = disp_lcd_get_bright(lcd);
 		disp_lcd_set_bright(lcd, bl);
@@ -1524,8 +1535,6 @@ static s32 disp_lcd_post_enable(struct disp_device* lcd)
 	spin_unlock_irqrestore(&lcd_data_lock, flags);
 	bl = disp_lcd_get_bright(lcd);
 	disp_lcd_set_bright(lcd, bl);
-
-	disp_sys_gpio_set_value(lcdp->lcd_cfg.lcd_bl_hdl, 1, "lcd_bl_en");
 
 	return ret;
 }

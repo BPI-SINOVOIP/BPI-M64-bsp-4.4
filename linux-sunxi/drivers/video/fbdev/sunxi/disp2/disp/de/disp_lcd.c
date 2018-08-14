@@ -761,6 +761,8 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 	DE_INF("lcd %d pin config, state %s, %d\n", lcd->disp,
 	       (bon) ? "on" : "off", bon);
 
+/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
+#if 1
 	/* io-pad */
 	if (bon == 1) {
 		for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
@@ -780,8 +782,6 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 
 	disp_al_lcd_io_cfg(lcd->hwdev_index, bon, &lcdp->panel_info);
 
-/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
-#if 0
 	if (bon == 0) {
 		for (i = LCD_GPIO_REGU_NUM - 1; i >= 0; i--) {
 			if (!
@@ -1688,7 +1688,7 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 #endif
 
 /* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
-#if 0
+#if 1
 	/* init fix power */
 	for (i = 0; i < LCD_POWER_NUM; i++) {
 		if (lcdp->lcd_cfg.lcd_fix_power_used[i] == 1)

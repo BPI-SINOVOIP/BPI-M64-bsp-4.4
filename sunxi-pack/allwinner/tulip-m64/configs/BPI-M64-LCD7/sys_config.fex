@@ -524,11 +524,11 @@ lcd_bright_curve_en = 0
 lcd_cmap_en         = 0
 
 ;rst
-lcd_gpio_0          = port:PD6<1><0><default><0>
+lcd_gpio_0          = port:PD6<1><0><default><1>
 
 ;power enable
-lcd_gpio_1          = port:PD7<1><0><default><0>
-lcd_bl_en           = port:PD5<1><0><default><0>
+lcd_gpio_1          = port:PD7<1><0><default><1>
+lcd_bl_en           = port:PD5<1><0><default><1>
 
 lcd_power     = "vcc-dsi-33"
 ;lcd_power1    = "vcc-lcd"
