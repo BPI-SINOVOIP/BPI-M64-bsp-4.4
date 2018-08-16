@@ -14,7 +14,16 @@
 #include "sunxi-ir-rx.h"
 
 static struct rc_map_table sunxi_nec_scan[] = {
-	{ KEY_ESC, KEY_ESC },
+	{ 0x17c612, KEY_POWER },
+	{ 0x17c601, KEY_UP },
+	{ 0x17c619, KEY_LEFT },
+	{ 0x17c611, KEY_RIGHT },
+	{ 0x17c609, KEY_DOWN },
+	{ 0x17c640, KEY_ENTER },
+	{ 0x17c60f, KEY_HOME },
+	{ 0x17c60d, KEY_MENU },
+	{ 0x17c61c, KEY_VOLUMEUP },
+	{ 0x17c67f, KEY_VOLUMEDOWN },
 };
 
 static struct rc_map_list sunxi_map = {

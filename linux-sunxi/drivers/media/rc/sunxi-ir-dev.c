@@ -444,7 +444,7 @@ static int sunxi_ir_recv_probe(struct platform_device *pdev)
 	int rc;
 	char const ir_dev_name[] = "s_cir_rx";
 
-	pr_debug("sunxi-ir probe start !\n");
+	pr_info("sunxi-ir probe start !\n");
 	ir_data = kzalloc(sizeof(*ir_data), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(ir_data)) {
 		pr_err("ir_data: not enough memory for ir data\n");
@@ -513,7 +513,7 @@ static int sunxi_ir_recv_probe(struct platform_device *pdev)
 	}
 
 	/* enable here */
-	pr_debug("ir probe end!\n");
+	pr_info("ir probe end!\n");
 
 	return 0;
 

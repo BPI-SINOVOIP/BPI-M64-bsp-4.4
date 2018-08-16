@@ -680,6 +680,8 @@ void rc_keydown(struct rc_dev *dev, enum rc_type protocol, u32 scancode, u8 togg
 	unsigned long flags;
 	u32 keycode = rc_g_keycode_from_table(dev, scancode);
 
+	pr_info("rc keycode = %d\n", keycode);
+
 	spin_lock_irqsave(&dev->keylock, flags);
 	ir_do_keydown(dev, protocol, scancode, keycode, toggle);
 
