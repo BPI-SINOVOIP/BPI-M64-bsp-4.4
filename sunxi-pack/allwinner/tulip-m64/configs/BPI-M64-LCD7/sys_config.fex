@@ -110,11 +110,26 @@ uart_debug_tx   = port:PB8<4><1><default><default>
 uart_debug_rx   = port:PB9<4><1><default><default>
 
 [jtag_para]
-jtag_enable     = 1
+jtag_enable     = 0
 jtag_ms         = port:PB0<4><default><default><default>
 jtag_ck         = port:PB1<4><default><default><default>
 jtag_do         = port:PB2<4><default><default><default>
 jtag_di         = port:PB3<4><default><default><default>
+
+;----------------------------------------------------------------------------------
+;
+;LED support
+;----------------------------------------------------------------------------------
+[led_para]
+compatible              = "allwinner,sunxi-leds"
+led_used		= 1
+led_num	 	 	= 3
+led1			= port:PD24<1><default><default><default>
+led1_trigger		= "default-on"
+led2			= port:PE14<1><default><default><default>
+led2_trigger		= "heartbeat"
+led3			= port:PE15<1><default><default><default>
+led3_trigger		= "default-on"
 
 [clock]
 pll4            = 300
