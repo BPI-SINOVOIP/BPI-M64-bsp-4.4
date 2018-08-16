@@ -16,6 +16,9 @@ obj-$(CONFIG_BT_HCIBTUSB)	+= btusb.o
 obj-$(CONFIG_BT_RTKBTUSB)	+= rtk_btusb.o
 obj-$(CONFIG_BT_HCIBTSDIO)	+= btsdio.o
 
+obj-$(CONFIG_BT_RTKHCIBTUSB)	+= rtkbt_usb.o
+rtkbt_usb-y			:= rtk_bt.o rtk_coex.o rtk_misc.o
+
 obj-$(CONFIG_BT_INTEL)		+= btintel.o
 obj-$(CONFIG_BT_ATH3K)		+= ath3k.o
 obj-$(CONFIG_BT_MRVL)		+= btmrvl.o
