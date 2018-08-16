@@ -1239,7 +1239,7 @@ ir_addr_code14       = 0x4040
 [gpio_para]
 compatible	= "allwinner,sunxi-init-gpio"
 gpio_used       = 1
-gpio_num        = 30
+gpio_num        = 28
 gpio_pin_1	=  port:PH3<1><default><default><0>
 gpio_pin_2	=  port:PH2<1><default><default><0>
 gpio_pin_3	=  port:PH6<1><default><default><0>
@@ -1268,10 +1268,6 @@ gpio_pin_25	=  port:PB7<1><default><default><0>
 gpio_pin_26	=  port:PL9<1><default><default><0>
 gpio_pin_27	=  port:PL7<1><default><default><0>
 gpio_pin_28	=  port:PL8<1><default><default><0>
-gpio_pin_29	=  port:PE14<1><default><default><1>
-gpio_pin_30	=  port:PE15<1><default><default><1>
-
-
 
 ;-------------------------------------------------------------------------------------
 ;used                        ---0:not used,1:used
