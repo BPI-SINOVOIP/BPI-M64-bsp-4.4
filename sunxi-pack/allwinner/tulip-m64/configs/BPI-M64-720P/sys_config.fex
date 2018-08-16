@@ -110,11 +110,26 @@ uart_debug_tx   = port:PB8<4><1><default><default>
 uart_debug_rx   = port:PB9<4><1><default><default>
 
 [jtag_para]
-jtag_enable     = 1
+jtag_enable     = 0
 jtag_ms         = port:PB0<4><default><default><default>
 jtag_ck         = port:PB1<4><default><default><default>
 jtag_do         = port:PB2<4><default><default><default>
 jtag_di         = port:PB3<4><default><default><default>
+
+;----------------------------------------------------------------------------------
+;
+;LED support
+;----------------------------------------------------------------------------------
+[led_para]
+compatible              = "allwinner,sunxi-leds"
+led_used		= 1
+led_num	 	 	= 3
+led1			= port:PD24<1><default><default><default>
+led1_trigger		= "default-on"
+led2			= port:PE14<1><default><default><default>
+led2_trigger		= "heartbeat"
+led3			= port:PE15<1><default><default><default>
+led3_trigger		= "default-on"
 
 [clock]
 pll4            = 300
@@ -1184,37 +1199,12 @@ gpio-spk =
 ;----------------------------------------------------------------------------------
 [s_cir0]
 s_cir0_used         = 1
-ir_addr_cnt	    = 15
-ir_power_key_code0  = 0x57
-ir_addr_code0       = 0x9f00
-ir_power_key_code1  = 0x1a
-ir_addr_code1       = 0xfb04
-ir_power_key_code2  = 0x14
-ir_addr_code2       = 0x7F80
-ir_power_key_code3  = 0x15
-ir_addr_code3       = 0x7F80
-ir_power_key_code4  = 0x0b
-ir_addr_code4       = 0xF708
-ir_power_key_code5  = 0x03
-ir_addr_code5       = 0x00EF
-ir_power_key_code6  = 0x9f
-ir_addr_code6       = 0x4CB3
-ir_power_key_code7  = 0x0a
-ir_addr_code7       = 0x7748
-ir_power_key_code8  = 0x45
-ir_addr_code8       = 0xbd02
-ir_power_key_code9  = 0x4d
-ir_addr_code9       = 0xde21
-ir_power_key_code10  = 0x18
-ir_addr_code10       = 0xfe01
-ir_power_key_code11  = 0x57
-ir_addr_code11       = 0xff00
-ir_power_key_code12  = 0x4d
-ir_addr_code12       = 0xff40
-ir_power_key_code13  = 0x88
-ir_addr_code13       = 0xdd22
-ir_power_key_code14  = 0x0a
-ir_addr_code14       = 0x4040
+supply		    = "vcc-cir"
+supply_vol	    = 3300000 
+ir_protocol_used    = 0
+ir_power_key_code   = 116
+ir_addr_code        = 0x17c612
+
 
 ;-------------------------------------------------------------------------------
 ;userspace gpio interface for android
@@ -1222,7 +1212,7 @@ ir_addr_code14       = 0x4040
 [gpio_para]
 compatible	= "allwinner,sunxi-init-gpio"
 gpio_used       = 1
-gpio_num        = 30
+gpio_num        = 28
 gpio_pin_1	=  port:PH3<1><default><default><0>
 gpio_pin_2	=  port:PH2<1><default><default><0>
 gpio_pin_3	=  port:PH6<1><default><default><0>
@@ -1251,10 +1241,6 @@ gpio_pin_25	=  port:PB7<1><default><default><0>
 gpio_pin_26	=  port:PL9<1><default><default><0>
 gpio_pin_27	=  port:PL7<1><default><default><0>
 gpio_pin_28	=  port:PL8<1><default><default><0>
-gpio_pin_29	=  port:PE14<1><default><default><1>
-gpio_pin_30	=  port:PE15<1><default><default><1>
-
-
 
 ;-------------------------------------------------------------------------------------
 ;used                        ---0:not used,1:used
@@ -1474,7 +1460,7 @@ regulator17     = "axp803_eldo2 none vcc-mipi vcc-lcd-0"
 regulator18     = "axp803_eldo3 none dvdd-csi-18"
 regulator19     = "axp803_fldo1 none vcc-hsic-12 vcc-ephy1"
 regulator20     = "axp803_fldo2 none vdd-cpus";
-regulator21     = "axp803_gpio0ldo none vcc-ctp"
+regulator21     = "axp803_gpio0ldo none vcc-cir"
 regulator22     = "axp803_gpio1ldo none "
 regulator23     = "axp803_dc1sw none vcc-wifi-8089 vcc-gmac-33 vcc-pd vcc-ephy0"
 ;--------------------------------------------------------------------------------------------------------
