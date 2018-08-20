@@ -424,6 +424,8 @@ int update_fdt_para_for_kernel(void* dtb_base)
 		}
 	}
 
+	printf("storage_type is %d\n", storage_type);
+
 	//fix nand&sdmmc
 	switch(storage_type)
 	{
@@ -470,7 +472,7 @@ int update_fdt_para_for_kernel(void* dtb_base)
 			else
 			{
 				disable_node("nand0");
-				disable_node("mmc2");
+				/*disable_node("mmc2"); bpi, enable emmc */
 				disable_node("mmc3");
 				#ifdef CONFIG_STORAGE_MEDIA_SPINAND
 				disable_node("spinand");
