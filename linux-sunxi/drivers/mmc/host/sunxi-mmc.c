@@ -98,93 +98,61 @@ static void sunxi_mmc_set_dat(struct sunxi_mmc_host *host, struct mmc_host *mmc,
 static void sunxi_mmc_exe_cmd(struct sunxi_mmc_host *host,
 			      struct mmc_command *cmd, u32 cmd_val, u32 imask);
 
+
+
 static int sunxi_mmc_reset_host(struct sunxi_mmc_host *host)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(250);
-	u32 rval;
-
+	s32 ret = 0;
 	mmc_writel(host, REG_GCTRL, SDXC_HARDWARE_RESET);
-	do {
-		rval = mmc_readl(host, REG_GCTRL);
-		if (!(rval & SDXC_HARDWARE_RESET))
-			break;
-		cond_resched();
-	} while (time_before(jiffies, expire));
-
-	if (rval & SDXC_HARDWARE_RESET) {
+	ret = mmc_wbclr(host, REG_GCTRL, SDXC_HARDWARE_RESET, 250);
+	if (ret)
 		dev_err(mmc_dev(host->mmc), "fatal err reset timeout\n");
-		return -EIO;
-	}
 
 	return 0;
 }
 
 static int sunxi_mmc_reset_dmaif(struct sunxi_mmc_host *host)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(250);
 	u32 rval;
+	s32 ret = 0;
 
 	rval = mmc_readl(host, REG_GCTRL);
 	mmc_writel(host, REG_GCTRL, rval | SDXC_DMA_RESET);
-	do {
-		rval = mmc_readl(host, REG_GCTRL);
-		if (!(rval & SDXC_DMA_RESET))
-			break;
-		cond_resched();
-	} while (time_before(jiffies, expire));
-
-	if (rval & SDXC_DMA_RESET) {
+	ret =  mmc_wbclr(host, REG_GCTRL, SDXC_DMA_RESET, 250);
+	if (ret)
 		dev_err(mmc_dev(host->mmc),
 			"fatal err reset dma interface timeout\n");
-		return -EIO;
-	}
 
 	return 0;
 }
 
 static int sunxi_mmc_reset_fifo(struct sunxi_mmc_host *host)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(250);
 	u32 rval;
+	s32 ret = 0;
 
 	rval = mmc_readl(host, REG_GCTRL);
 	mmc_writel(host, REG_GCTRL, rval | SDXC_FIFO_RESET);
-	do {
-		rval = mmc_readl(host, REG_GCTRL);
-		if (!(rval & SDXC_FIFO_RESET))
-			break;
-		cond_resched();
-	} while (time_before(jiffies, expire));
-
-	if (rval & SDXC_FIFO_RESET) {
+	ret = mmc_wbclr(host, REG_GCTRL, SDXC_FIFO_RESET, 250);
+	if (ret)
 		dev_err(mmc_dev(host->mmc), "fatal err reset fifo timeout\n");
-		return -EIO;
-	}
-
-	return 0;
+	return ret;
 }
 
 static int sunxi_mmc_reset_dmactl(struct sunxi_mmc_host *host)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(250);
 	u32 rval;
+	s32 ret = 0;
 
 	rval = mmc_readl(host, REG_DMAC);
 	mmc_writel(host, REG_DMAC, rval | SDXC_IDMAC_SOFT_RESET);
-	do {
-		rval = mmc_readl(host, REG_DMAC);
-		if (!(rval & SDXC_IDMAC_SOFT_RESET))
-			break;
-		cond_resched();
-	} while (time_before(jiffies, expire));
 
-	if (rval & SDXC_IDMAC_SOFT_RESET) {
+	ret = mmc_wbclr(host, REG_DMAC, SDXC_IDMAC_SOFT_RESET, 250);
+	if (ret)
 		dev_err(mmc_dev(host->mmc),
 			"fatal err reset dma contol timeout\n");
-		return -EIO;
-	}
 
-	return 0;
+	return ret;
 }
 
 void sunxi_mmc_set_a12a(struct sunxi_mmc_host *host)
@@ -358,14 +326,19 @@ static void sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
 
 	do {
 		ri = mmc_readl(host, REG_RINTR);
-	} while (!(ri & (SDXC_COMMAND_DONE | SDXC_INTERRUPT_ERROR_BIT)) &&
-		 time_before(jiffies, expire));
+		if (ri & (SDXC_COMMAND_DONE | SDXC_INTERRUPT_ERROR_BIT))
+			break;
+		cond_resched();
+	} while (time_before(jiffies, expire));
 
 	if (!(ri & SDXC_COMMAND_DONE) || (ri & SDXC_INTERRUPT_ERROR_BIT)) {
-		dev_err(mmc_dev(host->mmc),
-			"send  manual stop command failed\n");
-		if (req->stop)
-			req->stop->resp[0] = -ETIMEDOUT;
+		ri = mmc_readl(host, REG_RINTR);
+		if (!(ri & SDXC_COMMAND_DONE) || (ri & SDXC_INTERRUPT_ERROR_BIT)) {
+			dev_err(mmc_dev(host->mmc),
+				"send  manual stop command failed\n");
+			if (req->stop)
+				req->stop->resp[0] = -ETIMEDOUT;
+		}
 	} else {
 		if (req->stop)
 			req->stop->resp[0] = mmc_readl(host, REG_RESP0);
@@ -387,7 +360,6 @@ static void sunxi_mmc_dump_errinfo(struct sunxi_mmc_host *host)
 	 *(cmd->opcode == SD_IO_SEND_OP_COND || cmd->opcode == SD_IO_RW_DIRECT))
 	 *  return;
 	 */
-
 	dev_err(mmc_dev(host->mmc),
 		"smc %d p%d err, cmd %d,%s%s%s%s%s%s%s%s%s%s !!\n",
 		host->mmc->index, host->phy_index, cmd->opcode,
@@ -636,21 +608,13 @@ out:
 
 int sunxi_check_r1_ready(struct sunxi_mmc_host *smc_host, unsigned ms)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(ms);
+	s32 ret = 0;
 
 	dev_info(mmc_dev(smc_host->mmc), "wrd\n");
-	do {
-		if (!(mmc_readl(smc_host, REG_STAS) & SDXC_CARD_DATA_BUSY))
-			break;
-	} while (time_before(jiffies, expire));
-
-	if ((mmc_readl(smc_host, REG_STAS) & SDXC_CARD_DATA_BUSY)) {
-		dev_err(mmc_dev(smc_host->mmc), "wait r1 rdy %d ms timeout\n",
-			ms);
-		return -1;
-	} else {
-		return 0;
-	}
+	ret = mmc_wbclr(smc_host, REG_STAS, SDXC_CARD_DATA_BUSY, ms);
+	if (ret)
+		dev_err(mmc_dev(smc_host->mmc), "wait r1 rdy %d ms timeout\n", ms);
+	return ret;
 }
 
 static int sunxi_check_r1_ready_may_sleep(struct sunxi_mmc_host *smc_host)
@@ -662,19 +626,12 @@ static int sunxi_check_r1_ready_may_sleep(struct sunxi_mmc_host *smc_host)
 	*/
 	unsigned int delay_max_cnt[2] = {0};
 	int i = 0;
-	unsigned long expire = jiffies + msecs_to_jiffies(10);
 	delay_max_cnt[0] = 1000; /*wait interval 10us */
 	/*wait interval 1ms */
 	delay_max_cnt[1] = smc_host->mmc->max_busy_timeout-10-10;
 
 	/*****dead wait******/
-	do {
-		if (!(mmc_readl(smc_host, REG_STAS) & SDXC_CARD_DATA_BUSY))
-			break;
-		cond_resched();
-	} while (time_before(jiffies, expire));
-
-	if (!(mmc_readl(smc_host, REG_STAS) & SDXC_CARD_DATA_BUSY)) {
+	if (!mmc_wbclr(smc_host, REG_STAS, SDXC_CARD_DATA_BUSY, 10)) {
 		dev_dbg(mmc_dev(smc_host->mmc), "dead Wait r1 rdy ok\n");
 		return 0;
 	}
@@ -682,8 +639,7 @@ static int sunxi_check_r1_ready_may_sleep(struct sunxi_mmc_host *smc_host)
 	/*****no dead wait*****/
 	for (i = 0; i < 2; i++, cnt = 0) {
 		do {
-			if (!
-			    (mmc_readl(smc_host, REG_STAS) &
+			if (!(mmc_readl(smc_host, REG_STAS) &
 			     SDXC_CARD_DATA_BUSY)) {
 				dev_dbg(mmc_dev(smc_host->mmc),
 					"cmd%d Wait r1 rdy ok c%d i%d\n",
@@ -923,8 +879,6 @@ retry_giveup:
 s32 sunxi_mmc_update_clk(struct sunxi_mmc_host *host)
 {
 	u32 rval;
-	/*1000ms timeout*/
-	unsigned long expire = jiffies + msecs_to_jiffies(1000);
 	s32 ret = 0;
 
 	/* mask data0 when update clock */
@@ -937,16 +891,11 @@ s32 sunxi_mmc_update_clk(struct sunxi_mmc_host *host)
 	 * rval |= SDXC_VolSwitch;
 	 */
 	mmc_writel(host, REG_CMDR, rval);
-
-	do {
-		rval = mmc_readl(host, REG_CMDR);
-	} while (time_before(jiffies, expire) && (rval & SDXC_START));
-
-	if (rval & SDXC_START) {
+	ret = mmc_wbclr(host, REG_CMDR, SDXC_START, 1000);
+	if (ret)
 		dev_err(mmc_dev(host->mmc),
 			"update clock timeout, fatal error!!!\n");
-		ret = -EIO;
-	}
+
 
 	/* release data0 after update clock */
 	mmc_writel(host, REG_CLKCR,

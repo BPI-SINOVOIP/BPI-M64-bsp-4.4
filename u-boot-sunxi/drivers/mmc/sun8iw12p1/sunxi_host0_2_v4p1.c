@@ -537,7 +537,7 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval = readl(&reg->gctrl);
 	rval &= (~(1U << 10));
 
-    /*  disable ccu clock */
+    /*disable ccu clock*/
     writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
     MMCDBG("disable mclk %x\n", readl(mmchost->mclkbase));
 
@@ -550,7 +550,7 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 		MMCDBG("set %d rgctrl 0x%x to disable ddr mode\n", mmchost->mmc_no, readl(&reg->gctrl));
 	}
 
-    /*  enable ccu clock */ 
+    /*  enable ccu clock */
     writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
     MMCDBG("enable mmc %d mclk %x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 }

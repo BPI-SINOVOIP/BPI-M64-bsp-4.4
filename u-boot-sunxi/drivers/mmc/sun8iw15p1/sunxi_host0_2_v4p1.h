@@ -45,7 +45,8 @@ struct mmc_reg_v4p1 {
 	volatile u32 cbda;         /*  (0x94) */
 	volatile u32 res3[26];  /*  (0x98~0xff) */
 	volatile u32 thldc;		/*  (0x100) Card Threshold Control Register */
-	volatile u32 res4[2];    /*  (0x104~0x10b) */
+	volatile u32 sfc;	/*sample fifo control register */
+	volatile u32 res4[1];    /*  (0x104~0x10b) */
 	volatile u32 dsbd;		/* (0x10c) eMMC4.5 DDR Start Bit Detection Control */
 	volatile u32 res5[12];  /* (0x110~0x13c) */
 	volatile u32 drv_dl;    /* (0x140) drive delay control register*/

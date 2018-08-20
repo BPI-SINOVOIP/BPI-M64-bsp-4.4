@@ -42,7 +42,7 @@
 #define __SUNXI_MMC_H__
 
 #define DRIVER_NAME "sunxi-mmc"
-#define DRIVER_RIVISION "v1.19 2017-12-19 14:01"
+#define DRIVER_RIVISION "v1.22 2018-2-12 14:47"
 #define DRIVER_VERSION "SD/MMC/SDIO Host Controller Driver(" DRIVER_RIVISION ")"
 
 #if defined CONFIG_FPGA_V4_PLATFORM || defined CONFIG_FPGA_V7_PLATFORM
@@ -85,6 +85,41 @@
 	readl((host)->reg_base + SDXC_##reg)
 #define mmc_writel(host, reg, value) \
 	writel((value), (host)->reg_base + SDXC_##reg)
+
+/*
+*wait bit to be clear
+*waring,may sleep
+*/
+#define mmc_wbclr(host, reg_add, bmap, tms)(		\
+{													\
+	unsigned long tick = 0;						\
+	u32 rval = 0;									\
+	s32 ret = 0;									\
+													\
+	tick = jiffies + msecs_to_jiffies(tms) + 1;	\
+	do {											\
+		rval = mmc_readl(host, reg_add);			\
+		if (!(rval & bmap))							\
+			break;									\
+		cond_resched();								\
+	} while (time_before(jiffies, tick));	 		\
+													\
+	if ((rval & bmap)								\
+		&& (mmc_readl(host, reg_add) & bmap)) { 	\
+		dev_err(mmc_dev(host->mmc), 				\
+		"Wait reg(0x%x),bit(0x%lx) %dms timeout\n",	\
+		SDXC_##reg_add, bmap, tms); 				\
+		ret = -EIO; 								\
+	} else {										\
+		ret = 0;									\
+		dev_dbg(mmc_dev(host->mmc),					\
+		"Wait reg(0x%x),bit(0x%lx) %dms ok\n",		\
+		SDXC_##reg_add, bmap, tms);					\
+	}												\
+	ret;											\
+}													\
+)
+
 
 /* global control register bits */
 #define SDXC_SOFT_RESET			BIT(0)

@@ -525,6 +525,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval = readl(&reg->gctrl);
 	rval &= (~(1U << 10));
 
+    /*disable ccu clock*/
+    writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
+    MMCDBG("disable mclk %x\n", readl(mmchost->mclkbase));
+
 	if (on) {
 		rval |= (1U << 10);
 		writel(rval, &reg->gctrl);
@@ -533,6 +537,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 		writel(rval, &reg->gctrl);
 		MMCDBG("set %d rgctrl 0x%x to disable ddr mode\n", mmchost->mmc_no, readl(&reg->gctrl));
 	}
+
+    /*  enable ccu clock */
+    writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
+    MMCDBG("enable mmc %d mclk %x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 }
 
 static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)
@@ -922,17 +930,9 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (cmd->resp_type & MMC_RSP_BUSY)
 		MMCDBG("mmc %d mmc cmd %d check rsp busy\n", mmchost->mmc_no,cmd->cmdidx);
 	if ((cmd->cmdidx == 12)&&!(cmd->flags&MMC_CMD_MANUAL)){
-		MMCDBG("note we don't send stop cmd,only check busy here\n");
-		timeout = 500*1000;
-		do {
-			status = readl(&reg->status);
-			if (!timeout--) {
-				error = -1;
-				MMCINFO("mmc %d cmd12 busy timeout\n",mmchost->mmc_no);
-				goto out;
-			}
-			__usdelay(1);
-		} while (status & (1 << 9));
+		MMCDBG("usually, cmd12 is sent after cmd18/cmd25 automantically.\n");
+		/* don't wait write busy here, because no cmd12 will be sent for cmd24.
+		write busy status will be check after sent cmd25. */
 		return 0;
 	}
 	/*
@@ -1073,13 +1073,13 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		} while (!done);
 	}
 
-	if (cmd->resp_type & MMC_RSP_BUSY) {
+	if ((cmd->resp_type & MMC_RSP_BUSY) || ((data) && (data->flags & MMC_DATA_WRITE))) {
 		if ((cmd->cmdidx == MMC_CMD_ERASE)
 			|| ((cmd->cmdidx == MMC_CMD_SWITCH)
 				&&(((cmd->cmdarg>>16)&0xFF) == EXT_CSD_SANITIZE_START)))
 			timeout = 0x1fffffff;
 		else
-			timeout = 500*1000;
+			timeout = 50000*1000;
 
 		do {
 			status = readl(&reg->status);

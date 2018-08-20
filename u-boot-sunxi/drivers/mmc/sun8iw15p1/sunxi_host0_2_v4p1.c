@@ -147,7 +147,7 @@ static int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
 	}
 
 	//rval = (1U << 31) | (src << 24) | (n << 16) | (m - 1);
-	rval = (src << 24) | (n << 16) | (m - 1);
+	rval = (src << 24) | (n << 8) | (m - 1);
 	writel(rval, mmchost->mclkbase);
 
 	return 0;
@@ -159,7 +159,7 @@ static unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
 	unsigned rval = readl(mmchost->mclkbase);
 
 	m = rval & 0xf;
-	n = (rval>>16) & 0x3;
+	n = (rval>>8) & 0x3;
 	src = (rval>>24) & 0x3;
 
 	if (src == 0)
@@ -278,6 +278,12 @@ static unsigned mmc_config_delay(struct sunxi_mmc_host* mmchost)
 			#endif
 			writel(rval, &reg->ds_dl);
 		}
+
+		rval = readl(&reg->sfc);
+		rval |= 0x1;
+		writel(rval, &reg->sfc);
+		MMCDBG("sfc 0x%x\n", readl(&reg->sfc));
+
 		MMCDBG("%s: spd_md:%d, freq:%d, odly: %d; sdly: %d; dsdly: %d\n", __FUNCTION__, spd_md, freq, odly, sdly, dsdly);
 	}
 
@@ -533,6 +539,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval = readl(&reg->gctrl);
 	rval &= (~(1U << 10));
 
+    /*disable ccu clock*/
+    writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
+    MMCDBG("disable mclk %x\n", readl(mmchost->mclkbase));
+
 	if (on) {
 		rval |= (1U << 10);
 		writel(rval, &reg->gctrl);
@@ -541,6 +551,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 		writel(rval, &reg->gctrl);
 		MMCDBG("set %d rgctrl 0x%x to disable ddr mode\n", mmchost->mmc_no, readl(&reg->gctrl));
 	}
+
+    /*  enable ccu clock */
+    writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
+    MMCDBG("enable mmc %d mclk %x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 }
 
 static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)
@@ -565,21 +579,22 @@ static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)
 		MMCDBG("set %d dsbd 0x%x to disable hs400 mode\n", mmchost->mmc_no, readl(&reg->dsbd));
 	}
 }
-#if 0
+
 static int mmc_calibrate_delay_unit(struct sunxi_mmc_host* mmchost)
 {
  #ifndef FPGA_PLATFORM
 
 	struct mmc_reg_v4p1 *reg = (struct mmc_reg_v4p1 *)mmchost->reg;
 	unsigned rval = 0;
-	unsigned clk[3] = {50*1000*1000, 100*1000*1000, 200*1000*1000};
-	unsigned period[3] = {10*1000, 5*1000, 2500}; //ps, module clk is 2xclk at init phase.
+	unsigned clk[4] = {50*1000*1000, 100*1000*1000, 150*1000*1000, 200*1000*1000};
+	/*ps, module clk is 2xclk at init phase.*/
+	unsigned period[4] = {10*1000, 5*1000, 3333, 2500};
 	unsigned result = 0;
 	int i = 0;
 
 	MMCDBG("start %s, don't access device...\n", __FUNCTION__);
 
-	for (i=0; i<3; i++)
+	for (i = 0; i < 4; i++)
 	{
 		MMCINFO("%d MHz...\n", clk[i]/1000/1000);
 		/* close card clock */
@@ -650,7 +665,6 @@ static int mmc_calibrate_delay_unit(struct sunxi_mmc_host* mmchost)
 #endif	/* FPGA_PLATFORM */
 	return 0;
 }
-#endif
 
 static int mmc_core_init(struct mmc *mmc)
 {
@@ -678,7 +692,8 @@ static int mmc_core_init(struct mmc *mmc)
 	writel(3, &reg->csdc);
 	writel(0xdeb, &reg->dbgc);
 
-	//mmc_calibrate_delay_unit(mmchost);
+	if (mmchost->cfg.platform_caps.cal_delay_unit)
+		mmc_calibrate_delay_unit(mmchost);
 	return 0;
 }
 
@@ -929,7 +944,9 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (cmd->resp_type & MMC_RSP_BUSY)
 		MMCDBG("mmc %d mmc cmd %d check rsp busy\n", mmchost->mmc_no,cmd->cmdidx);
 	if ((cmd->cmdidx == 12)&&!(cmd->flags&MMC_CMD_MANUAL)){
-		MMCDBG("note we don't send stop cmd\n");
+		MMCDBG("usually, cmd12 is sent after cmd18/cmd25 automantically.\n");
+		/* don't wait write busy here, because no cmd12 will be sent for cmd24.
+		write busy status will be check after sent cmd25. */
 		return 0;
 	}
 	/*
@@ -1142,7 +1159,6 @@ out:
 			MMCMSG(mmc, "Read remain data\n");
 			while (readl(&reg->bbcr)<512) {
 				unsigned int tmp = readl(mmchost->database);
-				tmp = tmp;
 				MMCDBG("Read data 0x%x, bbcr 0x%x\n", tmp, readl(&reg->bbcr));
 				__usdelay(1);
 				if (!(timeout--)) {

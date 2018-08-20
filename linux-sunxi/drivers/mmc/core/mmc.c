@@ -585,6 +585,7 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
 	} else {
 		card->ext_csd.data_sector_size = 512;
+
 	}
 
 	/* eMMC v5 or later */
@@ -968,10 +969,22 @@ static int mmc_select_hs(struct mmc_card *card)
 {
 	int err;
 
+#if defined(CONFIG_ARCH_SUN8IW5P1) || defined(CONFIG_ARCH_SUN8IW6P1) \
+				|| defined(CONFIG_ARCH_SUN8IW8P1) || defined(CONFIG_ARCH_SUN8IW7P1)
+			/*Just for eMMC version (for example 4.41) that which don't has generic_cmd6_time register
+			* because for this eMMC on so ic,when switch speed mode,__mmc_switch function will use max timeout
+			* 10min dead wait doing nothing
+			*/
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+			   EXT_CSD_HS_TIMING, EXT_CSD_TIMING_HS,
+			   card->ext_csd.generic_cmd6_time,
+			   true, true, true);
+#else
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			   EXT_CSD_HS_TIMING, EXT_CSD_TIMING_HS,
 			   card->ext_csd.generic_cmd6_time,
 			   true, false, true);
+#endif
 	if (!err)
 		mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
 

@@ -255,27 +255,27 @@ static int mmc_get_sdly_auto_sample(int sdc_no)
 		if (spd_md == HS400)
 		{
 			val = p[spd_md*2 + 0];
-			for (f=0; f<4; f++) {
+			for (f = 0; f < 4; f++) {
 				mmchost->tm4.dsdly[f] = (val>>(f*8)) & 0xFF;
-				//MMCINFO("hs400 dsdly-0 0x%x\n", mmchost->tm4.dsdly[f]);
+				/*MMCINFO("hs400 dsdly-0 0x%x\n", mmchost->tm4.dsdly[f]);*/
 			}
 
 			val = p[spd_md*2 + 1];
-			for (f=4; f<MAX_CLK_FREQ_NUM; f++) {
+			for (f = 4; f < MAX_CLK_FREQ_NUM; f++) {
 				mmchost->tm4.dsdly[f] = (val>>((f-4)*8)) & 0xFF;
-				//MMCINFO("hs400 dsdly-1 0x%x\n", mmchost->tm4.dsdly[f]);
+				/*MMCINFO("hs400 dsdly-1 0x%x\n", mmchost->tm4.dsdly[f]);*/
 			}
 
 			val = p[spd_md*2 + 2 + 0];
-			for (f=0; f<4; f++) {
-				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM +f] = (val>>(f*8)) & 0xFF;
-				//MMCINFO("hs400 sdly-0 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM +f]);
+			for (f = 0; f < 4; f++) {
+				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f] = (val>>(f*8)) & 0xFF;
+				/*MMCINFO("hs400 sdly-0 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);*/
 			}
 
 			val = p[spd_md*2 + 2 + 1];
-			for (f=4; f<MAX_CLK_FREQ_NUM; f++) {
-				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM +f] =(val>>((f-4)*8)) & 0xFF;
-				//MMCINFO("hs400 sdly-1 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM +f]);
+			for (f = 4; f < MAX_CLK_FREQ_NUM; f++) {
+				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f] = (val>>((f-4)*8)) & 0xFF;
+				/*MMCINFO("hs400 sdly-1 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);*/
 			}
 		}
 		else
@@ -283,13 +283,13 @@ static int mmc_get_sdly_auto_sample(int sdc_no)
 			val = p[spd_md*2 + 0];
 			for (f=0; f<4; f++) {
 				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f] = (val>>(f*8)) & 0xFF;
-				//MMCINFO("sdly-0 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);
+				/*MMCINFO("sdly-0 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);*/
 			}
 
 			val = p[spd_md*2 + 1];
 			for (f=4; f<MAX_CLK_FREQ_NUM; f++) {
 				mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f] = (val>>((f-4)*8)) & 0xFF;
-				//MMCINFO("sdly-1 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);
+				/*MMCINFO("sdly-1 0x%x\n", mmchost->tm4.sdly[spd_md*MAX_CLK_FREQ_NUM + f]);*/
 			}
 		}
 
@@ -745,7 +745,7 @@ static void mmc_get_para_from_fex(int sdc_no)
 			}
 		}
 
-		ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_io_1v8", (uint32_t*)(&rval));
+		ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_io_1v8", (uint32_t *)(&rval));
 		if (ret < 0)
         	MMCDBG("get card2_boot_para:sdc_io_1v8 fail\n");
         else {

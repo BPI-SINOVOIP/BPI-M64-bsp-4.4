@@ -909,7 +909,7 @@ int sunxi_mmc_init(int sdc_no)
 
     MMCINFO("mmc driver ver %s\n", DRIVER_VER);
 
-    if ((sdc_no != 2) && (sdc_no != 0)) {
+    if ((sdc_no != 2) && (sdc_no != 0) && (sdc_no != 1)) {
         MMCINFO("sdc_on error, %d\n", sdc_no);
         return -1;
     }
@@ -922,7 +922,7 @@ int sunxi_mmc_init(int sdc_no)
     if ((sdc_no == 2)) {
         host->cfg.platform_caps.odly_spd_freq = &ext_odly_spd_freq[0];
         host->cfg.platform_caps.sdly_spd_freq = &ext_sdly_spd_freq[0];
-    } else if (sdc_no == 0) {
+    } else if ((sdc_no == 0)||(sdc_no == 1)) {
         host->cfg.platform_caps.odly_spd_freq = &ext_odly_spd_freq_sdc0[0];
         host->cfg.platform_caps.sdly_spd_freq = &ext_sdly_spd_freq_sdc0[0];
     }
@@ -938,7 +938,7 @@ int sunxi_mmc_init(int sdc_no)
 
     host->cfg.b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
 
-    if (sdc_no == 0) {
+    if ((sdc_no == 0) || (sdc_no == 1) ) {
         host->cfg.f_min = 400000;
 #ifdef FPGA_PLATFORM
         host->cfg.f_max = 12000000;
@@ -973,8 +973,11 @@ int sunxi_mmc_init(int sdc_no)
     mmc_resource_init(sdc_no);
     mmc_clk_io_onoff(sdc_no, 1, 1);
 
-    host->cfg.host_caps = MMC_MODE_4BIT | MMC_MODE_HS | MMC_MODE_HC \
-                            | MMC_MODE_HS_52MHz | MMC_MODE_DDR_52MHz;
+    if (sdc_no != 1)
+        host->cfg.host_caps = MMC_MODE_4BIT | MMC_MODE_HS | MMC_MODE_HC| MMC_MODE_HS_52MHz | MMC_MODE_DDR_52MHz;
+    else
+        host->cfg.host_caps =  MMC_MODE_HS | MMC_MODE_HC | MMC_MODE_HS_52MHz | MMC_MODE_DDR_52MHz;
+
     if (host->cfg.host_no == 2)
         host->cfg.host_caps |= MMC_MODE_8BIT;
     if (host->cfg.platform_caps.io_is_1v8) {

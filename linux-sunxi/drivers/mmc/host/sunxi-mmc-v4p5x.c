@@ -352,7 +352,7 @@ static void sunxi_mmc_on_off_emce_v4p6x(struct sunxi_mmc_host *host,
 static int __sunxi_mmc_do_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en,
 				     u32 pwr_save, u32 ignore_dat0)
 {
-	unsigned long expire = jiffies + msecs_to_jiffies(250);
+	s32 ret = 0;
 	u32 rval;
 
 	rval = mmc_readl(host, REG_CLKCR);
@@ -373,15 +373,13 @@ static int __sunxi_mmc_do_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en,
 	rval = SDXC_START | SDXC_UPCLK_ONLY | SDXC_WAIT_PRE_OVER;
 	mmc_writel(host, REG_CMDR, rval);
 
-	do {
-		rval = mmc_readl(host, REG_CMDR);
-	} while (time_before(jiffies, expire) && (rval & SDXC_START));
+	ret = mmc_wbclr(host, REG_CMDR, SDXC_START, 250);
 
 	/* clear irq status bits set by the command */
 	mmc_writel(host, REG_RINTR,
 		   mmc_readl(host, REG_RINTR) & ~SDXC_SDIO_INTERRUPT);
 
-	if (rval & SDXC_START) {
+	if (ret) {
 		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
 		return -EIO;
 	}

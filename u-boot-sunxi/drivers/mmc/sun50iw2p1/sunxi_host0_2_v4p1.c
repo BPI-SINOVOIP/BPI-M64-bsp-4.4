@@ -525,6 +525,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval = readl(&reg->gctrl);
 	rval &= (~(1U << 10));
 
+    /*  disable ccu clock */
+    writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
+    MMCDBG("disable mclk %x\n", readl(mmchost->mclkbase));
+
 	if (on) {
 		rval |= (1U << 10);
 		writel(rval, &reg->gctrl);
@@ -533,6 +537,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 		writel(rval, &reg->gctrl);
 		MMCDBG("set %d rgctrl 0x%x to disable ddr mode\n", mmchost->mmc_no, readl(&reg->gctrl));
 	}
+
+    /*  enable ccu clock */
+    writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
+    MMCDBG("enable mmc %d mclk %x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 }
 
 static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)

@@ -1,7 +1,7 @@
 #ifndef __MMC_DEF__
 #define __MMC_DEF__
 
-//#define SUNXI_MMCDBG
+#define SUNXI_MMCDBG
 
 #ifdef SUNXI_MMCDBG
 #define MMCINFO(fmt, args...)	pr_msg("[mmc]: "fmt,##args)//err or info
@@ -16,7 +16,7 @@
 #define MMC_MSG_EN	(1U)
 #define MMCMSG(d, fmt, args...) do {if ((d)->msglevel & MMC_MSG_EN)  printf("[mmc]: "fmt,##args); } while(0)
 
-#define DRIVER_VER  "2017-12-29 15:09:00"
+#define DRIVER_VER  "2018-4-19 17:20:00"
 
 //secure storage relate
 #define MAX_SECURE_STORAGE_MAX_ITEM             32

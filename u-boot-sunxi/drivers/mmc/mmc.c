@@ -2589,6 +2589,7 @@ void mmc_update_config_for_sdly(struct mmc *mmc)
 
 	if (host->cfg.platform_caps.tune_limit_kernel_timing == 0)
 	{
+		MMCINFO("tune_limit_kernel_timing = 0\n");
 		goto __NORMAL_RET;
 	}
 
