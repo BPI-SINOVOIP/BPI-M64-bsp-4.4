@@ -1,5 +1,4 @@
 obj-m			+= ov5640.o
-obj-m			+= ov5640_test.o
 #obj-m			+= ov2710.o
 #obj-m			+= ov2710_mipi.o
 obj-m			+= gc2145.o
