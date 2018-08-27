@@ -7,16 +7,10 @@ MACH="sun50iw1p1"
 BPIMACH="sun50iw1p1 sun8iw7p1 sun8iw11p1"
 BPIMACH="tulip-m64 tulip-noma"
 BOARD="BPI-M64-720P"
-NEWBOARD=$1
 board=
 kernel=
 BOOT_PACK_P=
-MODE=$2
-
-
-
-if [[ $NEWBOARD != "" ]]; then BOARD=$NEWBOARD ; fi
-
+MODE=$1
 
 echo "top dir $T"
 
