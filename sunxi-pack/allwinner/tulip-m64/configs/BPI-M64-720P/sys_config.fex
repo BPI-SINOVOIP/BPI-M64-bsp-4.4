@@ -562,11 +562,11 @@ pwm_positive        = port:PD22<2><0><default><default>
 [pwm0_suspend]
 pwm_positive        = port:PD22<7><0><default><default>
 
-[pwm16]
-s_pwm0_used         = 1
+[spwm0]
+s_pwm_used         = 1
 pwm_positive        = port:PL10<2><0><default><default>
 
-[pwm16_suspend]
+[spwm0_suspend]
 pwm_positive        = port:PL10<7><0><default><default>
 
 
@@ -611,9 +611,9 @@ output_mode = 5
 
 [csi0]
 csi0_used               = 1
-csi0_sensor_list        = 1
+csi0_sensor_list        = 0
 csi0_pck                = port:PE00<2><default><default><default>
-csi0_mck                = port:PE01<0><0><1><0>
+csi0_mck                = port:PE01<2><default><default><default>
 csi0_hsync              = port:PE02<2><default><default><default>
 csi0_vsync              = port:PE03<2><default><default><default>
 csi0_d0                 = port:PE04<2><default><default><default>
@@ -632,13 +632,13 @@ csi0_dev0_used          = 1
 csi0_dev0_mname         = "ov5640"
 csi0_dev0_twi_addr      = 0x78
 csi0_dev0_pos           = "rear"
-csi0_dev0_isp_used      = 1
+csi0_dev0_isp_used      = 0
 csi0_dev0_fmt           = 0
 csi0_dev0_stby_mode     = 0
-csi0_dev0_vflip         = 1
-csi0_dev0_hflip         = 1
+csi0_dev0_vflip         = 0
+csi0_dev0_hflip         = 0
 csi0_dev0_iovdd         = "avdd-csi"
-csi0_dev0_iovdd_vol     = 2800000
+csi0_dev0_iovdd_vol      = 2800000
 csi0_dev0_avdd          = "avdd-csi"
 csi0_dev0_avdd_vol      = 2800000
 csi0_dev0_dvdd          = "dvdd-csi-18"
@@ -646,8 +646,8 @@ csi0_dev0_dvdd_vol      = 1500000
 csi0_dev0_afvdd         = "avdd-csi"
 csi0_dev0_afvdd_vol     = 2800000
 csi0_dev0_power_en      =
-csi0_dev0_reset         = port:PE16<0><0><1><0>
-csi0_dev0_pwdn          = port:PE17<0><0><1><0>
+csi0_dev0_reset         = port:PE16<1><0><1><0>
+csi0_dev0_pwdn          = port:PE17<1><0><1><0>
 csi0_dev0_flash_used    = 0
 csi0_dev0_flash_type    = 2
 csi0_dev0_flash_en      =
@@ -655,8 +655,8 @@ csi0_dev0_flash_mode    =
 csi0_dev0_flvdd		= ""
 csi0_dev0_flvdd_vol		=
 csi0_dev0_af_pwdn       =
-csi0_dev0_act_used      = 1
-csi0_dev0_act_name      = "dw9714_act"
+csi0_dev0_act_used      = 0
+csi0_dev0_act_name      = "ad5820_act"
 csi0_dev0_act_slave     = 0x18
 
 [csi0/csi0_dev1]
@@ -708,7 +708,7 @@ tvin_channel_num    =
 ; de-interlace configuration
 ;--------------------------------------------------------------------------------
 [di]
-di_used             = 1
+di_used             = 0
 
 ;--------------------------------------------------------------------------------
 ;   SDMMC PINS MAPPING                                                          |
@@ -787,9 +787,9 @@ sdc2_emmc_rst      = port:PC16<3><1><3><default>
 cd-gpios	   =
 sunxi-power-save-mode =
 sunxi-dis-signal-vol-sw =
-mmc-ddr-1_8v	   =
-mmc-hs200-1_8v	   =
-mmc-hs400-1_8v	   =
+;mmc-ddr-1_8v	   =
+;mmc-hs200-1_8v	   =
+;mmc-hs400-1_8v	   =
 max-frequency	   = 100000000
 sdc_tm4_sm0_freq0 = 0
 sdc_tm4_sm0_freq1 = 0
@@ -1168,7 +1168,7 @@ sndcodec_used = 0x1
 aif2fmt = 0x3
 aif3fmt = 0x3
 aif2master = 0x1
-linein_detect =
+linein_detect = 
 hp_detect_case = 0x1
 ;------------------------------------------------------------------------------
 [i2s]
@@ -1451,12 +1451,12 @@ regulator8      = "axp803_rtc none"
 regulator9      = "axp803_aldo1 none vdd-csi-led iovdd-csi "
 regulator10     = "axp803_aldo2 none vcc-pl"
 regulator11     = "axp803_aldo3 none vcc-avcc vcc-pll"
-regulator12     = "axp803_dldo1 none vcc-hdmi-33 vcc-dsi-33 vcc-lcd"
+regulator12     = "axp803_dldo1 none vcc-hdmi-33 vcc-dsi-33"
 regulator13     = "axp803_dldo2 none vcc-wifi"
 regulator14     = "axp803_dldo3 none avdd-csi"
 regulator15     = "axp803_dldo4 none vcc-wifi-io vcc-pg"
 regulator16     = "axp803_eldo1 none vcc-cpvdd vcc-pc vcc-emmcvq18"
-regulator17     = "axp803_eldo2 none vcc-mipi vcc-lcd-0"
+regulator17     = "axp803_eldo2 none"
 regulator18     = "axp803_eldo3 none dvdd-csi-18"
 regulator19     = "axp803_fldo1 none vcc-hsic-12 vcc-ephy1"
 regulator20     = "axp803_fldo2 none vdd-cpus";
