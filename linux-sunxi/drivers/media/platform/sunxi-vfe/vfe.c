@@ -1528,8 +1528,11 @@ static int vidioc_enum_framesizes(struct file *file, void *fh,
 	if (ret)
 		vfe_err("enum frame sizes fail!!\n");
 
+	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 	discrete->width = fse.max_width;
 	discrete->height = fse.max_height;
+
+	vfe_dbg(0, "vidioc_enum_framesizes, width=%d, height=%d\n", discrete->width, discrete->height);
 
 	return ret;
 }
