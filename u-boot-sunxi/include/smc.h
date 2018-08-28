@@ -68,4 +68,10 @@ int arm_svc_set_cpu_on(int cpu, uint entry);
 int arm_svc_set_cpu_off(int cpu);
 int arm_svc_set_cpu_wfi(void);
 
+/*for multi cluster*/
+int sunxi_smc_set_cpu_entry(u32 entry, int cpu);
+/*for multi cluster*/
+int sunxi_smc_set_cpu_off(void);
+
+
 #endif

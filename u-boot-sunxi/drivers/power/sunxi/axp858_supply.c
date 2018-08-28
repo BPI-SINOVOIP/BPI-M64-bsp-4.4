@@ -93,8 +93,6 @@ static int axp858_set_vol(char *name, int set_vol, int onoff)
 	axp_contrl_info *p_item = NULL;
 	u8 base_step;
 
-	if (set_vol <= 0)
-		return 0;
 
 	p_item = get_ctrl_info_from_tbl(name);
 	if (!p_item) {
@@ -114,30 +112,33 @@ static int axp858_set_vol(char *name, int set_vol, int onoff)
 	p_item->ctrl_reg_addr,
 	p_item->ctrl_bit_ofs);
 
-	if (set_vol < p_item->min_vol) {
-		set_vol = p_item->min_vol;
-	} else if (set_vol > p_item->max_vol) {
-		set_vol = p_item->max_vol;
-	}
-	if (axp_i2c_read(AXP858_ADDR, p_item->cfg_reg_addr, &reg_value)) {
-		return -1;
-	}
+	if (set_vol >  0) {
 
-	reg_value &= ~p_item->cfg_reg_mask;
-	if (p_item->split1_val && (set_vol > p_item->split1_val)) {
-		if (p_item->split1_val < p_item->min_vol) {
-			axp_err("bad split val(%d) for %s\n", p_item->split1_val, name);
+		if (set_vol < p_item->min_vol) {
+			set_vol = p_item->min_vol;
+		} else if (set_vol > p_item->max_vol) {
+			set_vol = p_item->max_vol;
+		}
+		if (axp_i2c_read(AXP858_ADDR, p_item->cfg_reg_addr, &reg_value)) {
+			return -1;
 		}
 
-		base_step = (p_item->split1_val - p_item->min_vol)/p_item->step0_val;
-		reg_value |= (base_step + (set_vol - p_item->split1_val)/p_item->step1_val);
-	} else {
-		reg_value |= (set_vol - p_item->min_vol)/p_item->step0_val;
-	}
+		reg_value &= ~p_item->cfg_reg_mask;
+		if (p_item->split1_val && (set_vol > p_item->split1_val)) {
+			if (p_item->split1_val < p_item->min_vol) {
+				axp_err("bad split val(%d) for %s\n", p_item->split1_val, name);
+			}
 
-	if (axp_i2c_write(AXP858_ADDR, p_item->cfg_reg_addr, reg_value)) {
-		axp_err("unable to set %s\n", name);
-		return -1;
+			base_step = (p_item->split1_val - p_item->min_vol)/p_item->step0_val;
+			reg_value |= (base_step + (set_vol - p_item->split1_val)/p_item->step1_val);
+		} else {
+			reg_value |= (set_vol - p_item->min_vol)/p_item->step0_val;
+		}
+
+		if (axp_i2c_write(AXP858_ADDR, p_item->cfg_reg_addr, reg_value)) {
+			axp_err("unable to set %s\n", name);
+			return -1;
+		}
 	}
 
 	if (onoff < 0) {

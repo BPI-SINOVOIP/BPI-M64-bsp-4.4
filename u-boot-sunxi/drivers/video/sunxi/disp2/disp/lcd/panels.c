@@ -11,6 +11,8 @@ extern __lcd_panel_t tft720x1280_panel;
 extern __lcd_panel_t S6D7AA0X01_panel;
 extern __lcd_panel_t inet_dsi_panel;
 extern __lcd_panel_t tm_dsi_panel;
+extern __lcd_panel_t ili9881c_dsi_panel;
+extern __lcd_panel_t default_eink;
 
 __lcd_panel_t* panel_array[] = {
 #if defined(CONFIG_ARCH_SUN50IW3P1)
@@ -19,6 +21,7 @@ __lcd_panel_t* panel_array[] = {
 	&vr_ls055t1sx01_panel,
 	&sl008pn21d_panel,
 	&he0801a068_panel,
+	&ili9881c_dsi_panel,
 #else
 #if defined(CONFIG_ARCH_SUN8IW12P1)
 	&ili9341_panel,
@@ -38,6 +41,7 @@ __lcd_panel_t* panel_array[] = {
 	&vr_sharp_panel,
 	&he0801a068_panel,
 	&WilliamLcd_panel,
+	&default_eink,
 	&S070WV20_MIPI_RGB_panel,
 #endif
 #endif /*endif CONFIG_ARCH_SUN50IW3P1 */

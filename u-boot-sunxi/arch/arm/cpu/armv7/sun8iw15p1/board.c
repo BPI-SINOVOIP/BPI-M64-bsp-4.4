@@ -42,6 +42,7 @@
 #include <fdt_support.h>
 #include <sys_config_old.h>
 #include <cputask.h>
+#include "asm/arch/rtc_region.h"
 
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nannd flash, mmc2.
@@ -56,10 +57,8 @@ extern void power_limit_init(void);
 extern int sunxi_arisc_probe(void);
 int power_source_init(void)
 {
-	//int pll_cpux;
+	int pll_cpux;
 	int axp_exist = 0;
-
-	printf("u0:%x\n", readl(0x44000));
 #ifdef CONFIG_SUNXI_ARISC_EXIST
 	sunxi_arisc_probe();
 #endif
@@ -80,22 +79,27 @@ int power_source_init(void)
 
 	if(axp_exist)
 	{
+		gd->pmu_saved_status = axp_probe_pre_sys_mode();
 		axp_set_charge_vol_limit();
 		axp_set_all_limit();
 		axp_set_hardware_poweron_vol();
-		axp_set_power_supply_output();
+		if (axp_set_power_supply_output() < 0) {
+			printf("axp_set_power_supply_output error\n");
+			return -1;
+		}
 		//power_config_gpio_bias();
+		set_sunxi_gpio_power_bias();
 		power_limit_init();
 	}
 
 	sunxi_clock_set_corepll(uboot_spare_head.boot_data.run_clock);
 
-	//pll_cpux = sunxi_clock_get_corepll();
-	//tick_printf("PMU: cpux %d Mhz,AXI=%d Mhz\n", pll_cpux,sunxi_clock_get_axi());
-	//printf("PLL6=%d Mhz,AHB1=%d Mhz, APB1=%dMhz MBus=%dMhz\n", sunxi_clock_get_pll6(),
-	//	sunxi_clock_get_ahb(),
-	//	sunxi_clock_get_apb1(),
-	//	sunxi_clock_get_mbus());
+	pll_cpux = sunxi_clock_get_corepll();
+	tick_printf("PMU: cpux %d Mhz,AXI=%d Mhz\n", pll_cpux, sunxi_clock_get_axi());
+	tick_printf("PLL6=%d Mhz,AHB1=%d Mhz, APB1=%dMhz MBus=%dMhz\n", sunxi_clock_get_pll6(),
+		sunxi_clock_get_ahb(),
+		sunxi_clock_get_apb1(),
+		sunxi_clock_get_mbus());
 
 	return 0;
 }
@@ -193,3 +197,23 @@ int sunxi_set_secure_mode(void)
 	return 0;
 }
 
+int sunxi_set_bootmode_flag(u8 flag)
+{
+	volatile uint reg_val;
+	do {
+		writel(flag, RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+		reg_val = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+	} while ((reg_val & 0xff) != flag);
+
+	return 0;
+}
+
+int sunxi_get_bootmode_flag(void)
+{
+	uint fel_flag;
+
+	/* operation should be same with kernel write rtc */
+	fel_flag = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+
+	return fel_flag;
+}

@@ -33,6 +33,31 @@ static inline int _switch_device(int sel, int type, int mode)
 	return ret;
 }
 
+static inline int _switch_device_config(int sel, struct disp_device_config *config)
+{
+	unsigned long arg[4] = {0};
+	int ret = 0;
+
+	switch (config->type) {
+	case DISP_OUTPUT_TYPE_HDMI:
+	case DISP_OUTPUT_TYPE_TV:
+	case DISP_OUTPUT_TYPE_LCD:
+	case DISP_OUTPUT_TYPE_VGA:
+#ifdef ENABLE_HDMI_CLK_PREPARE
+		if (config->type == DISP_OUTPUT_TYPE_HDMI)
+			enable_hdmi_clock_prepare();
+#endif
+		arg[0] = sel;
+		arg[1] = (unsigned long)config;
+		ret = disp_ioctl(NULL, DISP_DEVICE_SET_CONFIG, (void *)arg);
+		break;
+	default:
+		return -1;
+	}
+	return ret;
+}
+
+
 static inline int _get_hpd_state(int sel, int type)
 {
 	unsigned long arg[4] = {0};

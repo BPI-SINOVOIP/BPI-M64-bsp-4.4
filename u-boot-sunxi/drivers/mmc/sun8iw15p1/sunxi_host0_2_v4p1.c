@@ -79,7 +79,7 @@ static int mmc_update_clk(struct sunxi_mmc_host* mmchost)
 	unsigned int cmd;
 	unsigned timeout = 100000;
 
-	writel(readl(&reg->clkcr)|(0x1<<31), &reg->clkcr);
+	writel(readl(&reg->clkcr)|(0x1U<<31), &reg->clkcr);
 
 	cmd = (1U << 31) | (1 << 21) | (1 << 13);
   	writel(cmd, &reg->cmd);
@@ -91,7 +91,7 @@ static int mmc_update_clk(struct sunxi_mmc_host* mmchost)
 		dumphex32("mmc", (char*)reg, 0x100);
 		return -1;
 	}
-	writel(readl(&reg->clkcr) & (~(0x1<<31)), &reg->clkcr);
+	writel(readl(&reg->clkcr) & (~(0x1U<<31)), &reg->clkcr);
 	writel(readl(&reg->rint), &reg->rint);
 	return 0;
 }
@@ -308,7 +308,7 @@ static int mmc_config_clock_modex(struct sunxi_mmc_host* mmchost, unsigned clk)
 	/* enable timing mode 1 */
 	if (mode == SUNXI_MMC_TIMING_MODE_1) {
 		rval = readl(&reg->ntsr);
-		rval |= (1<<31);
+		rval |= (1U<<31);
 		writel(rval, &reg->ntsr);
 		MMCDBG("mmc %d rntsr 0x%x\n", mmchost->mmc_no, rval);
 	} else
@@ -347,7 +347,7 @@ static int mmc_config_clock_modex(struct sunxi_mmc_host* mmchost, unsigned clk)
 	MMCDBG("get round card clk %d, mod_clk %d\n", mmc->clock, mmchost->mod_clk);
 
 	/* re-enable mclk */
-	writel(readl(mmchost->mclkbase)|(1<<31),mmchost->mclkbase);
+	writel(readl(mmchost->mclkbase)|(1U<<31),mmchost->mclkbase);
 	MMCDBG("mmc %d mclkbase 0x%x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 
 	/*
@@ -413,7 +413,7 @@ static int mmc_config_clock_modex(struct sunxi_mmc_host* mmchost, unsigned clk)
 		writel(rval, &reg->clkcr);
 
 		rval = readl(&reg->ntsr);
-		rval |= (1<<31);
+		rval |= (1U<<31);
 		writel(rval, &reg->ntsr);
 		MMCINFO("mmc %d ntsr 0x%x, ckcr 0x%x\n", mmchost->mmc_no,
 			readl(&reg->ntsr), readl(&reg->clkcr));
@@ -540,7 +540,7 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval &= (~(1U << 10));
 
     /*disable ccu clock*/
-    writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
+    writel(readl(mmchost->mclkbase)&(~(1U<<31)), mmchost->mclkbase);
     MMCDBG("disable mclk %x\n", readl(mmchost->mclkbase));
 
 	if (on) {
@@ -553,7 +553,7 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	}
 
     /*  enable ccu clock */
-    writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
+    writel(readl(mmchost->mclkbase)|(1U<<31), mmchost->mclkbase);
     MMCDBG("enable mmc %d mclk %x\n", mmchost->mmc_no, readl(mmchost->mclkbase));
 }
 
@@ -568,10 +568,10 @@ static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)
 	}
 
 	rval = readl(&reg->dsbd);
-	rval &= (~(1 << 31));
+	rval &= (~(1U << 31));
 
 	if (on) {
-		rval |= (1 << 31);
+		rval |= (1U << 31);
 		writel(rval, &reg->dsbd);
 		MMCDBG("set %d dsbd 0x%x to enable hs400 mode\n", mmchost->mmc_no, readl(&reg->dsbd));
 	} else {
@@ -1158,8 +1158,10 @@ out:
 			timeout = 1000;
 			MMCMSG(mmc, "Read remain data\n");
 			while (readl(&reg->bbcr)<512) {
+#ifdef SUNXI_MMCDBG
 				unsigned int tmp = readl(mmchost->database);
 				MMCDBG("Read data 0x%x, bbcr 0x%x\n", tmp, readl(&reg->bbcr));
+#endif
 				__usdelay(1);
 				if (!(timeout--)) {
 					MMCMSG(mmc, "Read remain data timeout\n");

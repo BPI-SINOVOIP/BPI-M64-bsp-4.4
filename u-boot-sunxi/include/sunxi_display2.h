@@ -216,6 +216,12 @@ enum disp_tv_mode
 	DISP_TV_MOD_1024_768P_60HZ      = 0x42,
 	DISP_TV_MOD_900_540P_60HZ       = 0x43,
 	DISP_TV_MOD_1920_720P_60HZ      = 0x44,
+
+	/*Just for the solution of hdmi edid detailed timiming block*/
+	DISP_HDMI_MOD_DT0                = 0x4a,
+	DISP_HDMI_MOD_DT1                = 0x4b,
+	DISP_HDMI_MOD_DT2                = 0x4c,
+	DISP_HDMI_MOD_DT3                = 0x4d,
 	/*
 	 * vga
 	 * NOTE:macro'value of new solution must between
@@ -233,6 +239,7 @@ enum disp_tv_mode
 	DISP_VGA_MOD_1280_720P_60        = 0x58,
 	DISP_VGA_MOD_1920_1200P_60       = 0x5a,
 	DISP_VGA_MOD_MAX_NUM             = 0x5b,
+
 	DISP_TV_MODE_NUM                 = 0x5c,
 };
 
@@ -664,8 +671,10 @@ struct disp_device_func
 {
 	int (*enable)(void);
 	int (*disable)(void);
+	int (*get_work_mode)(void);
 	int (*set_mode)(u32 mode);
 	int (*mode_support)(u32 mode);
+	int (*get_support_mode)(u32 init_mode);
 	int (*get_HPD_status)(void);
 	int (*get_input_csc)(void);
 	int (*get_video_timing_info)(struct disp_video_timings **video_info);
@@ -708,6 +717,11 @@ enum disp_tv_output
     DISP_TV_YPBPR   = 2,
     DISP_TV_SVIDEO  = 4,
     DISP_VGA = 5,
+};
+
+enum disp_hdmi_work_mode {
+	DISP_HDMI_SEMI_AUTO = 0,
+	DISP_HDMI_FULL_AUTO = 1,
 };
 
 enum tag_DISP_CMD
@@ -757,6 +771,9 @@ enum tag_DISP_CMD
 	DISP_SET_TV_HPD = 0xc5,
 	DISP_HDMI_GET_EDID = 0xc6,
 	DISP_HDMI_GET_HPD_STATUS = 0xc7,
+	DISP_HDMI_GET_SUPPORT_MODE = 0xc9,
+	DISP_HDMI_GET_WORK_MODE = 0xca,
+
 	DISP_TV_GET_HPD_STATUS = 0xc8,
 	//----lcd----
 	DISP_LCD_ENABLE = 0x100,

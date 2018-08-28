@@ -938,7 +938,7 @@ int sunxi_mmc_init(int sdc_no)
 
     host->cfg.b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
 
-    if ((sdc_no == 0) || (sdc_no == 1) ) {
+    if ((sdc_no == 0) || (sdc_no == 1)) {
         host->cfg.f_min = 400000;
 #ifdef FPGA_PLATFORM
         host->cfg.f_max = 12000000;

@@ -82,7 +82,12 @@ int power_source_init(void)
 		axp_set_charge_vol_limit();
 		axp_set_all_limit();
 		axp_set_hardware_poweron_vol();
-		axp_set_power_supply_output();
+		if (axp_set_power_supply_output() < 0) {
+			printf("axp_set_power_supply_output error\n");
+			while (1) {
+				;
+			}
+		}
 		//power_config_gpio_bias();
 		power_limit_init();
 	}

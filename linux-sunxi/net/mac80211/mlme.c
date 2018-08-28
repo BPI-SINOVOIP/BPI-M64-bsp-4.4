@@ -589,7 +589,7 @@ static void ieee80211_add_vht_ie(struct ieee80211_sub_if_data *sdata,
 	 */
 	if (cap & IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE) {
 		bool disable_mu_mimo = false;
-		struct ieee80211_sub_if_data *other;
+		struct ieee80211_sub_if_data *other = NULL;
 
 		list_for_each_entry_rcu(other, &local->interfaces, list) {
 			if (other->flags & IEEE80211_SDATA_MU_MIMO_OWNER) {
@@ -1482,7 +1482,7 @@ static bool ieee80211_powersave_allowed(struct ieee80211_sub_if_data *sdata)
 /* need to hold RTNL or interface lock */
 void ieee80211_recalc_ps(struct ieee80211_local *local)
 {
-	struct ieee80211_sub_if_data *sdata, *found = NULL;
+	struct ieee80211_sub_if_data *sdata = NULL, *found = NULL;
 	int count = 0;
 	int timeout;
 
@@ -3581,7 +3581,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 		return;
 	}
 
-	if (sta && elems.opmode_notif)
+	if (elems.opmode_notif)
 		ieee80211_vht_handle_opmode(sdata, sta, *elems.opmode_notif,
 					    rx_status->band);
 	mutex_unlock(&local->sta_mtx);
@@ -4140,7 +4140,7 @@ void ieee80211_sta_setup_sdata(struct ieee80211_sub_if_data *sdata)
 /* scan finished notification */
 void ieee80211_mlme_notify_scan_completed(struct ieee80211_local *local)
 {
-	struct ieee80211_sub_if_data *sdata;
+	struct ieee80211_sub_if_data *sdata = NULL;
 
 	/* Restart STA timers */
 	rcu_read_lock();
@@ -4490,20 +4490,20 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 		return -EOPNOTSUPP;
 	}
 
-	auth_data = kzalloc(sizeof(*auth_data) + req->sae_data_len +
+	auth_data = kzalloc(sizeof(*auth_data) + req->auth_data_len +
 			    req->ie_len, GFP_KERNEL);
 	if (!auth_data)
 		return -ENOMEM;
 
 	auth_data->bss = req->bss;
 
-	if (req->sae_data_len >= 4) {
-		__le16 *pos = (__le16 *) req->sae_data;
+	if (req->auth_data_len >= 4) {
+		__le16 *pos = (__le16 *)req->auth_data;
 		auth_data->sae_trans = le16_to_cpu(pos[0]);
 		auth_data->sae_status = le16_to_cpu(pos[1]);
-		memcpy(auth_data->data, req->sae_data + 4,
-		       req->sae_data_len - 4);
-		auth_data->data_len += req->sae_data_len - 4;
+		memcpy(auth_data->data, req->auth_data + 4,
+		       req->auth_data_len - 4);
+		auth_data->data_len += req->auth_data_len - 4;
 	}
 
 	if (req->ie && req->ie_len) {

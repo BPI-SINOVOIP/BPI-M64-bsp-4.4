@@ -31,6 +31,17 @@
 
 #define VBLANK_OFF_DELAY	50000
 
+struct device *sunxi_drm_dev;
+
+void sunxi_drm_set_dev(struct device *dev)
+{
+	sunxi_drm_dev = dev;
+}
+
+struct device *sunxi_drm_get_dev(void)
+{
+	return sunxi_drm_dev;
+}
 
 static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 {
@@ -234,6 +245,7 @@ static int sunxi_drm_platform_probe(struct platform_device *pdev)
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(64);
 	sunxi_drm_driver.num_ioctls = ARRAY_SIZE(sunxi_ioctls);
 
+	sunxi_drm_set_dev(&pdev->dev);
 	return drm_platform_init(&sunxi_drm_driver, pdev);
 }
 

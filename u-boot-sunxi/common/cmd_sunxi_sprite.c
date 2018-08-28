@@ -13,7 +13,7 @@ extern int sprite_form_sysrecovery(void);
 extern int sprite_led_init(void);
 extern int sprite_led_exit(int status);
 #ifdef CONFIG_AUTO_UPDATE
-extern int sunxi_card_update_main(void);
+extern int sunxi_auto_update_main(void);
 #endif
 
 int  __attribute__((weak)) sunxi_usb_dev_register(uint dev_name)
@@ -47,11 +47,12 @@ int do_sprite_test(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return ret;
 	}
 #ifdef CONFIG_AUTO_UPDATE
-	else if(uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_UPDATE)
+	else if (uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_UPDATE ||
+		uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE)
 	{
-		printf("run card update\n");
+		printf("run auto update\n");
 		sprite_led_init();
-		ret = sunxi_card_update_main();
+		ret = sunxi_auto_update_main();
 		sprite_led_exit(ret);
 		if (!ret)
 		{

@@ -146,7 +146,7 @@ int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
     if (div > 128) {
         m = 1;
         n = 0;
-        mmcinfo("%s: source clock is too high, clk %d, src %d!!!\n",
+        mmcinfo("%s: source clock is too high, clk %d, src %u!!!\n",
                 __FUNCTION__, clk_hz, sclk_hz);
     } else if (div > 64) {
         n = 3;
@@ -183,9 +183,9 @@ unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
     else if (src == 2) {
         /*todo*/
     } else {
-        mmcinfo("%s: wrong clock source %d\n",__func__, src);
+        mmcinfo("%s: wrong clock source %u\n",__func__, src);
     }
-    mmcdbg("**%s**:src = %d,sclk_hz = %d\n",__func__,src,sclk_hz);
+    mmcdbg("**%s**:src = %u,sclk_hz = %u\n",__func__,src,sclk_hz);
 
     return (sclk_hz / (1<<n) / (m+1) );
 }
@@ -202,15 +202,24 @@ int mmc_resource_init(int sdc_no)
     mmchost->hclkbase = CCMU_HCLKGATE0_BASE;
     mmchost->hclkrst  = CCMU_BUS_SOFT_RST_REG0;
     if (sdc_no == 0)
+    {
         mmchost->mclkbase = CCMU_MMC0_CLK_BASE;
+    }
     else if (sdc_no == 2)
     {
         mmchost->mclkbase = CCMU_MMC2_CLK_BASE;
         mmchost->database = (u32)mmchost->reg + SMC_2_FIFO_OFFS;
     }
     else if (sdc_no == 3)
+    {
         mmchost->mclkbase = CCMU_MMC3_CLK_BASE;
-    else {
+    }
+    else if(sdc_no == 1)
+    {
+	mmchost->mclkbase = CCMU_MMC1_CLK_BASE;
+    }
+    else
+    {
         mmcinfo("Wrong mmc NO.: %d\n", sdc_no);
         return -1;
     }
@@ -221,7 +230,7 @@ int mmc_resource_init(int sdc_no)
 
 int sunxi_mmc_init(int sdc_no, unsigned bus_width, const normal_gpio_cfg *gpio_info, int offset ,void *extra_data)
 {
-    if ((sdc_no == 0) || (sdc_no == 3))
+    if ((sdc_no == 0) || (sdc_no == 3) || (sdc_no == 1) )
         return mmc_v4px_init(sdc_no, bus_width, gpio_info, offset, extra_data);
     else if (sdc_no == 2)
         return mmc_v5p1_init(sdc_no, bus_width, gpio_info, offset, extra_data);
@@ -235,7 +244,7 @@ int sunxi_mmc_init(int sdc_no, unsigned bus_width, const normal_gpio_cfg *gpio_i
 
 int sunxi_mmc_exit(int sdc_no, const normal_gpio_cfg *gpio_info, int offset)
 {
-    if ((sdc_no == 0) || (sdc_no == 3))
+    if ((sdc_no == 0) || (sdc_no == 3) || (sdc_no == 1))
         return mmc_v4px_exit(sdc_no,gpio_info,offset);
     else if (sdc_no == 2)
         return mmc_v5p1_exit(sdc_no,gpio_info,offset);

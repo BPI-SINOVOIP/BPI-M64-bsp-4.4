@@ -21,7 +21,7 @@
 #define TU_SIZE 32
 #define STA_DLY 5
 #define MAX_LANE_NUM 4
-#define TRAIN_CNT 20
+#define TRAIN_CNT 4
 
 /* SRAM TEST */
 /*#define SRAM_TEST*/

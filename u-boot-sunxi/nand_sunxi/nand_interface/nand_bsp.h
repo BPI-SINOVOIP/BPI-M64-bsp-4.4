@@ -138,6 +138,7 @@ extern int nand_physic_read_page(unsigned int chip,unsigned int block,unsigned i
 extern __u32 nand_get_nand_version(void);
 extern __s32 nand_get_param(boot_nand_para_t * nand_param);
 extern __s32 NAND_GetFlashInfo(boot_flash_info_t *info);
+extern __s32 NAND_GetBootflag(__u32 flag);
 
 extern  int show_spare(int flag);
 extern  int nand_write_nboot_data(unsigned char *buf,unsigned int len);

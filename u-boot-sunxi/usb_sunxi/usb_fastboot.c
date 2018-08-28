@@ -37,6 +37,7 @@
 #include "../sprite/sprite_download.h"
 #include <private_toc.h>
 #include <securestorage.h>
+#include <sprite.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -511,10 +512,14 @@ static int __erase_part(char *name)
 	start            = sunxi_partition_get_offset_byname(name);
 	unerased_sectors = sunxi_partition_get_size_byname(name);
 
+	printf("********* starting to erase %s partition, this may take some time, please wait for minutes ***********\n", name);
 	if (memcmp(name, "UDISK", strlen("UDISK")) == 0) {
-		unerased_sectors = unerased_sectors/8;
-	} else if (memcmp(name, "cache", strlen("cache")) == 0)
-		unerased_sectors = unerased_sectors/8;
+		if (unerased_sectors >= 16 * 1024 * 1024 / 512)
+			unerased_sectors = 16 * 1024 * 1024 / 512;
+	} else if (memcmp(name, "cache", strlen("cache")) == 0) {
+		if (unerased_sectors >= 16 * 1024 * 1024 / 512)
+			unerased_sectors = 16 * 1024 * 1024 / 512;
+	}
 
 	if((!start) || (!unerased_sectors))
 	{
@@ -561,6 +566,63 @@ static int __erase_part(char *name)
 
 	return 0;
 }
+
+/*
+*******************************************************************************
+*                     erase_userdata
+*
+* Description:
+*    for fastboot oem unlock or lock to erase UDISK partition
+*
+* Parameters:
+*    void
+*
+* Return value:
+*    int
+*
+* note:
+*    void
+*
+*******************************************************************************
+*/
+static int erase_userdata(void)
+{
+	void *addr  = (void *)FASTBOOT_ERASE_BUFFER;
+	u32   start, unerased_sectors;
+	u32   nblock = FASTBOOT_ERASE_BUFFER_SIZE/512;
+
+	start            = sunxi_partition_get_offset_byname("UDISK");
+	unerased_sectors = sunxi_partition_get_size_byname("UDISK");
+
+	printf("***start to erase UDISK partition, this may take some time***\n");
+	if (unerased_sectors >= 16 * 1024 * 1024 / 512)
+		unerased_sectors = 16 * 1024 * 1024 / 512;
+
+	if ((!start) || (!unerased_sectors)) {
+		printf("sunxi fastboot erase FAIL: partition UDISK does not exist\n");
+		return -1;
+	}
+
+	memset(addr, 0xff, FASTBOOT_ERASE_BUFFER_SIZE);
+	while (unerased_sectors >= nblock) {
+		if (!sunxi_flash_write(start, nblock, addr)) {
+			printf("sunxi fastboot erase FAIL: failed to erase partition UDISK \n");
+			return -1;
+		}
+		start += nblock;
+		unerased_sectors -= nblock;
+	}
+	if (unerased_sectors) {
+		if (!sunxi_flash_write(start, unerased_sectors, addr)) {
+			printf("sunxi fastboot erase FAIL: failed to erase partition UDISK \n");
+			return -1;
+		}
+	}
+
+	printf("sunxi fastboot: partition 'UDISK' erased\n");
+	return 0;
+}
+
 /*
 *******************************************************************************
 *                     __flash_to_part
@@ -607,6 +669,68 @@ static void __flash_to_uboot(void)
 	}
 	__sunxi_fastboot_send_status(response, strlen(response));
 	return ;
+}
+
+static void __flash_to_mbr(void)
+{
+	char  response[68];
+	int ret = -1;
+
+	int storage_type = 0;
+	int mbr_num = SUNXI_MBR_COPY_NUM;
+
+	storage_type = get_boot_storage_type();
+
+	if(storage_type == STORAGE_NOR)
+	{
+		mbr_num = 1;
+	}
+
+#ifdef CONFIG_SUNXI_GPT
+	printf("sunxi fastboot: The platform support GPT!\n");
+	printf("                The mbr will convert to GPT!\n");
+
+	ret = download_standard_gpt(trans_data.base_recv_buffer,(SUNXI_MBR_SIZE * mbr_num),storage_type);
+
+	if(ret)
+	{
+		printf("sunxi fastboot error: write GPT to flash failed\n");
+		sprintf(response, "FAILdownload: write GPT to flash failed\n");
+		__sunxi_fastboot_send_status(response, strlen(response));
+		return ;
+	}
+	else
+	{
+		sprintf(response, "OKAY\n");
+		__sunxi_fastboot_send_status(response, strlen(response));
+		return ;
+	}
+#else
+	ret = sunxi_sprite_verify_mbr(trans_data.base_recv_buffer);
+
+	if(ret)
+	{
+		printf("sunxi fastboot error: mbr verify failed,the file is not mbr file\n");
+		sprintf(response, "FAILdownload: mbr verify failed,the file is not mbr file\n");
+		__sunxi_fastboot_send_status(response, strlen(response));
+		return ;
+	}
+	else
+	{
+		if(sunxi_sprite_write(0, (SUNXI_MBR_SIZE * mbr_num)/512, trans_data.base_recv_buffer) == ((SUNXI_MBR_SIZE * mbr_num)/512))
+		{
+			printf("sunxi fastboot: write mbr to flash ok\n");
+			sprintf(response, "OKAY\n");
+			__sunxi_fastboot_send_status(response, strlen(response));
+		}
+		else
+		{
+			printf("sunxi fastboot error: write mbr to flash failed\n");
+			sprintf(response, "FAILdownload: write mbr to flash failed\n");
+			__sunxi_fastboot_send_status(response, strlen(response));
+		}
+	}
+#endif
 }
 
 static int __flash_to_part(char *name)
@@ -666,7 +790,7 @@ static int __flash_to_part(char *name)
 		    data_sectors = (trans_data.try_to_recv + 511)/512;
 		    if(data_sectors > part_sectors)
 		    {
-		    	printf("sunxi fastboot download FAIL: partition %s size 0x%x is smaller than data size 0x%x\n", name, trans_data.act_recv, data_sectors * 512);
+				printf("sunxi fastboot download FAIL: partition %s size 0x%x is smaller than data size 0x%x\n", name, part_sectors * 512, data_sectors * 512);
 				sprintf(response, "FAILdownload: partition size < data size");
 
 				__sunxi_fastboot_send_status(response, strlen(response));
@@ -915,6 +1039,7 @@ int sunxi_oem_op_lock(int request_flag, char *info)
 {
 	char local_info[64];
 	char *info_p;
+	int ret;
 
 	if (info == NULL) {
 		memset(local_info, 0, 64);
@@ -927,41 +1052,38 @@ int sunxi_oem_op_lock(int request_flag, char *info)
 	case SUNXI_LOCKED:
 		if (gd->lockflag == SUNXI_LOCKED) {
 			strcpy(info_p, "system is already locked");
-			printf("%s\n", info_p);
-			return -2;
-		} else if (!__erase_part("UDISK")) {
+			ret = -1;
+		} else if (!erase_userdata()) {
 			gd->lockflag = SUNXI_LOCKED;
 			strcpy(info_p, "Lock device successfully!");
+			ret = 0;
 		} else {
 			strcpy(info_p, "the lock flag is invalid");
-			printf("%s\n", info_p);
-			return -3;
+			ret = -2;
 		}
 
 		break;
 	case SUNXI_UNLOCKED:
 		if (gd->lockflag == SUNXI_UNLOCKED) {
 			strcpy(info_p, "system is already unlocked");
-			printf("%s\n", info_p);
-			return -4;
-		} else if (!__erase_part("UDISK")) {
+			ret = -3;
+		} else if (!erase_userdata()) {
 			gd->lockflag = SUNXI_UNLOCKED;
 			strcpy(info_p, "Unlock device successfully!");
+			ret = 0;
 		} else {
 			strcpy(info_p, "the unlock flag is invalid");
-			printf("%s\n", info_p);
-			return -5;
+			ret = -4;
 		}
 
 		break;
 
 	default:
 		strcpy(info_p, "the requst is invalid");
-		printf("%s\n", info_p);
-		return -6;
+		ret = -5;
 	}
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -994,7 +1116,13 @@ static int sunxi_fastboot_write_status_flag(char *name)
 		printf("save  %s flag to secure storage failed\n", name);
 		return -1;
 	}
-
+	/* save device unlock flag for boot_verify to judge if the device ever unlock */
+	if (memcmp(name, "unlocked", strlen("unlocked")) == 0) {
+		if (sunxi_secure_object_write("device_unlock", "unlock", strlen("unlock"))) {
+			printf("save device_unlock flag to secure storage failed\n");
+			return -1;
+		};
+	}
 	printf("save  %s flag to secure storage success\n", name);
 	sunxi_secure_storage_exit();
 
@@ -1065,6 +1193,8 @@ static void __oem_operation(char *operation)
 	memset(lock_info, 0, 64);
 	memset(response, 0, 68);
 
+	lockflag = 0;
+
 	if(!strncmp(operation, "lock", 4))
 	{
 		if ((gd->securemode == SUNXI_SECURE_MODE_WITH_SECUREOS) || (gd->securemode == SUNXI_SECURE_MODE_NO_SECUREOS)) {
@@ -1073,7 +1203,6 @@ static void __oem_operation(char *operation)
 			sunxi_fastboot_write_status_flag("locked");
 		} else {
 			printf("the system is normal\n");
-			return ;
 		}
 	}
 	else if(!strncmp(operation, "unlock", 6))
@@ -1088,7 +1217,6 @@ static void __oem_operation(char *operation)
 			sunxi_fastboot_write_status_flag("unlocked");
 		} else {
 			printf("the system is normal\n");
-			return ;
 		}
 	}
 	else
@@ -1160,7 +1288,7 @@ static void __continue(void)
 
 	sunxi_usb_exit();
 
-	if( storage_type == STORAGE_EMMC || storage_type == STORAGE_SD)
+	if( storage_type == STORAGE_EMMC || storage_type == STORAGE_SD || storage_type == STORAGE_SD1)
 	{
 		setenv("bootcmd", "run setargs_mmc boot_normal");
 	}
@@ -1470,16 +1598,25 @@ static void __limited_fastboot(void)
 */
 int sunxi_fastboot_status_read(void)
 {
+	char d_buffer[32];
 	char buffer[512];
+	int  d_data_len;
 	int  data_len;
 	int  ret;
 
 	/* read locked or unlocked flag in secure storage */
 	memset(buffer, 0x00, sizeof(buffer));
+	memset(d_buffer, 0x00, sizeof(d_buffer));
 	if (sunxi_secure_storage_init()) {
 		printf("secure storage init fail\n");
 	} else {
+		ret = sunxi_secure_object_read("device_unlock", d_buffer, 32, &d_data_len);
 		ret = sunxi_secure_object_read("fastboot_status_flag", buffer, 512, &data_len);
+
+		if ((!ret) && (!strcmp(buffer, "locked")) && (!strcmp(d_buffer, "unlock"))) {
+			setenv("verifiedbootstate", "yellow");
+		}
+
 		if (ret) {
 			printf("sunxi secure storage has no flag\n");
 			gd->lockflag = SUNXI_LOCKED;
@@ -1577,9 +1714,17 @@ static int sunxi_fastboot_state_loop(void  *buffer)
 					break;
 				}
 				if(memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6),"u-boot",6) == 0)
+				{
 					__flash_to_uboot();
+				}
+				else if(memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6),"mbr",3) == 0)
+				{
+					__flash_to_mbr();
+				}
 				else
+				{
 					__flash_to_part((char *)(sunxi_ubuf->rx_req_buffer + 6));
+				}
 			}
 			else if(memcmp(sunxi_ubuf->rx_req_buffer, "download:", 9) == 0)
 			{

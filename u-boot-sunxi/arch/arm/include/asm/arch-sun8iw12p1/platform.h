@@ -104,6 +104,8 @@
 #define RVBARADDR0_L                        (SUNXI_CPUX_CFG_BASE+0x40)
 #define RVBARADDR0_H                        (SUNXI_CPUX_CFG_BASE+0x44)
 
+#define RES_CAL_CTRL_REG                    (SUNXI_RPRCM_BASE + 0x310)
+
 #define GPIO_BIAS_MAX_LEN (32)
 #define GPIO_BIAS_MAIN_NAME "gpio_bias"
 #define GPIO_POW_MODE_REG (0x0340)

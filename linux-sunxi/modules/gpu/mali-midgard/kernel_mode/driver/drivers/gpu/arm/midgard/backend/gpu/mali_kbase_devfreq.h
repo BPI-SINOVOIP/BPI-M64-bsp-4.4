@@ -21,4 +21,9 @@
 int kbase_devfreq_init(struct kbase_device *kbdev);
 void kbase_devfreq_term(struct kbase_device *kbdev);
 
+#ifdef CONFIG_ARCH_SUNXI
+int sunxi_update_vf(unsigned long *freq, unsigned long *voltage);
+extern int revise_current_level(void);
+#endif /* CONFIG_ARCH_SUNXI */
+
 #endif /* _BASE_DEVFREQ_H_ */

@@ -69,6 +69,8 @@ extern int board_display_framebuffer_set(int width, int height, int bitcount, vo
 extern int board_display_framebuffer_change(void *buffer);
 extern void board_display_set_alpha_mode(int mode);
 extern int board_display_device_open(void);
+extern int board_display_eink_update(char *name, __u32 update_mode);
+/* extern int board_display_eink_panel_release(void); */
 extern int borad_display_get_screen_width(void);
 extern int borad_display_get_screen_height(void);
 extern void board_display_setenv(char *data);
@@ -87,6 +89,7 @@ extern void usb_detect_for_charge(int detect_time);
 extern int sunxi_flash_handle_init(void);
 
 extern int sunxi_bmp_display(char *name);
+extern int sunxi_Eink_Get_bmp_buffer(char *name, char *bmp_gray_buf);
 
 extern int drv_disp_init(void);
 extern int drv_disp_exit(void);
@@ -96,6 +99,7 @@ extern long disp_ioctl(void *hd, unsigned int cmd, void *arg);
 extern int board_init(void);
 extern void dram_init_banksize(void);
 extern int dram_init(void);
+extern int sunxi_bmp_load(char *name);
 
 extern int change_to_debug_mode(void);
 #ifdef CONFIG_GENERIC_MMC

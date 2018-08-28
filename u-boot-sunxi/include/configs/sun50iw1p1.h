@@ -134,7 +134,7 @@
 #define CONFIG_SUNXI_ARISC_EXIST
 #define CONFIG_SUNXI_MULITCORE_BOOT
 //#define CONFIG_SUNXI_HDCP_IN_SECURESTORAGE
-//#define CONFIG_GPT_SUPPORT
+#define CONFIG_GPT_SUPPORT
 #ifdef CONFIG_GPT_SUPPORT
 #define CONFIG_SUNXI_GPT
 #define CONFIG_EFI_PARTITION
@@ -147,6 +147,7 @@
 #define CONFIG_OPTEE25
 #define CONFIG_WIDEVINE_KEY_INSTALL
 /* #define CONFIG_DETECT_RTC_BOOT_MODE */
+#define CONFIG_KEYMASTER_KEY_INSTALL
 
 /*********************************************************************
  *uboot cmd support
@@ -165,7 +166,6 @@
 #define CONFIG_CMD_SUNXI_MEMTEST
 #endif
 
-#define CONFIG_CMD_ECHO
 #define CONFIG_CMD_FAT			/* with this we can access bootfs in nand */
 #define CONFIG_CMD_BOOTA		/* boot android image */
 #define CONFIG_CMD_RUN			/* run a command */
@@ -306,7 +306,24 @@
 /* get param from secure storage to cmdline */
 #define CONFIG_SUNXI_USER_KEY
 
-#define CONFIG_BOARD_ID_GPIO
-#define CONFIG_BOARD_ID_GPIO_MAX_NUM  2
+//#define CONFIG_BOARD_ID_GPIO
+//#define CONFIG_BOARD_ID_GPIO_MAX_NUM  2
+
+#ifndef CONFIG_BOARD_ID_GPIO
+#define CONFIG_SUNXI_MOZART
+#endif
+
+//here define the path where to find the boardid
+#ifdef CONFIG_SUNXI_MOZART
+#define CONFIG_SUNXI_MOZART_IFNAME "sunxi_flash"
+#define CONFIG_SUNXI_MOZART_PARTITION "private"
+#define CONFIG_SUNXI_MOZART_FILENAME "ULI/factory/board_id.txt"
+#define CONFIG_SUNXI_MOZART_BOARDID_POST 9
+#endif
+
+//here difine the dtb count
+#ifdef CONFIG_SUNXI_MOZART
+#define CONFIG_SUNXI_MOZART_DTB_COUNT 2
+#endif
 
 #endif /* __CONFIG_H */

@@ -1,6 +1,8 @@
 #ifndef __DEV_MANAGE_H__
 #define __DEV_MANAGE_H__
+#include <sunxi_display2.h>
 
+/*
 enum {
 	DISP_OUTPUT_TYPE_NONE   = 0,
 	DISP_OUTPUT_TYPE_LCD    = 1,
@@ -38,6 +40,6 @@ enum {
 	DISP_TV_MOD_3840_2160P_25HZ     = 0x1d,
 	DISP_TV_MOD_3840_2160P_24HZ     = 0x1e,
 	DISP_TV_MODE_NUM                = 0x1f,
-};
+};*/
 
 #endif /* #ifndef __DEV_MANAGE_H_ */

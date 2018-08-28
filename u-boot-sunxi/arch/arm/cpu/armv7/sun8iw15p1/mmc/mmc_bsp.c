@@ -361,7 +361,10 @@ static int mmc_get_timing_cfg_tm4(u32 sdc_no, u32 spd_md_id, u32 freq_id, u8 *od
 				}
 			}
 
-			*odly = 0;
+			if (spd_md_id == HSDDR52_DDR50)
+				*odly = 1;
+			else
+				*odly = 0;
 			*sdly = dly;
 			mmcdbg("%s: %d %d 0x%x 0x%x, odly %d sdly %d\n", __FUNCTION__, spd_md_id, freq_id, spd_md_sdly, dly, *odly, *sdly);
 		}
@@ -431,7 +434,7 @@ static int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
 	if (div > 128) {
 		m = 1;
 		n = 0;
-		mmcinfo("%s: source clock is too high, clk %d, src %d!!!\n",
+		mmcinfo("%s: source clock is too high, clk %d, src %u!!!\n",
 			__FUNCTION__, clk_hz, sclk_hz);
 	} else if (div > 64) {
 		n = 3;
@@ -448,7 +451,7 @@ static int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
 	}
 
 	//rval = (1U << 31) | (src << 24) | (n << 16) | (m - 1);
-	rval = (src << 24) | (n << 16) | (m - 1);
+	rval = (src << 24) | (n << 8) | (m - 1);
 	writel(rval, mmchost->mclkbase);
 
 	return 0;
@@ -460,7 +463,7 @@ static unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
 	unsigned rval = readl(mmchost->mclkbase);
 
 	m = rval & 0xf;
-	n = (rval>>16) & 0x3;
+	n = (rval>>8) & 0x3;
 	src = (rval>>24) & 0x3;
 
 	if (src == 0)
@@ -470,7 +473,7 @@ static unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
 	else if (src == 2) {
 		/*todo*/
 	} else {
-		mmcinfo("%s: wrong clock source %d\n",__func__, src);
+		mmcinfo("%s: wrong clock source %u\n",__func__, src);
 	}
 
 	return (sclk_hz / (1<<n) / (m+1) );
@@ -574,7 +577,13 @@ static unsigned mmc_config_delay(struct sunxi_mmc_host* mmchost, u32 spd_md_id, 
 			#endif
 			writel(rval, &mmchost->reg->ds_dl);
 		}
-		mmcdbg("%s: spd_md:%d, freq:%d, odly: %d; sdly: %d; dsdly: %d\n", __FUNCTION__, spd_md, freq, odly, sdly, dsdly);
+
+		rval = readl(&mmchost->reg->sfc);
+		rval |= 0x1;
+		writel(rval, &mmchost->reg->sfc);
+		mmcdbg("sfc 0x%x\n", readl(&mmchost->reg->sfc));
+
+		mmcdbg("%s: spd_md:%u, freq:%u, odly: %d; sdly: %d; dsdly: %d\n", __FUNCTION__, spd_md, freq, odly, sdly, dsdly);
 	}
 
 OUT:
@@ -632,7 +641,7 @@ static int mmc_config_clock_modex(struct sunxi_mmc_host* mmchost, unsigned clk)
 			mmc->clock = mmc_get_mclk(mmchost) / 2;
 	}
 	mmchost->clock = mmc->clock; /* bankup current clock frequency at host */
-	mmcdbg("get round card clk %d, mod_clk %d\n", mmc->clock, mmchost->mod_clk);
+	mmcdbg("get round card clk %u, mod_clk %d\n", mmc->clock, mmchost->mod_clk);
 
 	/* re-enable mclk */
 	writel(readl(mmchost->mclkbase)|(1<<31),mmchost->mclkbase);
@@ -782,6 +791,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 	rval = readl(&mmchost->reg->gctrl);
 	rval &= (~(1U << 10));
 
+    /*  disable ccu clock */
+    writel(readl(mmchost->mclkbase)&(~(1<<31)), mmchost->mclkbase);
+
+
 	if (on) {
 		rval |= (1U << 10);
 		writel(rval, &mmchost->reg->gctrl);
@@ -790,6 +803,10 @@ static void mmc_ddr_mode_onoff(struct mmc *mmc, int on)
 		writel(rval, &mmchost->reg->gctrl);
 		mmcdbg("set %d rgctrl 0x%x to disable ddr mode\n", mmchost->mmc_no, readl(&mmchost->reg->gctrl));
 	}
+
+    /*  enable ccu clock */
+    writel(readl(mmchost->mclkbase)|(1<<31), mmchost->mclkbase);
+
 }
 
 static void mmc_hs400_mode_onoff(struct mmc *mmc, int on)
@@ -820,7 +837,7 @@ static void mmc_set_ios(struct mmc *mmc)
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 
 
-	mmcdbg("mmc %d ios: bus: %d, clock: %d\n",mmchost ->mmc_no, mmc->bus_width, mmc->clock);
+	mmcdbg("mmc %d ios: bus: %u, clock: %u\n",mmchost ->mmc_no, mmc->bus_width, mmc->clock);
 
 	if (mmc->clock && mmc_config_clock(mmc, mmc->clock)) {
 	    mmcinfo("[mmc]: " "*** update clock failed\n");
@@ -985,7 +1002,7 @@ static int mmc_trans_data_by_dma(struct mmc *mmc, struct mmc_data *data)
 		} else {
 			pdes[des_idx].buf_addr_ptr2 = (u32)&pdes[des_idx+1];
 		}
-		mmcdbg("mmc %d frag %d, remain %d, des[%d](%x): "
+		mmcdbg("mmc %d frag %u, remain %u, des[%u](%x): "
 			"[0] = %x, [1] = %x, [2] = %x, [3] = %x\n",mmchost ->mmc_no,
 			i, remain, des_idx, (u32)&pdes[des_idx],
 			(u32)((u32*)&pdes[des_idx])[0], (u32)((u32*)&pdes[des_idx])[1],
@@ -1041,7 +1058,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		return -1;
 	}
 	if (cmd->resp_type & MMC_RSP_BUSY)
-		mmcdbg("mmc %d cmd %d check rsp busy\n",mmchost ->mmc_no, cmd->cmdidx);
+		mmcdbg("mmc %d cmd %u check rsp busy\n",mmchost ->mmc_no, cmd->cmdidx);
 	if (cmd->cmdidx == 12)
 		return 0;
 	/*
@@ -1084,7 +1101,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		writel(data->blocks * data->blocksize, &mmchost->reg->bytecnt);
 	}
 
-	mmcdbg("mmc %d, cmd %d(0x%x), arg 0x%x\n", mmchost->mmc_no, cmd->cmdidx, cmdval|cmd->cmdidx, cmd->cmdarg);
+	mmcdbg("mmc %d, cmd %u(0x%x), arg 0x%x\n", mmchost->mmc_no, cmd->cmdidx, cmdval|cmd->cmdidx, cmd->cmdarg);
 	writel(cmd->cmdarg, &mmchost->reg->arg);
 	if (!data)
 		writel(cmdval|cmd->cmdidx, &mmchost->reg->cmd);
@@ -1097,7 +1114,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (data) {
 		int ret = 0;
 		bytecnt = data->blocksize * data->blocks;
-		mmcdbg("mmc %d trans data %d bytes\n",mmchost ->mmc_no, bytecnt);
+		mmcdbg("mmc %d trans data %u bytes\n",mmchost ->mmc_no, bytecnt);
 #ifdef MMC_TRANS_BY_DMA
 		if (bytecnt > 512) {
 #else
@@ -1128,7 +1145,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 			error = status & 0xbbc2;
 			if(!error)
 				error = 0xffffffff;//represet software timeout
-			mmcinfo("mmc %d cmd %d timeout, err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
+			mmcinfo("mmc %d cmd %u timeout, err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
 			goto out;
 		}
 	} while (!(status&0x4));
@@ -1219,7 +1236,7 @@ out:
 		writel(0x7, &mmchost->reg->gctrl);
 		while(readl(&mmchost->reg->gctrl)&0x7);
 		mmc_update_clk(mmc);
-		mmcinfo("mmc %d cmd %d err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
+		mmcinfo("mmc %d cmd %u err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
 	}
 	writel(0xffffffff, &mmchost->reg->rint);
 
@@ -1258,6 +1275,10 @@ void mmc_update_host_caps(int sdc_no)
 		mmc->f_max_ddr = ext_f_max * 1000000;
 	if (ext_f_max && ((mmc->f_max/1000000) > ext_f_max))
 		mmc->f_max = ext_f_max * 1000000;
+	/*set bias according to uboot burnin info*/
+	if (priv_info->ext_para1 & EXT_PARA1_1V8_GPIO_BIAS)
+		writel(readl(SUNXI_PIO_BASE + GPIO_POW_MODE_REG)
+		| (1<<2), SUNXI_PIO_BASE + GPIO_POW_MODE_REG);
 #endif
 }
 
@@ -1307,7 +1328,8 @@ int sunxi_mmc_init(int sdc_no, unsigned bus_width, const normal_gpio_cfg *gpio_i
 	}
 
 	mmc_clk_io_onoff(sdc_no, 1, gpio_info, offset);
-	ret = mmc_register(sdc_no, mmc);
+    mmcinfo("mmc %d bias %x\n", sdc_no, readl(SUNXI_PIO_BASE + GPIO_POW_MODE_REG));
+    ret = mmc_register(sdc_no, mmc);
 	if (ret < 0){
 		mmcinfo("mmc %d register failed\n",sdc_no);
 		return -1;

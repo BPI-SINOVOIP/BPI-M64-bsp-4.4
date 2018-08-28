@@ -41,3 +41,5 @@ obj-$(CONFIG_SUNXI_AXP858) += sunxi/axp858_supply.o
 obj-$(CONFIG_SUNXI_AXP2585) += sunxi/axp2585.o
 obj-$(CONFIG_SUNXI_AXP2585) += sunxi/axp2585_supply.o
 endif
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_POWER_DIR) += -finstrument-functions

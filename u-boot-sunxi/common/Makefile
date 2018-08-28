@@ -286,4 +286,8 @@ obj-$(CONFIG_CMD_SUNXI_PMU) += cmd_sunxi_pmu.o
 obj-$(CONFIG_CMD_SUNXI_SYSCFG) += cmd_sunxi_sysconfig.o
 obj-$(CONFIG_CMD_ANDROID_MISC) += cmd_android_misc.o
 obj-y += cmd_svudata.o
+obj-$(CONFIG_SUNXI_MOZART) += cmd_boot0_extend.o
 CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
+
+ccflags-$(CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE) += -finstrument-functions-exclude-file-list=console.c
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_COMMON_DIR) += -finstrument-functions

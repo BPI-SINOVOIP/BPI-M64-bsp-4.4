@@ -30,6 +30,279 @@ struct disp_al_private_data {
 };
 
 static struct disp_al_private_data al_priv;
+#ifdef SUPPORT_WB	/*DE write back function, just for eink 32bpp to 8bpp*/
+int disp_al_set_rtmx_base(u32 disp, unsigned int base)
+{
+	return rtmx_set_base(base);
+}
+
+int disp_al_rtmx_init(u32 disp, unsigned int addr0, unsigned int addr1,
+			unsigned int addr2, unsigned int w, unsigned int h,
+			unsigned int outw, unsigned int outh, unsigned int fmt)
+{
+	rt_mixer_init(disp, addr0, addr1, addr2, w, h, outw, outh, fmt);
+	return 0;
+}
+
+int disp_al_rtmx_set_addr(u32 disp, unsigned int addr0)
+{
+	rt_mixer_set_addr(disp, addr0);
+	return 0;
+}
+
+int disp_al_set_eink_wb_base(u32 disp, unsigned int base)
+{
+	return wb_eink_set_reg_base(disp, base);
+}
+
+int disp_al_set_eink_wb_param(u32 disp, unsigned int w,
+				unsigned int h, unsigned int addr)
+{
+	__einkwb_config_t wbcfg;
+
+	wbcfg.width = w;
+	wbcfg.height = h;
+	wbcfg.addr[0] = addr;
+	wbcfg.addr[1] = 0;
+	wbcfg.addr[2] = 0;
+	wbcfg.csc_std = 2;
+	return wb_eink_set_para(0, &wbcfg);
+}
+
+int disp_al_enable_eink_wb_interrupt(u32 disp)
+{
+	return wb_eink_enableint(disp);
+}
+
+int disp_al_disable_eink_wb_interrupt(u32 disp)
+{
+
+	return wb_eink_disableint(disp);
+}
+
+int disp_al_clear_eink_wb_interrupt(u32 disp)
+{
+	return wb_eink_clearint(disp);
+}
+
+int disp_al_enable_eink_wb(u32 disp)
+{
+	return wb_eink_writeback_enable(disp);
+}
+
+int disp_al_disable_eink_wb(u32 disp)
+{
+	return wb_eink_close(disp);
+}
+
+int disp_al_eink_wb_reset(u32 disp)
+{
+	return wb_eink_reset(disp);
+}
+
+int disp_al_eink_wb_dereset(u32 disp)
+{
+	return wb_eink_dereset(disp);
+}
+
+
+int disp_al_get_eink_wb_status(u32 disp)
+{
+	return wb_eink_get_status(disp);
+}
+#endif
+
+int disp_al_set_eink_base(u32 disp, unsigned long base)
+{
+	return eink_set_base(base);
+}
+
+int disp_al_eink_irq_enable(u32 disp)
+{
+	return eink_irq_enable();
+}
+
+int disp_al_eink_irq_disable(u32 disp)
+{
+	return eink_irq_disable();
+}
+
+/*return: 0,decode int; 1:index_calc int; -1 error*/
+int disp_al_eink_irq_query(u32 disp)
+{
+	/*clear interrupt*/
+	return eink_irq_query();
+}
+
+
+int disp_al_eink_config(u32 disp, struct eink_init_param *param)
+{
+
+	eink_config(param->eink_bits, param->eink_mode);
+	return 0;
+}
+
+
+int disp_al_eink_disable(u32 disp)
+{
+	return 0;
+
+}
+
+
+s32 disp_al_eink_start_calculate_index(u32 disp,
+					unsigned long old_index_data_paddr,
+					unsigned long new_index_data_paddr,
+					struct eink_8bpp_image *last_image,
+					struct eink_8bpp_image *current_image)
+{
+	struct ee_img tcurrent_img, tlast_img;
+	struct area_info update_area;
+
+	unsigned char  flash_mode, win_en;
+
+	tcurrent_img.addr = (unsigned long)current_image->paddr;/*image_addr*/
+	tcurrent_img.w = current_image->size.width;
+	tcurrent_img.h = current_image->size.height;
+	tcurrent_img.pitch = DISPALIGN(current_image->size.width,
+					current_image->size.align);
+
+	tlast_img.addr = (unsigned long)last_image->paddr;
+	tlast_img.w = last_image->size.width;
+	tlast_img.h = last_image->size.height;
+	tlast_img.pitch = DISPALIGN(last_image->size.width,
+					last_image->size.align);
+
+	flash_mode = current_image->flash_mode;
+	win_en = current_image->window_calc_enable;
+
+	memcpy((void *)&update_area, (void *)&current_image->update_area,
+					sizeof(struct area_info));
+
+	eink_start_idx(&tlast_img, &tcurrent_img, flash_mode, win_en,
+					old_index_data_paddr,
+					new_index_data_paddr, &update_area);
+
+	return 0;
+}
+
+int disp_al_is_calculate_index_finish(unsigned int disp)
+{
+	return eink_index_finish();
+}
+
+int disp_al_get_update_area(unsigned int disp, struct area_info *area)
+{
+	return eink_get_updata_area(area);
+}
+
+
+int disp_al_eink_pipe_enable(u32 disp, unsigned int pipe_no)
+{
+	return eink_pipe_enable(pipe_no);
+}
+
+int disp_al_eink_pipe_disable(u32 disp, unsigned int pipe_no)
+{
+
+	return eink_pipe_disable(pipe_no);
+}
+
+int disp_al_eink_pipe_config(u32 disp,  unsigned int pipe_no,
+					struct area_info area)
+{
+	return eink_pipe_config(&area, pipe_no);
+
+}
+
+int disp_al_eink_pipe_config_wavefile(u32 disp, unsigned int wav_file_addr,
+						unsigned int pipe_no)
+{
+
+	return eink_pipe_config_wavefile(wav_file_addr, pipe_no);
+}
+
+int disp_al_eink_start_decode(unsigned int disp, unsigned long new_idx_addr,
+						unsigned long wav_data_addr,
+						struct eink_init_param *param)
+{
+	return eink_decoder_start(new_idx_addr, wav_data_addr, param);
+}
+
+int disp_al_edma_init(unsigned int disp, struct eink_init_param *param)
+{
+
+	return eink_edma_init(param->eink_mode);
+}
+
+int disp_al_eink_edma_cfg_addr(unsigned int disp, unsigned long wav_addr)
+{
+	return  eink_edma_cfg_addr(wav_addr);
+}
+
+
+int disp_al_edma_config(unsigned int disp, unsigned long wave_data_addr,
+						struct eink_init_param *param)
+{
+
+	return eink_edma_cfg(wave_data_addr, param);
+}
+
+int disp_al_edma_write(unsigned int disp, unsigned char en)
+{
+
+	return eink_edma_en(en);
+}
+
+int disp_al_dbuf_rdy(void)
+{
+	return eink_dbuf_rdy();
+}
+
+int disp_al_eink_set_wb(unsigned char wb_en, unsigned int wb_addr)
+{
+	/* edma write back */
+	return eink_set_wb(wb_en, wb_addr);
+}
+
+int disp_al_init_waveform(const char *path)
+{
+	return init_waveform(path);
+}
+
+void disp_al_free_waveform(void)
+{
+	free_waveform();
+}
+
+
+int disp_al_get_waveform_data(unsigned int disp, enum eink_update_mode mode,
+				unsigned int temp, unsigned int *total_frames,
+							unsigned int *wf_buf)
+{
+	return get_waveform_data(mode, temp, total_frames, wf_buf);
+}
+
+int disp_al_get_eink_panel_bit_num(unsigned int disp,
+					enum eink_bit_num *bit_num)
+{
+	return get_eink_panel_bit_num(bit_num);
+}
+
+int disp_al_init_eink_ctrl_data_8(unsigned int disp, unsigned long wavedata_buf,
+				struct eink_timing_param *eink_timing_info,
+				unsigned int i)
+{
+	return init_eink_ctrl_data_8(wavedata_buf, eink_timing_info, i);
+
+}
+
+int disp_al_init_eink_ctrl_data_16(unsigned int disp, unsigned int wavedata_buf,
+				struct eink_timing_param *eink_timing_info)
+{
+	return init_eink_ctrl_data_16(wavedata_buf, eink_timing_info);
+
+}
 
 static int disp_al_validate_direct_show(unsigned int disp,
 			struct disp_layer_config_data *data,
@@ -178,6 +451,16 @@ int disp_al_manager_exit(unsigned int disp)
 	return de_clk_disable(DE_CLK_CORE0 + disp);
 }
 
+int disp_al_de_clk_enable(unsigned int disp)
+{
+	return de_clk_enable(DE_CLK_CORE0 + disp);
+}
+
+int disp_al_de_clk_disable(unsigned int disp)
+{
+	return de_clk_disable(DE_CLK_CORE0 + disp);
+}
+
 int disp_al_manager_apply(unsigned int disp, struct disp_manager_data *data)
 {
 	if (data->flag & MANAGER_ENABLE_DIRTY) {
@@ -294,6 +577,16 @@ int disp_al_capture_get_status(unsigned int disp)
 	return wb_ebios_get_status(disp);
 }
 
+int disp_al_write_back_clk_init(unsigned int disp)
+{
+	return de_clk_enable(DE_CLK_WB);
+}
+
+int disp_al_write_back_clk_exit(unsigned int disp)
+{
+	return de_clk_disable(DE_CLK_WB);
+}
+
 int disp_al_smbl_apply(unsigned int disp, struct disp_smbl_info *info)
 {
 	return de_smbl_apply(disp, info);
@@ -388,10 +681,9 @@ int disp_al_lcd_get_clk_info(u32 screen_id, struct lcd_clk_info *info,
 
 	if (panel->lcd_tcon_mode == DISP_TCON_DUAL_DSI &&
 	    panel->lcd_if == LCD_IF_DSI) {
-		info->tcon_div = tcon_div / 2;
+		tcon_div = tcon_div / 2;
 		dsi_div /= 2;
-	} else
-		info->tcon_div = tcon_div;
+	}
 
 	if (0 == find)
 		__wrn("cant find clk info for lcd_if %d\n", panel->lcd_if);
@@ -399,7 +691,7 @@ int disp_al_lcd_get_clk_info(u32 screen_id, struct lcd_clk_info *info,
 #if defined(DSI_VERSION_28)
 	if (panel->lcd_if == LCD_IF_DSI &&
 	    panel->lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE) {
-		info->tcon_div = 6;
+		tcon_div = 6;
 		dsi_div = 6;
 	}
 #endif
@@ -969,7 +1261,9 @@ int disp_init_al(disp_bsp_init_para *para)
 	de_enhance_init(para);
 	de_ccsc_init(para);
 	de_dcsc_init(para);
+#ifndef CONFIG_EINK_PANEL_USED
 	wb_ebios_init(para);
+#endif
 	de_clk_set_reg_base(para->reg_base[DISP_MOD_DE]);
 
 	for (i = 0; i < DEVICE_NUM; i++)

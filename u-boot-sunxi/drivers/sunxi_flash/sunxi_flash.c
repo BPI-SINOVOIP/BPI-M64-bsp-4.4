@@ -137,12 +137,6 @@ __weak uint NAND_GetLogicPageSize(void)
 	return 16*1024;
 }
 
-
-int  __attribute__((weak)) sunxi_fastboot_status_read(void)
-{
-	return 0;
-}
-
 int  __attribute__((weak)) nand_init_for_boot(int workmode)
 {
 	return -1;
@@ -362,14 +356,16 @@ int sunxi_flash_boot_handle(int storage_type,int workmode )
 		break;
 
 		case STORAGE_SD:
+		case STORAGE_SD1:
 		case STORAGE_EMMC:
                 case STORAGE_EMMC3:
 		{
 			//sdmmc handle init
-		//	card_no = (storage_type == 1)?0:2;
 		        if(storage_type == STORAGE_SD)
                                 card_no = 0;
-                        else if(storage_type == STORAGE_EMMC)
+		        else if(storage_type == STORAGE_SD1)
+				card_no = 1;
+			else if(storage_type == STORAGE_EMMC)
                                 card_no = 2;
                         else
                                 card_no = 3;
@@ -399,7 +395,6 @@ int sunxi_flash_boot_handle(int storage_type,int workmode )
 
 	//script_parser_patch("target", "storage_type", &storage_type, 1);
 	pr_msg("sunxi flash init ok\n");
-	sunxi_fastboot_status_read();
 	return  0;
 }
 
@@ -583,6 +578,7 @@ int read_boot_package(int storage_type, void *package_buf)
 
 		case STORAGE_EMMC:
 		case STORAGE_SD:
+		case STORAGE_SD1:
 		case STORAGE_EMMC3:
 			ret = sunxi_sprite_phyread(UBOOT_START_SECTOR_IN_SDMMC, read_len/512, package_buf);
 			break;

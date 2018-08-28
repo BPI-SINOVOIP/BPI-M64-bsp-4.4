@@ -1,3 +1,13 @@
+/*
+ * Allwinner SoCs display driver.
+ *
+ * Copyright (C) 2016 Allwinner.
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2.  This program is licensed "as is" without any
+ * warranty of any kind, whether express or implied.
+ */
+
 /**
  *All Winner Tech, All Right Reserved. 2014-2015 Copyright (c)
  *
@@ -1277,6 +1287,15 @@ static int de_rtmx_get_coarse_fac(unsigned int sel, unsigned int chno,
 	*chn = 0;
 	*midyw = ovl_w;
 	*midcw = ovl_w >> wshift;
+	if ((format > 2) && (ovl_w == vsu_outw) && (ovl_h == vsu_outh)) {
+		*yvm = 0;
+		*yvn = 0;
+		*cvm = 0;
+		*cvn = 0;
+		*midyh = ovl_h;
+		*midch = ovl_h >> hshift;
+		return status;
+	}
 
 	linebuf = de_feat_get_scale_linebuf_for_yuv(sel, chno);
 	if ((ovl_w > linebuf)

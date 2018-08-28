@@ -69,6 +69,11 @@ typedef struct descriptor_queue
 	uint reserved[3];
 }task_queue;
 
+#if defined(SHA256_MULTISTEP_PACKAGE) || defined(SHA512_MULTISTEP_PACKAGE)
+int sunxi_hash_init(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len);
+int sunxi_hash_update(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len);
+int sunxi_hash_final(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len);
+#endif
 
 void sunxi_ss_open(void);
 void sunxi_ss_close(void);

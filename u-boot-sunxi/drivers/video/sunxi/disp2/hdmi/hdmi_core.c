@@ -51,6 +51,10 @@ struct disp_video_timings video_timing[] =
 	{HDMI1024_768,       0, 65000000, 0,  1024,   768,  1344,  160,   24, 136,   806,  29,  3,  6,  1,   1,   0,    0,  0},
 	{HDMI900_540,        0, 74250000, 0,   900,   540,  1650,  400,  300,  50,   750, 120, 80, 10,  1,   1,   0,    0,  0},
 	{HDMI1920_720,       0, 94500000, 0,   1920,  720,  1984,  26,   26,   12,   792,  46, 14,  12, 0,   0,   0,    0,  0},
+	{HDMI_DT0,           0,        0, 0,      0,    0,     0,    0,    0,   0,     0,   0,  0,   0, 0,   0,   0,    0,  0},
+	{HDMI_DT1,           0,        0, 0,      0,    0,     0,    0,    0,   0,     0,   0,  0,   0, 0,   0,   0,    0,  0},
+	{HDMI_DT2,           0,        0, 0,      0,    0,     0,    0,    0,   0,     0,   0,  0,   0, 0,   0,   0,    0,  0},
+	{HDMI_DT3,           0,        0, 0,      0,    0,     0,    0,    0,   0,     0,   0,  0,   0, 0,   0,   0,    0,  0},
 };
 
 static void hdmi_para_reset(void)
@@ -118,6 +122,9 @@ s32 hdmi_core_initial(bool sw_only)
 		}
 	} else {
 		bsp_hdmi_init();
+#if defined(__UBOOT_PLAT__)
+		hdmi_edid_parse();
+#endif
 	}
 
 	return 0;
@@ -333,8 +340,10 @@ u32 hdmi_core_get_cts_enable(void)
 u32 hdmi_core_get_csc_type(void)
 {
 	int csc = 1;
+	u32 yuv = 1;
 
-	if ((hdmi_core_get_cts_enable() == 1) &&(hdmi_edid_is_yuv() == 0))
+	yuv = hdmi_edid_is_yuv();
+	if (yuv == 0)
 		csc = 0;
 
 	if ((is_exp == 1) &&
@@ -347,6 +356,7 @@ u32 hdmi_core_get_csc_type(void)
 		csc = 0;
 	}
 
+	__inf("hdmi_core_get_csc_type:%d\n", csc);
 	return csc;
 }
 
@@ -650,3 +660,17 @@ int hdmi_core_cec_get_simple_msg(unsigned char *msg)
 	return ret;
 }
 
+s32 hdmi_core_get_supported_vic(int init_vic)
+{
+	s32 hdmi_vic = 0;
+	int index = 0;
+
+	hdmi_vic = hdmi_edid_check_init_vic_and_get_supported_vic(init_vic);
+	if ((hdmi_vic >= HDMI_DT0) && (hdmi_vic <= HDMI_DT3)
+		&& (hdmi_get_work_mode() == DISP_HDMI_FULL_AUTO)) {
+		index = hdmi_core_get_video_info(hdmi_vic);
+		hdmi_get_edid_dt_timing_info(hdmi_vic, &video_timing[index]);
+	}
+
+	return 	hdmi_vic;
+}

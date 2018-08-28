@@ -27,3 +27,5 @@ else
 	obj-$(CONFIG_SUNXI_MODULE_NAND) += nand.o
 endif
 obj-$(CONFIG_SUNXI_MODULE_SPINOR) += spinor.o
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_SUNXI_FLASH_DIR) += -finstrument-functions

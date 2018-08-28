@@ -21,81 +21,426 @@
 #include "asm/arch/ccmu.h"
 #include "asm/arch/timer.h"
 #include "asm/arch/archdef.h"
+#include <sunxi_board.h>
 
-void set_pll_cpux_axi(void)
+#define HOSC		0
+#define PLL_24M		1
+#define HOSC_19M	1
+#define HOSC_38M	2
+#define HOSC_24M	3
+
+u32 osc_type;
+
+static int probe_ic_version(void)
 {
-	__u32 reg_val;
-	/*select CPUX  clock src: OSC24M,AXI divide ratio is 3, system apb clk ratio is 4*/
-	writel((0<<24) | (3<<8) | (2<<0), CCMU_CPUX_AXI_CFG_REG);
-	__usdelay(1);
+	u32 val = 0;
 
-	/* set default val: clk is 408M  ,PLL_OUTPUT= 24M*N/( M*P)*/
-	writel((0x02001000), CCMU_PLL_CPUX_CTRL_REG);
+	val = (readl(SUNXI_VERSION_REG) & 0x7);
+	return val;
+}
+static void set_circuits_analog_for_A_version(void)
+{
+	u32 reg;
 
-	/* lock enable */
-	reg_val = readl(CCMU_PLL_CPUX_CTRL_REG);
-	reg_val |= (1<<29);
-	writel(reg_val, CCMU_PLL_CPUX_CTRL_REG);
+	reg = readl(VDD_SYS_PWROFF_GATING_REG);
+	reg &= ~(1 << VDD_ADDA_OFF_GATING);
+	writel(reg , VDD_SYS_PWROFF_GATING_REG);
+	__msdelay(2);
 
-	/* enable pll */
-	reg_val = readl(CCMU_PLL_CPUX_CTRL_REG);
-	reg_val |=  (1<<31);
-	writel(reg_val, CCMU_PLL_CPUX_CTRL_REG);
+	reg = readl(RES_CAL_CTRL_REG);
+	reg |= (1 << CAL_ANA_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
 
-	//wait PLL_CPUX stable
+	reg = readl(RES_CAL_CTRL_REG);
+	reg &= ~(1 << CAL_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
+
+	reg = readl(RES_CAL_CTRL_REG);
+	reg |= (1 << CAL_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
+
+}
+
+static void set_circuits_analog_for_C_version(void)
+{
+	u32 reg;
+
+	reg = readl(VDD_SYS_PWROFF_GATING_REG);
+	reg |= (1 << VDD_ADDA_OFF_GATING);
+	writel(reg , VDD_SYS_PWROFF_GATING_REG);
+	__msdelay(2);
+
+	reg = readl(RES_CAL_CTRL_REG);
+	reg |= (1 << CAL_ANA_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
+
+	reg = readl(RES_CAL_CTRL_REG);
+	reg &= ~(1 << CAL_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
+
+	reg = readl(RES_CAL_CTRL_REG);
+	reg |= (1 << CAL_EN);
+	writel(reg , RES_CAL_CTRL_REG);
+	__msdelay(2);
+
+}
+static void set_circuits_analog(void)
+{
+	/*calibration circuits analog enable*/
+	u32 val = 0;
+	val = probe_ic_version();
+	if (val) {
+		set_circuits_analog_for_C_version();
+	} else {
+		set_circuits_analog_for_A_version();
+    }
+}
+
+static void set_cpu_step(void)
+{
+	u32 reg_val;
+	reg_val = readl(SUNXI_CCM_BASE + 0x400);
+	reg_val &= (~(0x7 << 28));
+	reg_val |= (0x01 << 28);
+	writel(reg_val, SUNXI_CCM_BASE + 0x400);
+}
+
+
+static void prode_which_osc(void)
+{
+	u32 val = 0;
+
+	val = (readl(XO_CTRL_REG) & (0x3 << 14));
+	osc_type = (val >> 14);
+}
+
+static u32 prode_pll_input_clk_src(void)
+{
+	u32 val = 0;
+	u32 pll_src = 0;
+
+	val = (readl(XO_CTRL_REG) & (0x1 << 13));
+	pll_src = (val >> 13);
+	return pll_src;
+}
+
+static void cfg_pll_clk_src_input(u32 pll_addr)
+{
+	u32 reg_value = 0;
+
+	reg_value = prode_pll_input_clk_src();
+	if (reg_value == HOSC) {
+		reg_value = readl(pll_addr);
+		reg_value |= (0x1 << 23);
+		writel(reg_value, pll_addr);
+	} else if (reg_value == PLL_24M) {
+		reg_value = readl(pll_addr);
+		reg_value &= (~(0x1 << 23));
+		writel(reg_value, pll_addr);
+	}
+}
+
+static void pll_lock_enable(u32 reg_addr, u32 enable_bit, u32 lock_bit)
+{
+	u32 reg_value = 0;
+
+	reg_value = readl(reg_addr);
+	reg_value |= (0x1 << enable_bit);
+	writel(reg_value, reg_addr);
+
 #ifndef FPGA_PLATFORM
-	while(!(readl(CCMU_PLL_CPUX_CTRL_REG) & (0x1<<28)));
+	while (!(readl(reg_addr) & (0x1 << lock_bit))) {
+		;
+	}
 	__usdelay(1);
 #endif
-	/* lock disable */
-	reg_val = readl(CCMU_PLL_CPUX_CTRL_REG);
-	reg_val &= ~(1<<29);
-	writel(reg_val, CCMU_PLL_CPUX_CTRL_REG);
+}
 
-	//set and change cpu clk src to PLL_CPUX,  PLL_CPUX:AXI0 = 408M:136M
-	reg_val = readl(CCMU_CPUX_AXI_CFG_REG);
-	reg_val &=  ~(0x03 << 24);
-	reg_val |=  (0x03 << 24);
-	writel(reg_val, CCMU_CPUX_AXI_CFG_REG);
+static void pll_out_enable(u32 pll_addr, u32 enable_bit)
+{
+	u32 reg_value = 0;
+
+	reg_value = readl(pll_addr);
+	reg_value |= (0x1U << enable_bit);
+	writel(reg_value , pll_addr);
+}
+
+
+static s32 prode_pll_enable(u32 reg_addr, u32 pll_enable)
+{
+	u32 val = 0;
+
+	val = readl(reg_addr);
+	if (val & (0x1U << pll_enable)) {
+		return 0;
+	}
+	return -1;
+}
+
+static void cfg_pll_24M(void)
+{
+	u32 reg_value = 0;
+
+	/*close and clean bypass*/
+	reg_value = readl(CCMU_PLL_24M_CTRL_REG);
+	reg_value &= (~((0x1U << 31) | (0x1 << 29) | (0x1 << 27) | (0x1 << 23)));
+	writel(reg_value, CCMU_PLL_24M_CTRL_REG);
+
+	/*set div*/
+	if (osc_type == HOSC_38M) {
+		reg_value = (readl(CCMU_PLL_24M_CTRL_REG));
+		reg_value &= (~((0x1f << 16) | (0xff << 8) | (0x1 << 1) | (0x1 << 0)));
+		reg_value |= (((0x13 << 16) | (0x31 << 8) | (0x1 << 1) | (0x1 << 0)));
+		writel(reg_value, CCMU_PLL_24M_CTRL_REG);
+	} else if (osc_type == HOSC_19M) {
+		reg_value = (readl(CCMU_PLL_24M_CTRL_REG));
+		reg_value &= (~((0x1f << 16) | (0xff << 8) | (0x1 << 1) | (0x1 << 0)));
+		reg_value |= (((0x13 << 16) | (0x31 << 8) | (0x0 << 1) | (0x1 << 0)));
+		writel(reg_value, CCMU_PLL_24M_CTRL_REG);
+	}
+	__usdelay(10);
+
+	/*enable pll*/
+	reg_value = (readl(CCMU_PLL_24M_CTRL_REG));
+	reg_value |= (0x1U << 31);
+	writel(reg_value, CCMU_PLL_24M_CTRL_REG);
+
+	/*enable lock*/
+	pll_lock_enable(CCMU_PLL_24M_CTRL_REG, 29, 28);
+
+	/*pll out enable*/
+	pll_out_enable(CCMU_PLL_24M_CTRL_REG, 27);
+}
+
+static void switch_cpu_axi_to_osc(u32 reg_addr)
+{
+	__u32 reg_val;
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 24);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 8) | (0x3 << 0));
+	reg_val |= ((0x03 << 8) | (0x1 << 0));
+	writel(reg_val, reg_addr);
 	__usdelay(1);
 }
 
-void set_pll_hsic(void)
+static void switch_psi_ahb_apb_to_osc(u32 reg_addr)
 {
 	__u32 reg_val;
-	/*set default value, default is 480M*/
-	writel(0x2701, CCMU_PLL_HSIC_CTRL_REG);
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 24);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 8) | (0x3 << 0));
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+}
+
+static void switch_mubs_to_osc(void)
+{
+	 __u32 reg_val;
+	reg_val = readl(CCMU_MBUS_CFG_REG);
+	reg_val &= ~(0x03 << 24);
+	writel(reg_val, CCMU_MBUS_CFG_REG);
+	__usdelay(1);
+
+	reg_val = readl(CCMU_MBUS_CFG_REG);
+	reg_val &= ~((0x7 << 0));
+	writel(reg_val, CCMU_MBUS_CFG_REG);
+	__usdelay(1);
+
+}
+
+static void close_pll(u32 reg_addr, u32 pll_enable, u32 lock_enable)
+{
+	__u32 reg_val;
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x01U << pll_enable) | (0x01U << lock_enable));
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+}
+
+static void switch_cpu_axi_to_pll(u32 reg_addr)
+{
+	__u32 reg_val;
+	/*set cpu = pll*/
+	reg_val = readl(reg_addr);
+	reg_val &=  ~(0x03 << 24);
+	reg_val |=  (0x03 << 24);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	/*set axi div=0x1+1*/
+	reg_val = readl(reg_addr);
+	reg_val &=  ~(0x03 << 0);
+	reg_val |=  (0x01 << 0);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	/*set apb div=default=0x3+1*/
+	reg_val = readl(reg_addr);
+	reg_val &=  ~(0x03 << 8);
+	reg_val |=  (0x03 << 8);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+}
+
+void switch_psi_ahb_to_pll(u32 reg_addr)
+{
+	__u32 reg_val;
+
+	/* PLL0:AHB1:APB1 = 600M:200M:100M */
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 8) | (0x03 << 0));
+	reg_val |= ((0x0 << 8) | (0x2 << 0));
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 24);
+	reg_val |= (0x03 << 24);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+}
+
+void switch_apb_to_pll(u32 reg_addr)
+{
+	__u32 reg_val;
+
+	/* PLL0:AHB1:APB1 = 600M:200M:100M */
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 8) | (0x03 << 0));
+	reg_val |= ((0x1 << 8) | (0x2 << 0));
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 24);
+	reg_val |= (0x03 << 24);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+}
+
+static u32 prode_pll_init(void)
+{
+	u32 val_1 = 0;
+	u32 val_2 = 0;
+	u32 pll_src = 0;
+
+	val_1 = prode_pll_enable(CCMU_PLL_CPUX_CTRL_REG, 31);
+	val_2 = prode_pll_enable(CCMU_PLL_PERI0_CTRL_REG, 31);
+	if ((val_1 == 0) && (val_2 == 0)) {
+		return 0;
+	}
+
+	if (val_1 < 0) {
+		/*select CPUX  clock src: OSC24M,AXI divide ratio is 2, system apb clk ratio is 4*/
+		switch_cpu_axi_to_osc(CCMU_CPUX_AXI_CFG_REG);
+	}
+
+	if (val_2 < 0) {
+		switch_psi_ahb_apb_to_osc(CCMU_PSI_AHB1_AHB2_CFG_REG);
+		switch_psi_ahb_apb_to_osc(CCMU_AHB3_CFG_GREG);
+		switch_psi_ahb_apb_to_osc(CCMU_APB1_CFG_GREG);
+		switch_psi_ahb_apb_to_osc(CCMU_APB2_CFG_GREG);
+		switch_mubs_to_osc();
+	}
+
+	prode_which_osc();
+	pll_src = prode_pll_input_clk_src();
+	if (pll_src == PLL_24M) {
+		pll_src = prode_pll_enable(CCMU_PLL_24M_CTRL_REG, 31);
+		if (pll_src < 0) {
+			cfg_pll_24M();
+		}
+	} else if (pll_src ==  HOSC) {
+		;
+	}
+
+	return -1;
+}
+
+
+static void enable_cpu_pll(u32 reg_addr, u32 pll_enable, u32 lock_enable, u32 lock_flag)
+{
+	__u32 reg_val;
+
+	/*disable pll*/
+	close_pll(reg_addr, pll_enable, lock_enable);
+
+	/*cfg pll src*/
+	cfg_pll_clk_src_input(CCMU_PLL_CPUX_CTRL_REG);
+
+	/*set cpu_pll=408M,P=0x0+1/N=0x10+1/K=0x0+1/M=0x0+1 divide*/
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 16) | (0xff << 8) | (0x3 << 0));
+	reg_val |= ((0x0 << 16) | (0x10 << 8) | (0x0 << 0));
+	writel(reg_val, reg_addr);
 
 	/* lock enable */
-	reg_val = readl(CCMU_PLL_HSIC_CTRL_REG);
-	reg_val |= (1<<29);
-	writel(reg_val, CCMU_PLL_HSIC_CTRL_REG);
+	reg_val = readl(reg_addr);
+	reg_val |= (0x1U << lock_enable);
+	writel(reg_val, reg_addr);
 
-	/* enabe PLL */
-	reg_val =readl(CCMU_PLL_HSIC_CTRL_REG);
-	reg_val |= (1<<31);
-	writel(reg_val, CCMU_PLL_HSIC_CTRL_REG);
+	/* enable pll */
+	reg_val = readl(reg_addr);
+	reg_val |=  (0x1U << pll_enable);
+	writel(reg_val, reg_addr);
+
+	/*wait PLL_CPUX stable*/
 #ifndef FPGA_PLATFORM
-	while(!(readl(CCMU_PLL_HSIC_CTRL_REG) & (0x1<<28)));
-	__usdelay(20);
+	while (!(readl(reg_addr) & (0x1 << lock_flag))) {
+		;
+	}
+	__usdelay(1);
 #endif
-	/* lock disable */
-	reg_val = readl(CCMU_PLL_HSIC_CTRL_REG);
-	reg_val &= ~(1<<29);
-	writel(reg_val, CCMU_PLL_HSIC_CTRL_REG);
+	/*pll out enable*/
+	pll_out_enable(reg_addr, 27);
+}
+
+void set_pll_cpux_axi(void)
+{
+	/* set default val: clk is 408M  ,PLL_OUTPUT= 24M*N/( M*P)*/
+	enable_cpu_pll(CCMU_PLL_CPUX_CTRL_REG, 31, 29, 28);
+
+	/*set and change cpu clk src to PLL_CPUX,  PLL_CPUX:AXI0 = 408M:204M*/
+	switch_cpu_axi_to_pll(CCMU_CPUX_AXI_CFG_REG);
 }
 
 void set_pll_periph0(void)
 {
 	__u32 reg_val;
 
-	/*change  psi/ahb src to OSC24M before set pll6 */
-	reg_val = readl(CCMU_PSI_AHB1_AHB2_CFG_REG);
-	reg_val &= (~(0x3<<24));
-	writel(reg_val,CCMU_PSI_AHB1_AHB2_CFG_REG);
+	/* close pll*/
+	close_pll(CCMU_PLL_PERI0_CTRL_REG, 31, 29);
 
-	/* set default val*/
-	writel(0x31<<8, CCMU_PLL_PERI0_CTRL_REG);
+	/*cfg pll clk src*/
+	cfg_pll_clk_src_input(CCMU_PLL_PERI0_CTRL_REG);
+
+	/*cfg pll div*/
+	reg_val = readl(CCMU_PLL_PERI0_CTRL_REG);
+	reg_val &= ~((0xFF << 8) | (0x3 << 0));
+	if (osc_type == HOSC_38M) {
+		reg_val |= ((0x31 << 8) | (0x0 << 1) | (0x1 << 0));
+	} else {
+		reg_val |= ((0x31 << 8) | (0x0 << 1) | (0x0 << 0));
+	}
+	writel(reg_val, CCMU_PLL_PERI0_CTRL_REG);
+	__usdelay(10);
 
 	/* lock enable */
 	reg_val = readl(CCMU_PLL_PERI0_CTRL_REG);
@@ -104,49 +449,29 @@ void set_pll_periph0(void)
 
 	/* enabe PLL: 600M(1X)  1200M(2x) */
 	reg_val =readl(CCMU_PLL_PERI0_CTRL_REG);
-	reg_val |= (1<<31);
+	reg_val |= (0x1U << 31);
 	writel(reg_val, CCMU_PLL_PERI0_CTRL_REG);
 
 #ifndef FPGA_PLATFORM
 	while(!(readl(CCMU_PLL_PERI0_CTRL_REG) & (0x1<<28)));
 	__usdelay(20);
 #endif
-	/* lock disable */
-	reg_val = readl(CCMU_PLL_PERI0_CTRL_REG);
-	reg_val &= (~(1<<29));
-	writel(reg_val, CCMU_PLL_PERI0_CTRL_REG);
-
+	/*pll out enable*/
+	pll_out_enable(CCMU_PLL_PERI0_CTRL_REG, 27);
 }
 
 void set_ahb(void)
 {
-	/* PLL6:AHB1:APB1 = 600M:200M:100M */
-	writel((2<<0) | (0<<8), CCMU_PSI_AHB1_AHB2_CFG_REG);
-	writel((0x03 << 24)|readl(CCMU_PSI_AHB1_AHB2_CFG_REG), CCMU_PSI_AHB1_AHB2_CFG_REG);
-	__usdelay(1);
-	/*PLL6:AHB3 = 600M:200M*/
-	writel((2<<0) | (0<<8), CCMU_AHB3_CFG_GREG);
-	writel((0x03 << 24)|readl(CCMU_AHB3_CFG_GREG), CCMU_AHB3_CFG_GREG);
+	/* PLL0:AHB1:APB1 = 600M:200M:100M */
+	switch_psi_ahb_to_pll(CCMU_PSI_AHB1_AHB2_CFG_REG);
+	switch_psi_ahb_to_pll(CCMU_AHB3_CFG_GREG);
 }
 
 void set_apb(void)
 {
 	/*PLL6:APB1 = 600M:100M */
-	writel((2<<0) | (1<<8), CCMU_APB1_CFG_GREG);
-	writel((0x03 << 24)|readl(CCMU_APB1_CFG_GREG), CCMU_APB1_CFG_GREG);
-	__usdelay(1);
+	switch_apb_to_pll(CCMU_APB1_CFG_GREG);
 }
-
-/* SRAMC's clk source is AHB1, so the AHB1 clk must less than 100M */
-void set_pll_ahb_for_secure(void)
-{
-	/* PLL6:AHB1 = 600M:100M */
-	/* div M=3 N=2*/
-	writel((2<<0) | (1<<8), CCMU_PSI_AHB1_AHB2_CFG_REG);
-	writel((0x03 << 24)|readl(CCMU_PSI_AHB1_AHB2_CFG_REG), CCMU_PSI_AHB1_AHB2_CFG_REG);
-	__usdelay(1);
-}
-
 
 void set_pll_dma(void)
 {
@@ -161,18 +486,22 @@ void set_pll_mbus(void)
 {
 	__u32 reg_val;
 
+	reg_val = readl(CCMU_MBUS_CFG_REG);
+	if ((reg_val & (0x3 << 24)) == 1) {
+		return;
+	}
 	/*reset mbus domain*/
 	reg_val = 1<<30;
 	writel(1<<30, CCMU_MBUS_CFG_REG);
 	__usdelay(1);
 
-	/* set MBUS div */
+	/* set MBUS div m=2*/
 	reg_val = readl(CCMU_MBUS_CFG_REG);
 	reg_val |= (2<<0);
 	writel(reg_val, CCMU_MBUS_CFG_REG);
 	__usdelay(1);
 
-	/* set MBUS clock source to pll6(2x), mbus=pll6/(m+1) = 400M*/
+	/* set MBUS clock source to pll6(2x), mbus=pll0/(m+1) = 400M*/
 	reg_val = readl(CCMU_MBUS_CFG_REG);
 	reg_val |= (1<<24);
 	writel(reg_val, CCMU_MBUS_CFG_REG);
@@ -180,7 +509,7 @@ void set_pll_mbus(void)
 
 	/* open MBUS clock */
 	reg_val = readl(CCMU_MBUS_CFG_REG);
-	reg_val |= (0X01 << 31);
+	reg_val |= (0x1U << 31);
 	writel(reg_val, CCMU_MBUS_CFG_REG);
 	__usdelay(1);
 }
@@ -188,13 +517,23 @@ void set_pll_mbus(void)
 void set_pll( void )
 {
 	printf("set pll start\n");
-	set_pll_cpux_axi();
-	set_pll_hsic();
-	set_pll_periph0();
-	if(0)
-		set_pll_ahb_for_secure();
-	else
+    set_circuits_analog();
+	set_cpu_step();
+	if (prode_pll_init() == 0) {
+		switch_psi_ahb_apb_to_osc(CCMU_PSI_AHB1_AHB2_CFG_REG);
+		switch_psi_ahb_apb_to_osc(CCMU_AHB3_CFG_GREG);
+		switch_psi_ahb_apb_to_osc(CCMU_APB1_CFG_GREG);
+		switch_mubs_to_osc();
+		set_pll_periph0();
 		set_ahb();
+		set_apb();
+		set_pll_dma();
+		set_pll_mbus();
+		return;
+	}
+	set_pll_cpux_axi();
+	set_pll_periph0();
+	set_ahb();
 	set_apb();
 	set_pll_dma();
 	set_pll_mbus();
@@ -210,18 +549,16 @@ void set_pll_in_secure_mode( void )
 
 void reset_pll( void )
 {
-	__u32 reg_val;
-	//set ahb,apb to default, use OSC24M
-	reg_val = readl(CCMU_PSI_AHB1_AHB2_CFG_REG);
-	reg_val &= (~(0x3<<24));
-	writel(reg_val,CCMU_PSI_AHB1_AHB2_CFG_REG);
+	/*cpu axi to osc*/
+	printf("reset pll\n");
+	switch_cpu_axi_to_osc(CCMU_CPUX_AXI_CFG_REG);
 
-	reg_val = readl(CCMU_APB1_CFG_GREG);
-	reg_val &= (~(0x3<<24));
-	writel(reg_val,CCMU_APB1_CFG_GREG);
+	/*change  psi/ahb1~3/apb1~2/cci/mbus src to OSC24M */
+	switch_psi_ahb_apb_to_osc(CCMU_PSI_AHB1_AHB2_CFG_REG);
+	switch_psi_ahb_apb_to_osc(CCMU_AHB3_CFG_GREG);
+	switch_psi_ahb_apb_to_osc(CCMU_APB1_CFG_GREG);
+	switch_mubs_to_osc();
 
-	//set cpux pll to default,use OSC24M
-	writel(0x0301, CCMU_CPUX_AXI_CFG_REG);
 	return ;
 }
 
@@ -230,3 +567,36 @@ void set_gpio_gate(void)
 
 }
 
+int sunxi_key_clock_open(void)
+{
+	uint reg_val = 0;
+
+	/* reset */
+	reg_val = readl(CCMU_GPADC_BGR_REG);
+	reg_val &= ~(1<<16);
+	writel(reg_val, CCMU_GPADC_BGR_REG);
+
+	__usdelay(2);
+
+	reg_val |=  (1<<16);
+	writel(reg_val, CCMU_GPADC_BGR_REG);
+
+	/* enable KEYADC gating */
+	reg_val = readl(CCMU_GPADC_BGR_REG);
+	reg_val |= (1<<0);
+	writel(reg_val, CCMU_GPADC_BGR_REG);
+
+	return 0;
+}
+
+int sunxi_key_clock_close(void)
+{
+	uint reg_val = 0;
+
+	/* disable KEYADC gating */
+	reg_val = readl(CCMU_GPADC_BGR_REG);
+	reg_val &= ~(1<<0);
+	writel(reg_val, CCMU_GPADC_BGR_REG);
+
+	return 0;
+}

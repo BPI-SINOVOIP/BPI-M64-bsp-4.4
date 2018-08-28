@@ -11,6 +11,8 @@
 #include <sys_partition.h>
 #include <sunxi_flash.h>
 #include <sunxi_board.h>
+#include <image.h>
+
 
 #define  SUNXI_FLASH_READ_FIRST_SIZE      (32 * 1024)
 
@@ -60,6 +62,7 @@ static int sunxi_flash_read_all(u32 start, ulong buf, const char *part_name)
 	u32 start_block = start;
 	void *addr;
 	struct andr_img_hdr *fb_hdr;
+	image_header_t *uz_hdr;
 
 	addr = (void *)buf;
 	ret = sunxi_flash_read(start_block, SUNXI_FLASH_READ_FIRST_SIZE/512, addr);
@@ -68,14 +71,22 @@ static int sunxi_flash_read_all(u32 start, ulong buf, const char *part_name)
 
 		return 1;
 	}
+
 	fb_hdr = (struct andr_img_hdr *)addr;
-	if (memcmp(fb_hdr->magic, ANDR_BOOT_MAGIC, 8)) {
+	uz_hdr = (image_header_t *)addr;
+
+	if (!memcmp(fb_hdr->magic, ANDR_BOOT_MAGIC, 8)) {
+		rbytes = fb_hdr->kernel_size + fb_hdr->ramdisk_size + fb_hdr->second_size + 1024 * 1024 + 511;
+
+	} else if (image_check_magic(uz_hdr)) {
+		rbytes = image_get_data_size(uz_hdr) + image_get_header_size() + 512;
+
+	} else {
 		printf("boota: bad boot image magic, maybe not a boot.img?\n");
 		printf("try to read partition(%s) all\n",part_name);
 		rbytes = sunxi_partition_get_size_byname(part_name) * 512;
-	} else {
-		rbytes = fb_hdr->kernel_size + fb_hdr->ramdisk_size + fb_hdr->second_size + 1024 * 1024 + 511;
 	}
+
 	rblock = rbytes/512 - SUNXI_FLASH_READ_FIRST_SIZE/512;
 	debug("rblock=%d, start=%d\n", rblock, start_block);
 	start_block += SUNXI_FLASH_READ_FIRST_SIZE/512;
@@ -93,7 +104,7 @@ static int sunxi_flash_read_all(u32 start, ulong buf, const char *part_name)
 static int sunxi_flash_write_boot0(void *addr, int storage_type)
 {
 	int ret = -1;
-	int boot0_len;
+	int boot0_len = 0;
 
 	switch (storage_type) {
 		case STORAGE_NAND:
@@ -102,11 +113,10 @@ static int sunxi_flash_write_boot0(void *addr, int storage_type)
 			sunxi_sprite_exit(0);
 			break;
 		case STORAGE_NOR:
-			boot0_len = sunxi_flash_get_boot0_size();
-			if (boot0_len > 0)
-				ret = spinor_download_boot0(boot0_len, (void *)addr);
+			ret = spinor_download_boot0(boot0_len, (void *)addr);
 			break;
 		case STORAGE_SD:
+		case STORAGE_SD1:
 		case STORAGE_EMMC:
 		case STORAGE_EMMC3:
 			ret = sunxi_sprite_download_boot0((void *)addr, storage_type);

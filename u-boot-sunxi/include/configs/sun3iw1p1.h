@@ -40,6 +40,20 @@
 #define UBOOT_VERSION           "3.0.0"
 #define UBOOT_PLATFORM          "1.0.0"
 
+//#define BOOT0_LOAD_KERNEL
+//#define BOOT0_JUMP_KERNEL
+
+
+#ifdef BOOT0_LOAD_KERNEL
+//please modify this by sys_partition_nor.fex.
+//for example , boot partition after boot-res and env
+//boot-res:1024 env:256
+//then BOOT0_LOAD_KERNEL_START_SECTOR is (32+1024+256), 32 is mbr
+#define BOOT0_LOAD_KERNEL_START_SECTOR  (32 + 1024 + 256)
+//#define BOOT0_LOAD_KERNEL_BUF           (0x80807fc0)
+#define BOOT0_LOAD_KERNEL_BUF           (0x80007fc0)
+#define BOOT0_LOAD_KERNEL_ENTRY         (0x80008000)
+#endif
 
 
 #ifdef CONFIG_SUN3IW1P1_NOR
@@ -97,7 +111,7 @@
 #define CONFIG_SUNXI_FDT_ADDR                (CONFIG_SYS_SDRAM_BASE+0x01000000)
 
 //serial number
-//#define CONFIG_SUNXI_SERIAL
+#define CONFIG_SUNXI_SERIAL
 // the sram base address, and the stack address in stage1
 #define CONFIG_SYS_INIT_RAM_ADDR        (0x00000000)
 #define CONFIG_SYS_INIT_RAM_SIZE        (0x00007ff0)
@@ -376,6 +390,7 @@
     #define CONFIG_CMD_SUNXI_SHUTDOWN
     #define CONFIG_CMD_SUNXI_BMP
     #define CONFIG_CMD_SUNXI_MEMTEST
+    #define CONFIG_BOOT_TONE
 #endif
 #ifdef CONFIG_SUNXI_KEY_BURN
     #define CONFIG_CMD_SUNXI_BURN
@@ -435,5 +450,8 @@
 /*key use tp controlar*/
 //#define CONFIG_TPADC_KEY
 
+#ifdef CONFIG_BOOT_TONE
+#define CONFIG_SUN3I_SOUND
+#endif
 
 #endif /* __CONFIG_H */

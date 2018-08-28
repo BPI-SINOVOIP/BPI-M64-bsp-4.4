@@ -12,6 +12,7 @@
 #include <malloc.h>
 #include <sys_config.h>
 #include <fdt_support.h>
+#include <sunxi_display2.h>
 #include "video_misc_hal.h"
 
 #if defined(CONFIG_BOOT_PARAMETER)
@@ -36,7 +37,7 @@ void disp_getprop_by_name(int node, const char *name,
 	unsigned int *value, unsigned int defval)
 {
 	if (fdt_getprop_u32(working_fdt, node, name, value) < 0) {
-		printf("set disp.%s fail. using defval=%d\n", name, defval);
+		printf("set disp.%s fail. using defval=%u\n", name, defval);
 		*value = defval;
 	}
 }
@@ -71,6 +72,85 @@ int hal_save_string_to_kernel(char *name, char *str)
 	printf("save_string_to_kernel %s.%s(%s). ret-code:%s\n",
 		DISP_FDT_NODE, name, str, fdt_strerror(ret));
 	return ret;
+}
+
+int hal_get_disp_device_config(int type, void *config)
+{
+
+#ifdef CONFIG_BOOT_PARAMETER
+	int tmp[4] = {0}; /* format, depth, cs, eotf */
+	struct disp_device_config *out = config;
+
+	if (!out)
+		return -1;
+	memset(out, 0, sizeof(*out));
+
+	if (bootparam_get_disp_device_config(type, tmp)) {
+		printf("Can't get display(type:%d) config from boot\n", type);
+		return -1;
+	}
+	if (tmp[2] == 0 || tmp[3] == 0) {
+		printf("invalid display config\n");
+		return -1;
+	}
+	out->type   = type;
+	out->format = tmp[0];
+	out->bits   = tmp[1];
+	out->cs     = tmp[2];
+	out->eotf   = tmp[3];
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+int hal_save_disp_device_config_to_kernel(int disp, void *from)
+{
+	const char *tag[] = {
+		"disp_config0",
+		"disp_config1"
+	};
+	struct disp_device_config saved;
+	struct disp_device_config *config = from;
+
+	if (disp < 0 || disp > 1)
+		return -1;
+
+	if (!config && !hal_get_disp_device_config(DISP_OUTPUT_TYPE_HDMI, &saved)) {
+		printf("get hdmi config from bootparam success.\n");
+		config = &saved;
+	}
+	if (!config)
+		return -1;
+
+	printf("hdmi config: format-%d bits-%d cs-%d eotf-%d\n",
+			config->format, config->bits, config->cs, config->eotf);
+
+#ifndef CONFIG_SUNXI_MULITCORE_BOOT
+	int node = get_disp_fdt_node();
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->type);
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->mode);
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->format);
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->bits);
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->cs);
+	fdt_appendprop_u32(working_fdt, node, tag[disp], config->eotf);
+#else
+/*
+	uint32_t array[6];
+	array[0] = config->type;
+	array[1] = config->mode;
+	array[2] = config->format;
+	array[3] = config->bits;
+	array[4] = config->cs;
+	array[5] = config->eotf;
+
+	sunxi_fdt_getprop_store_array(working_fdt,
+			DISP_FDT_NODE, tag[disp], array, 6);
+*/
+	/* We have already save the config on hal_switch_device() */
+	printf("bootGUI save config: %s\n", tag[disp]);
+#endif
+	return 0;
 }
 
 /*---------------------------------------------------------*/

@@ -43,6 +43,7 @@ extern  int sunxi_usb_exit(void);
 DECLARE_GLOBAL_DATA_PTR;
 
 extern volatile int sunxi_usb_burn_from_boot_handshake, sunxi_usb_burn_from_boot_init, sunxi_usb_burn_from_boot_setup;
+volatile int sunxi_usb_probe_update_action;
 
 
 int do_burn_from_boot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
@@ -113,6 +114,19 @@ int do_burn_from_boot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				sunxi_usb_exit();
 				tick_printf("%s usb : have no handshake\n", __func__);
 				return 0;
+			}
+		}
+		else
+		{
+		    if(sunxi_usb_probe_update_action == 1)
+			{
+				printf("ready to run efex \n");
+				sunxi_board_run_fel();
+			}
+			if(sunxi_usb_probe_update_action == 2)
+			{
+				printf("ready to boot normal \n");
+				break ;
 			}
 		}
 		if(ctrlc())

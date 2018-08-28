@@ -33,3 +33,5 @@ obj-$(CONFIG_TEGRA) += tegra-common/
 ifneq (,$(filter s5pc1xx exynos,$(SOC)))
 obj-y += s5p-common/
 endif
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_ARMV7_DIR) += -finstrument-functions

@@ -96,6 +96,8 @@
 
 #include <mali_kbase_as_fault_debugfs.h>
 
+#include <platform/sunxi/platform.h>
+
 /* GPU IRQ Tags */
 #define	JOB_IRQ_TAG	0
 #define MMU_IRQ_TAG	1
@@ -3840,6 +3842,7 @@ static int power_control_init(struct platform_device *pdev)
 	if (!kbdev)
 		return -ENODEV;
 
+#ifndef CONFIG_ARCH_SUNXI
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)) && defined(CONFIG_OF) \
 			&& defined(CONFIG_REGULATOR)
 	kbdev->regulator = regulator_get_optional(kbdev->dev, "mali");
@@ -3875,6 +3878,7 @@ static int power_control_init(struct platform_device *pdev)
 			goto fail;
 		}
 	}
+#endif /* CONFIG_ARCH_SUNXI */
 
 #if defined(CONFIG_OF) && defined(CONFIG_PM_OPP)
 	/* Register the OPPs if they are available in device tree */
@@ -3892,7 +3896,9 @@ static int power_control_init(struct platform_device *pdev)
 
 	return 0;
 
+#ifndef CONFIG_ARCH_SUNXI
 fail:
+#endif
 
 if (kbdev->clock != NULL) {
 	clk_put(kbdev->clock);
@@ -4051,6 +4057,7 @@ static int kbase_device_debugfs_init(struct kbase_device *kbdev)
 
 	kbase_debug_job_fault_debugfs_init(kbdev);
 	kbasep_gpu_memory_debugfs_init(kbdev);
+	kbasep_gpu_utilisation_debugfs_init(kbdev);
 	kbase_as_fault_debugfs_init(kbdev);
 #if KBASE_GPU_RESET_EN
 	/* fops_* variables created by invocations of macro

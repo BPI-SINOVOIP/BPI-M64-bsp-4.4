@@ -34,4 +34,8 @@ int graphic_buffer_alloc(unsigned int w, unsigned h, unsigned int bpp,
 
 int graphic_buffer_free(void *handle, int usage);
 
+#ifndef CONFIG_SUNXI_LOGBUFFER
+#define HW_FB_ADDR SUNXI_DISPLAY_FRAME_BUFFER_ADDR
+#endif
+
 #endif /* #ifndef __GR_ALLOCATOR_H__ */

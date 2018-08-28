@@ -20,6 +20,12 @@ export CONFIG_MALI_PLATFORM_THIRDPARTY_NAME=sunxi
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 
+include $(KDIR)/.config
+
+ifeq ($(CONFIG_PM_DEVFREQ),y)
+export CONFIG_MALI_DEVFREQ=y
+endif
+
 BUSLOG_PATH_RELATIVE = $(CURDIR)/../../../..
 UMP_PATH_RELATIVE = $(CURDIR)/../../../base/ump
 KBASE_PATH_RELATIVE = $(CURDIR)

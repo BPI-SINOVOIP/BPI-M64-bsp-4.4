@@ -46,16 +46,28 @@
 */
 void sunxi_spc_set_to_ns(uint type)
 {
-	writel(0x0016EAAF, SPC_SET_REG(0));
-	writel(0x00000007, SPC_SET_REG(2));
-	writel(0x00000001, SPC_SET_REG(3));
-    writel(0xDBD5033D, SPC_SET_REG(4));
-    writel(0x0040113F, SPC_SET_REG(5));
-    writel(0x007D0503, SPC_SET_REG(6));
-    writel(0x00323F1F, SPC_SET_REG(8));
-    writel(0x0BFB0303, SPC_SET_REG(10));
-    writel(0x000F011F, SPC_SET_REG(11));
-    writel(0x05FF2ED5, SPC_SET_REG(12));
-    writel(0x0000187C, SPC_SET_REG(13));
+#if 0
+	int i = 0;
+	for (i = 0; i < 14; i++)
+		writel(0xFFFFFFFF, SPC_SET_REG(i));
+	printf("set non-secure periperal(ccmu)\n");
+
+	/* set ccmu security switch: set mbus_sec bus_sec pll_sec to non-sec */
+	writel(0x7, SUNXI_CCM_BASE+0xf00);
+
+	/* set R_PRCM security switch: set power_sec  pll_sec cpus_clk to non-sec */
+	writel(0x7, SUNXI_RPRCM_BASE+0x290);
+
+	/* set dma security switch: set DMA channel0-7 to non-sec */
+	writel(0xfff, SUNXI_DMA_BASE+0x20);
+
+	/* enable non-secure access cci-400 registers */
+	writel(0x1, SUNXI_CCI400_BASE + 0x8);
+
+#endif
 }
 
+int sunxi_deassert_arisc(void)
+{
+	return 0;
+}

@@ -26,6 +26,7 @@
 #include <fdt_support.h>
 #include <sys_config_old.h>
 #include <cputask.h>
+#include "asm/arch/rtc_region.h"
 
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nannd flash, mmc2.
@@ -41,38 +42,39 @@ int power_source_init(void)
 {
 	int pll_cpux;
 	int axp_exist = 0;
+    int pmu_type = 0;
 
-	printf("u0:%x\n", readl(0x44000));
 #ifdef CONFIG_SUNXI_ARISC_EXIST
 	sunxi_arisc_probe();
 #endif
-
-	axp_exist =  axp_probe();
-	if(axp_exist)
-	{
-		axp_probe_factory_mode();
-		if(axp_probe_power_supply_condition())
+	pmu_type = uboot_spare_head.boot_ext[0].data[0];
+	if (pmu_type) {
+		axp_exist =  axp_probe();
+		if (axp_exist)
 		{
-			printf("axp_probe_power_supply_condition error\n");
-		}
-		gd->vbus_status = axp_probe_vbus_type();
-		set_sunxi_gpio_power_bias();
-		axp_set_charge_vol_limit();
-		axp_set_all_limit();
-		axp_set_hardware_poweron_vol();
-		if (axp_set_power_supply_output() < 0) {
-			printf("axp_set_power_supply_output error\n");
-			while (1) {
-				;
+			axp_probe_factory_mode();
+			if (axp_probe_power_supply_condition()) {
+					printf("axp_probe_power_supply_condition error\n");
 			}
+			gd->vbus_status = axp_probe_vbus_type();
+			set_sunxi_gpio_power_bias();
+			axp_set_charge_vol_limit();
+			axp_set_all_limit();
+			axp_set_hardware_poweron_vol();
+			if (axp_set_power_supply_output() < 0) {
+				printf("axp_set_power_supply_output error\n");
+				while (1) {
+					;
+				}
+			}
+
+		} else {
+			printf("axp_probe error\n");
 		}
-
+	} else {
+		sunxi_axp_dummy_init();
+		set_sunxi_gpio_power_bias();
 	}
-	else
-	{
-		printf("axp_probe error\n");
-	}
-
 	sunxi_clock_set_corepll(uboot_spare_head.boot_data.run_clock);
 
 	pll_cpux = sunxi_clock_get_corepll();
@@ -176,4 +178,25 @@ int sunxi_set_secure_mode(void)
 	}
 
 	return 0;
+}
+
+int sunxi_set_bootmode_flag(u8 flag)
+{
+	volatile uint reg_val;
+	do {
+		writel(flag, RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+		reg_val = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+	} while ((reg_val & 0xff) != flag);
+
+	return 0;
+}
+
+int sunxi_get_bootmode_flag(void)
+{
+	uint fel_flag;
+
+	/* operation should be same with kernel write rtc */
+	fel_flag = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+
+	return fel_flag;
 }

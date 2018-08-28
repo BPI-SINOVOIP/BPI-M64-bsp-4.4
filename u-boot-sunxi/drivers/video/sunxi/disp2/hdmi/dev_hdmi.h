@@ -11,6 +11,7 @@ int hdmi_mmap(struct file *file, struct vm_area_struct * vma);
 long hdmi_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 u32 hdmi_get_vic(u32 mode);
+u8 hdmi_get_work_mode(void);
 
 extern s32 hdmi_init(struct platform_device *pdev);
 extern s32 hdmi_exit(void);

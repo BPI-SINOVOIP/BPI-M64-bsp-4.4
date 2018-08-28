@@ -155,7 +155,6 @@ static void kbase_pm_get_dvfs_utilisation_calc(struct kbase_device *kbdev,
 	kbdev->pm.backend.metrics.time_period_start = now;
 }
 
-#if defined(CONFIG_MALI_DEVFREQ) || defined(CONFIG_MALI_MIDGARD_DVFS)
 /* Caller needs to hold kbdev->pm.backend.metrics.lock before calling this
  * function.
  */
@@ -212,7 +211,6 @@ void kbase_pm_get_dvfs_utilisation(struct kbase_device *kbdev,
 	*busy_out = busy;
 	spin_unlock_irqrestore(&kbdev->pm.backend.metrics.lock, flags);
 }
-#endif
 
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 

@@ -63,7 +63,6 @@ typedef struct __DRAM_PARA
 
 }__dram_para_t;
 
-extern int DRAMC_get_dram_size(void);
 #ifdef FPGA_PLATFORM
 unsigned int mctl_init(void *para);
 #else

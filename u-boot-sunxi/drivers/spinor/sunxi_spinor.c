@@ -31,6 +31,7 @@
 #include <sunxi_board.h>
 #include <fdt_support.h>
 #include <sys_config_old.h>
+#include <private_toc.h>
 
 
 static int   spinor_flash_inited = 0;
@@ -63,7 +64,10 @@ static int check_mbr_flag;
 #define QUAD_READ_ERR	(-1)
 static int set_quad_mode(u8 cmd1, u8 cmd2);
 static int spi_nor_fast_read_quad_output(uint start, uint sector_cnt, void *buf);
+#endif
+extern int spinor_get_boot0_size(uint *length, void *addr);
 
+#ifdef CONFIG_SPI_QUAD_MODE
 struct spinor_info {
 	uint		id;
 	u8		mode_cmd1;
@@ -1231,6 +1235,88 @@ int update_boot0_dram_para(char *buffer)
 
 }
 
+static int __spinor_boot_sector_write(uint start, uint nsector, void *buffer)
+{
+	int sector_index;
+
+	debug("start: 0x%x, nsector: 0x%x \n", start, nsector);
+
+	if (nsector > SPINOR_BLOCK_SECTORS-start % SPINOR_BLOCK_SECTORS) {
+		printf("sector cnt error\n");
+		return -1;
+	}
+
+	sector_index = start / SPINOR_BLOCK_SECTORS;
+	if ((start % SPINOR_BLOCK_SECTORS) || (nsector < SPINOR_BLOCK_SECTORS)) {
+		if (__spinor_sector_read(sector_index * SPINOR_BLOCK_SECTORS, SPINOR_BLOCK_SECTORS, spinor_write_cache)) {
+			printf("spinor read  sector fail\n");
+			return -1;
+		}
+	}
+
+	memcpy((spinor_write_cache + ((start % SPINOR_BLOCK_SECTORS) * 512)), buffer, nsector*512);
+
+	if (__spinor_erase_block(sector_index)) {
+		printf("erase 0x%x sector fail\n", sector_index);
+		return -1;
+	}
+
+	if (__spinor_sector_write(sector_index * SPINOR_BLOCK_SECTORS, SPINOR_BLOCK_SECTORS, spinor_write_cache)) {
+		printf("spinor write  0x%x sector fail\n", sector_index);
+		return -1;
+	}
+
+#ifdef SPINOR_DEBUG
+	/* verify */
+	if (__spinor_sector_read(start, nsector, spinor_write_cache)) {
+		printf("spinor read  sector fail\n");
+		return -1;
+	}
+
+	if (memcmp(spinor_write_cache, buffer, nsector*512)) {
+		printf("***write 0x%x sector fail***\n", sector_index*SPINOR_BLOCK_SECTORS);
+		return -1;
+	}
+#endif
+	return SPINOR_BLOCK_SECTORS;
+}
+
+int spinor_boot_write(uint start, uint nblock, void *buffer)
+{
+	uint start_sector;
+	int ret;
+	int offset;
+	int nsector = 0;
+	int sector_once_write = SPINOR_BLOCK_SECTORS;
+
+	if (nblock < SPINOR_BLOCK_SECTORS) {
+		sector_once_write = nblock;
+	}
+
+	offset = start%SPINOR_BLOCK_SECTORS;
+	/*  deal with first sector,make it align with 64k */
+	if (offset) {
+		nsector = SPINOR_BLOCK_SECTORS - offset;
+		ret =  __spinor_boot_sector_write(start, nsector, buffer);
+		if (ret < 0) {
+			printf("spinor sprite write fail\n");
+			return 0;
+		}
+	}
+
+	for (start_sector = start + nsector; start_sector < start + nblock; start_sector += SPINOR_BLOCK_SECTORS) {
+		if (start+nblock - start_sector < SPINOR_BLOCK_SECTORS)
+			sector_once_write = start+nblock - start_sector;
+		ret = __spinor_boot_sector_write(start_sector, sector_once_write,
+						(void *)((uint)buffer + (start_sector - start) * 512));
+		if (ret < 0) {
+			printf("spinor sprite write fail\n");
+			return 0;
+		}
+	}
+	return nblock;
+}
+
 int spinor_download_uboot(uint length, void *buffer)
 {
 	int ret = -1;
@@ -1239,9 +1325,14 @@ int spinor_download_uboot(uint length, void *buffer)
 		printf("warning:spinor need init\n");
 		sunxi_sprite_init(0);
 	}
-	ret = spinor_sprite_write(UBOOT_START_SECTOR_IN_SPINOR, length/512, buffer);
-	if (ret < 0)
-	{
+
+	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_BOOT) {
+		ret = spinor_boot_write(UBOOT_START_SECTOR_IN_SPINOR, length/512, buffer);
+	} else {
+		ret = spinor_sprite_write(UBOOT_START_SECTOR_IN_SPINOR, length/512, buffer);
+	}
+
+	if (ret < 0) {
 		printf("spinor download uboot fail\n");
 		return -1;
 	}
@@ -1253,12 +1344,23 @@ int spinor_download_boot0(uint length, void *buffer)
 {
 	int ret = -1;
 
-	if(update_boot0_dram_para(buffer))
-	{
+    ret = spinor_get_boot0_size(&length, buffer);
+	if (ret < 0) {
+		printf("spinor boot0_size is fail\n");
 		return -1;
 	}
+	if (ret > 0) {
+		if (update_boot0_dram_para(buffer)) {
+			return -1;
+		}
+	}
 
-	ret = spinor_sprite_write(0, length/512, buffer);
+	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_BOOT) {
+		ret = spinor_boot_write(0, length/512, buffer);
+	} else {
+		ret = spinor_sprite_write(0, length/512, buffer);
+	}
+
 	if (ret < 0)
 	{
 		printf("spinor download boot0 fail\n");

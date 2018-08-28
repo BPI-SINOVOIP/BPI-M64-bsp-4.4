@@ -257,6 +257,49 @@ ulong sunxi_dma_request(uint dmatype)
 
     return 0;
 }
+
+ulong sunxi_dma_request_from_last(uint dmatype)
+{
+    int   i;
+
+    if(dma_int_not++ == 0)
+    {
+        sunxi_dma_init();
+    }
+    if(dmatype == 0)
+    {
+        for(i = SUNXI_DMA_MAX-1; i >= 0; i--)
+        {
+            if(dma_channal_source_n[i].used == 0)
+            {
+                dma_channal_source_n[i].type          = 0;
+                dma_channal_source_n[i].used          = 1;
+                dma_channal_source_n[i].channal_count = i;
+
+                return (ulong)&dma_channal_source_n[i];
+            }
+        }
+        printf("dmatype=0 and all chanal is used\n");
+
+    }
+    else if(dmatype == 1)
+    {
+        for(i = SUNXI_DMA_MAX-1; i >= 0; i--)
+        {
+            if(dma_channal_source_d[i].used == 0)
+            {
+                dma_channal_source_n[i].type          = 1;
+                dma_channal_source_d[i].used          = 1;
+                dma_channal_source_d[i].channal_count = i;
+
+                return (ulong)&dma_channal_source_d[i];
+            }
+        }
+        printf("dmatype=0 and all chanal is used\n");
+    }
+
+    return 0;
+}
 /*
 ****************************************************************************************************
 *

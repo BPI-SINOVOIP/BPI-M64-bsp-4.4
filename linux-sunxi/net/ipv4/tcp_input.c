@@ -54,7 +54,7 @@
  *		Andi Kleen:		Process packets with PSH set in the
  *					fast path.
  *		J Hadi Salim:		ECN support
- *	 	Andrei Gurtov,
+ *		Andrei Gurtov,
  *		Pasi Sarolahti,
  *		Panu Kuhlberg:		Experimental audit of TCP (re)transmission
  *					engine. Lots of bugs are found.
@@ -2344,7 +2344,7 @@ static void tcp_undo_cwnd_reduction(struct sock *sk, bool unmark_loss)
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	if (unmark_loss) {
-		struct sk_buff *skb;
+		struct sk_buff *skb = NULL;
 
 		tcp_for_write_queue(skb, sk) {
 			if (skb == tcp_send_head(sk))
@@ -2596,7 +2596,7 @@ void tcp_simple_retransmit(struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct sk_buff *skb;
+	struct sk_buff *skb = NULL;
 	unsigned int mss = tcp_current_mss(sk);
 	u32 prior_lost = tp->lost_out;
 
@@ -3994,7 +3994,7 @@ void tcp_reset(struct sock *sk)
 }
 
 /*
- * 	Process the FIN bit. This now behaves as it is supposed to work
+ *	Process the FIN bit. This now behaves as it is supposed to work
  *	and the FIN takes effect when it is validly part of sequence
  *	space. Not before when we get holes.
  *
@@ -4964,7 +4964,8 @@ static void __tcp_ack_snd_check(struct sock *sk, int ofo_possible)
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	    /* More than one full frame received... */
-	if (((tp->rcv_nxt - tp->rcv_wup) > inet_csk(sk)->icsk_ack.rcv_mss &&
+	if (((tp->rcv_nxt - tp->rcv_wup) > (inet_csk(sk)->icsk_ack.rcv_mss) *
+			sysctl_tcp_delack_seg &&
 	     /* ... and right edge of window advances far enough.
 	      * (tcp_recvmsg() will send ACK otherwise). Or...
 	      */
@@ -5040,7 +5041,7 @@ static void tcp_check_urg(struct sock *sk, const struct tcphdr *th)
 	 * or we break the semantics of SIOCATMARK (and thus sockatmark())
 	 *
 	 * NOTE. Double Dutch. Rendering to plain English: author of comment
-	 * above did something sort of 	send("A", MSG_OOB); send("B", MSG_OOB);
+	 * above did something sort of	send("A", MSG_OOB); send("B", MSG_OOB);
 	 * and expect that both A and B disappear from stream. This is _wrong_.
 	 * Though this happens in BSD with high probability, this is occasional.
 	 * Any application relying on this is buggy. Note also, that fix "works"
@@ -5216,7 +5217,7 @@ discard:
  *	TCP receive function for the ESTABLISHED state.
  *
  *	It is split into a fast path and a slow path. The fast path is
- * 	disabled when:
+ *	disabled when:
  *	- A zero window was announced from us - zero window probing
  *        is only handled properly in the slow path.
  *	- Out of order segments arrived.

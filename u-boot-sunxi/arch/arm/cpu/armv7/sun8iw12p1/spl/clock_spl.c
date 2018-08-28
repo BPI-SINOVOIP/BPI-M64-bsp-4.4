@@ -22,7 +22,15 @@
 #include "asm/arch/timer.h"
 #include "asm/arch/archdef.h"
 #include "asm/arch/key.h"
+#include <sunxi_board.h>
 
+static void set_circuits_analog(void)
+{
+	/*calibration circuits analog enable*/
+	/*sunxi_clear_bit(RES_CAL_CTRL_REG, BIT(1));*/
+	sunxi_clear_bit(RES_CAL_CTRL_REG, BIT(0));
+	sunxi_set_bit(RES_CAL_CTRL_REG, BIT(0));
+}
 
 void set_factor_n(int factor_n, int reg)
 {
@@ -252,6 +260,8 @@ void set_platform_config(void)
 		reg_val &= ~(1 << 1);
 		writel(reg_val, reg_addr);
 	}
+
+	set_circuits_analog();
 }
 
 static void set_cpu_step(void)

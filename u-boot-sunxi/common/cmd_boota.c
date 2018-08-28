@@ -45,6 +45,7 @@
 #include <cputask.h>
 #include <sys_config_old.h>
 #include <sys_partition.h>
+#include <sunxi_mbr.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -77,7 +78,7 @@ static void announce_and_cleanup(int fake)
 	udc_disconnect();
 #endif
 	cleanup_before_linux();
-	pr_notice("\nStarting kernel ...%s\n\n", fake ?
+	pr_force("\nStarting kernel ...%s\n\n", fake ?
 		"(fake run for tracing)" : "");
 }
 
@@ -128,6 +129,12 @@ int do_boota_linux (void *kernel_addr, void *dtb_base, uint arch_type)
 
 	debug("## Transferring control to Linux (at address %lx)...\n",
 		(ulong) kernel_entry);
+
+#ifdef CONFIG_SUNXI_FINS_FUNC
+	extern int __attribute__((__no_instrument_function__))
+		ff_move_reloc_data(void);
+	ff_move_reloc_data();
+#endif
 
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
 	sunxi_secondary_cpu_poweroff();
@@ -217,8 +224,11 @@ void update_bootargs(void)
 		strcat(cmdline, tmpbuf);
 	}
 	setenv("bootargs", cmdline);
-	printf("android.hardware = %s", board_hardware_info());
+	printf("android.hardware = %s\n", board_hardware_info());
 }
+
+extern int switch_boot_partition(void);
+extern int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -240,6 +250,8 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if(android_image_check_header(fb_hdr))
 	{
 		puts("boota: bad boot image magic, maybe not a boot.img?\n");
+		switch_boot_partition();
+		do_reset(NULL, 0, 0,NULL);
 		return -1;
 	}
 	android_image_get_kernel(fb_hdr,0,&os_data,&os_len);
@@ -249,30 +261,42 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #ifdef CONFIG_SUNXI_SECURE_SYSTEM
 	if(gd->securemode)
 	{
-		ulong total_len = ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size) + 	\
-		                  ALIGN(fb_hdr->kernel_size, fb_hdr->page_size)  +  \
-		                  fb_hdr->page_size;
-
-		printf("total_len=%u\n", (unsigned int)total_len);
-		ulong sign_data , sign_len;
-		int ret ;
-
-		setenv("verifiedbootstate", "green");
-		if (android_image_get_signature(fb_hdr, &sign_data, &sign_len))
-			ret = sunxi_verify_embed_signature((void *)os_load_addr,
-				(unsigned int)total_len,
-				argv[2], (void *)sign_data, sign_len);
-		else
-			ret = sunxi_verify_signature((void *)os_load_addr,
-				(unsigned int)total_len, argv[2]);
-
-		if (ret) {
-			printf("boota: verify the %s failed\n", argv[2]);
-			setenv("verifiedbootstate", "red");
-
+		if (gd->lockflag == SUNXI_UNLOCKED) {
+			setenv("verifiedbootstate", "orange");
 			printf("start to display warnings.bmp\n");
 			sunxi_bmp_display("warnings.bmp");
-			return 1;
+		} else {
+			ulong total_len = ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size) + 	\
+							  ALIGN(fb_hdr->kernel_size, fb_hdr->page_size)  +  \
+							  fb_hdr->page_size;
+
+			printf("total_len=%d\n", (unsigned int)total_len);
+			ulong sign_data , sign_len;
+			int ret;
+
+			if (!strcmp(getenv("verifiedbootstate"), "yellow")) {
+				printf("start to display warnings.bmp\n");
+				sunxi_bmp_display("warnings.bmp");
+			} else {
+				setenv("verifiedbootstate", "green");
+			}
+			if (android_image_get_signature(fb_hdr, &sign_data, &sign_len))
+				ret = sunxi_verify_embed_signature((void *)os_load_addr,
+					(unsigned int)total_len,
+					argv[2], (void *)sign_data, sign_len);
+			else
+				ret = sunxi_verify_signature((void *)os_load_addr,
+					(unsigned int)total_len, argv[2]);
+
+			if (ret) {
+				printf("boota: verify the %s failed\n", argv[2]);
+				setenv("verifiedbootstate", "red");
+
+				printf("start to display warnings.bmp\n");
+				sunxi_bmp_display("warnings.bmp");
+				__msdelay(30000);
+				sunxi_board_shutdown();
+			}
 		}
 	}
 #endif

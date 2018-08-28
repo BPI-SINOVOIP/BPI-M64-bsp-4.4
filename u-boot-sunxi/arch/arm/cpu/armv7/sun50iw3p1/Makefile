@@ -27,3 +27,4 @@ obj-y	+= board.o
 obj-y	+= usb_clock.o
 obj-y	+= key_clock.o
 
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_ARMV7_DIR) += -finstrument-functions

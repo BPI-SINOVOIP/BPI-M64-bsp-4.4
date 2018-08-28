@@ -74,6 +74,35 @@ static NS16550_t serial_ports[6] = {
 #endif
 };
 
+struct uart_clk {
+	const char *name;
+	unsigned int base_addr;
+	unsigned int gate_shift;
+	unsigned int rst_shift;
+};
+
+static struct uart_clk uart_clk_tab[] = {
+	{"uart0", 0x0300190c, 0, 16},
+	{"uart1", 0x0300190c, 1, 17},
+	{"uart2", 0x0300190c, 2, 18},
+	{"uart3", 0x0300190c, 3, 19},
+	{"suart1", 0x0701018c, 1, 17},
+	{"suart2", 0x0701018c, 2, 18}
+};
+
+void serial_clk_enable(int port)
+{
+	unsigned int reg;
+
+	port--;
+	if (!uart_clk_tab[port].base_addr)
+		return;
+
+	reg = readl(uart_clk_tab[port].base_addr);
+	reg |= ((1 << uart_clk_tab[port].gate_shift) | (1 << uart_clk_tab[port].rst_shift));
+	writel(reg, uart_clk_tab[port].base_addr);
+}
+
 #define PORT	serial_ports[port-1]
 
 /* Multi serial device functions */
@@ -81,6 +110,7 @@ static NS16550_t serial_ports[6] = {
 	static int  eserial##port##_init(void) \
 	{ \
 		int clock_divisor; \
+		serial_clk_enable(port); \
 		clock_divisor = calc_divisor(serial_ports[port-1]); \
 		NS16550_init(serial_ports[port-1], clock_divisor); \
 		return 0 ; \
@@ -88,6 +118,10 @@ static NS16550_t serial_ports[6] = {
 	static void eserial##port##_setbrg(void) \
 	{ \
 		serial_setbrg_dev(port); \
+	} \
+	static void eserial##port##_setbaud(int baud) \
+	{ \
+		serial_setbaud_dev(port, baud); \
 	} \
 	static int  eserial##port##_getc(void) \
 	{ \
@@ -112,6 +146,7 @@ static NS16550_t serial_ports[6] = {
 	.start	= eserial##port##_init,		\
 	.stop	= NULL,				\
 	.setbrg	= eserial##port##_setbrg,	\
+	.setbaud = eserial##port##_setbaud,	\
 	.getc	= eserial##port##_getc,		\
 	.tstc	= eserial##port##_tstc,		\
 	.putc	= eserial##port##_putc,		\
@@ -182,6 +217,17 @@ _serial_tstc(const int port)
 }
 
 void
+_serial_setbaud(const int port, int baud)
+{
+	int clock_divisor;
+
+#define MODE_X_DIV 16
+	clock_divisor = (CONFIG_SYS_NS16550_CLK + (baud * (MODE_X_DIV / 2))) /
+		(MODE_X_DIV * baud);
+	NS16550_reinit(PORT, clock_divisor);
+}
+
+void
 _serial_setbrg (const int port)
 {
 	int clock_divisor;
@@ -218,6 +264,12 @@ static inline int
 serial_tstc_dev(unsigned int dev_index)
 {
 	return _serial_tstc(dev_index);
+}
+
+static inline void
+serial_setbaud_dev(unsigned int dev_index, int baud)
+{
+	_serial_setbaud(dev_index, baud);
 }
 
 static inline void

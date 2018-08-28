@@ -111,13 +111,27 @@ int sunxi_deassert_arisc(void)
 int load_fip(int *use_monitor)
 {
 	int i;
+	int dtb_loaded = 0, soccfg_loaded = 0;
+	int default_dtb_offset = 0, default_dtb_len = 0;
+	int default_soccfg_offset = 0, default_soccfg_len = 0;
+
+#ifdef CONFIG_BOARD_ID_GPIO
 	int dtb_index = 0;
+#endif
+
+#ifdef CONFIG_SUNXI_MOZART
+	int dtb_index = 0;
+#endif
 
 	void *dram_para_addr = (void *)BT0_head.prvt_head.dram_para;
 
 	struct sbrom_toc1_head_info  *toc1_head = NULL;
 	struct sbrom_toc1_item_info  *item_head = NULL;
 	struct sbrom_toc1_item_info  *toc1_item = NULL;
+
+#ifdef CONFIG_SUNXI_MOZART
+	struct boot0_extend_msg  *boot0_extend = NULL;
+#endif
 
 	char item_dtb_name_with_index[64+4];
 	char item_soccfg_name_with_index[64+4];
@@ -126,6 +140,26 @@ int load_fip(int *use_monitor)
 
 	toc1_head = (struct sbrom_toc1_head_info *)CONFIG_BOOTPKG_STORE_IN_DRAM_BASE;
 	item_head = (struct sbrom_toc1_item_info *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + sizeof(struct sbrom_toc1_head_info));
+
+#ifdef CONFIG_SUNXI_MOZART
+	boot0_extend = (struct boot0_extend_msg *)CONFIG_BOOT0_EXTEND_MSG_STORE_IN_DRAM_BASE;
+#ifdef BOOT_DEBUG
+	printf("*******************BOOT0 EXTEND Message*************************\n");
+	printf("Boot0_extend_magic      = %x\n",   boot0_extend->magic);
+	printf("Boot0_extend_dtb_index      = %d\n",   boot0_extend->dtb_index);
+	printf("****************************************************************\n");
+#endif
+	dtb_index = boot0_extend->dtb_index;
+	if(dtb_index >= CONFIG_SUNXI_MOZART_DTB_COUNT)
+	{
+		dtb_index = 0;
+	}
+	if(dtb_index != 0)
+	{
+		sprintf(item_dtb_name_with_index, "%s-%d", ITEM_DTB_NAME, dtb_index);
+		sprintf(item_soccfg_name_with_index, "%s-%d", ITEM_SOCCFG_NAME, dtb_index);
+	}
+#endif
 
 #ifdef BOOT_DEBUG
 	printf("*******************TOC1 Head Message*************************\n");
@@ -223,10 +257,20 @@ int load_fip(int *use_monitor)
 		else if(strlen(toc1_item->name) == strlen(item_dtb_name_with_index) &&
 				strncmp(toc1_item->name, item_dtb_name_with_index, strlen(item_dtb_name_with_index)) == 0) {
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_DTB_STORE_IN_DRAM_BASE);
+			dtb_loaded = 1;
 		}
 		else if(strlen(toc1_item->name) == strlen(item_soccfg_name_with_index) &&
 				strncmp(toc1_item->name, item_soccfg_name_with_index, strlen(item_soccfg_name_with_index)) == 0) {
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SOCCFG_STORE_IN_DRAM_BASE);
+			soccfg_loaded = 1;
+		}
+		else if(strncmp(toc1_item->name, ITEM_DTB_NAME, sizeof(ITEM_DTB_NAME)) == 0) {
+			default_dtb_offset = toc1_item->data_offset/512;
+			default_dtb_len = (toc1_item->data_len+511)/512;
+		}
+		else if(strncmp(toc1_item->name, ITEM_SOCCFG_NAME, sizeof(ITEM_SOCCFG_NAME)) == 0) {
+			default_soccfg_offset = toc1_item->data_offset/512;
+			default_soccfg_len = (toc1_item->data_len+511)/512;
 		}
 
 
@@ -237,6 +281,24 @@ int load_fip(int *use_monitor)
 		/* Obtain a reference to the image by querying the platform layer */
 		header = (struct spare_boot_head_t* )CONFIG_SYS_TEXT_BASE;
 		header->boot_data.monitor_exist = 1;
+	}
+	if(dtb_loaded == 0)
+	{
+		printf("Warning:can not find %s in toc1\n", item_dtb_name_with_index);
+		if(default_dtb_offset != 0 && default_dtb_len != 0)
+		{
+			printf("default load %s\n", ITEM_DTB_NAME);
+			toc1_flash_read(default_dtb_offset,default_dtb_len, (void *)CONFIG_DTB_STORE_IN_DRAM_BASE);
+		}
+	}
+	if(soccfg_loaded == 0)
+	{
+		printf("Warning:can not find %s in toc1\n", item_soccfg_name_with_index);
+		if(default_soccfg_offset != 0 && default_soccfg_len != 0)
+		{
+			printf("default load %s\n", ITEM_SOCCFG_NAME);
+			toc1_flash_read(default_soccfg_offset,default_soccfg_len, (void *)CONFIG_SOCCFG_STORE_IN_DRAM_BASE);
+		}
 	}
 	return 0;
 }

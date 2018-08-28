@@ -2,6 +2,117 @@
 
 static const struct de_feat *de_cur_features;
 
+#if defined(CONFIG_ARCH_SUN8IW15P1)
+static const int sun8iw15_de_num_chns[] = {
+	/* DISP0 */
+	4,
+};
+
+static const int sun8iw15_de_num_vi_chns[] = {
+	/* DISP0 */
+	1,
+};
+
+static const int sun8iw15_de_num_layers[] = {
+	/* DISP0 CH0 */
+	4,
+	/* DISP0 CH1 */
+	4,
+	/* DISP0 CH2 */
+	4,
+	/* DISP0 CH3 */
+	4,
+};
+
+static const int sun8iw15_de_is_support_vep[] = {
+	/* DISP0 CH0 */
+	1,
+	/* DISP0 CH1 */
+	0,
+	/* DISP0 CH2 */
+	0,
+	/* DISP0 CH3 */
+	0,
+};
+
+static const int sun8iw15_de_is_support_smbl[] = {
+	/* CH0 */
+	1,
+	/* CH1 */
+	0,
+};
+
+static const int sun8iw15_de_supported_output_types[] = {
+	/* tcon0 */
+	DE_OUTPUT_TYPE_LCD,
+};
+
+static const int sun8iw15_de_is_support_wb[] = {
+	/* DISP0 */
+	1,
+};
+
+static const int sun8iw15_de_is_support_scale[] = {
+	/* DISP0 CH0 */
+	1,
+	/* DISP0 CH1 */
+	1,
+	/* DISP0 CH2 */
+	1,
+	/* DISP0 CH3 */
+	1,
+};
+
+static const int sun8iw15_de_scale_line_buffer_yuv[] = {
+	/* DISP0 CH0 */
+	2560,
+	/* DISP0 CH1 */
+	2048,
+	/* DISP0 CH2 */
+	2048,
+	/* DISP0 CH3 */
+	2048,
+};
+
+static const int sun8iw15_de_scale_line_buffer_rgb[] = {
+	/* DISP0 CH0 */
+	2560,
+	/* DISP0 CH1 */
+	2048,
+	/* DISP0 CH2 */
+	2048,
+	/* DISP0 CH3 */
+	2048,
+};
+
+static const int sun8iw15_de_scale_line_buffer_ed[] = {
+	/* DISP0 CH0 */
+	2560,
+	/* DISP0 CH1 */
+	2048,
+	/* DISP0 CH2 */
+	2048,
+	/* DISP0 CH3 */
+	2048,
+};
+
+static const struct de_feat sun8iw15_de_features = {
+	.num_screens = DE_NUM,
+	.num_devices = DEVICE_NUM,
+	.num_chns = sun8iw15_de_num_chns,
+	.num_vi_chns = sun8iw15_de_num_vi_chns,
+	.num_layers = sun8iw15_de_num_layers,
+	.is_support_vep = sun8iw15_de_is_support_vep,
+	.is_support_smbl = sun8iw15_de_is_support_smbl,
+	.is_support_wb = sun8iw15_de_is_support_wb,
+	.supported_output_types = sun8iw15_de_supported_output_types,
+	.is_support_scale = sun8iw15_de_is_support_scale,
+	.scale_line_buffer_yuv = sun8iw15_de_scale_line_buffer_yuv,
+	.scale_line_buffer_rgb = sun8iw15_de_scale_line_buffer_rgb,
+	.scale_line_buffer_ed = sun8iw15_de_scale_line_buffer_ed,
+};
+#endif /*endif CONFIG_ARCH_SUN8IW15P1*/
+
 #if defined(CONFIG_ARCH_SUN8IW7P1)
 static const int sun8iw7_de_num_chns[] = {
 	/* DISP0 */
@@ -1320,6 +1431,8 @@ int de_feat_init(void)
 	de_cur_features = &sun8iw7_de_features;
 #elif defined(CONFIG_ARCH_SUN8IW6P1)
 	de_cur_features = &sun8iw6_de_features;
+#elif defined(CONFIG_ARCH_SUN8IW15P1)
+	de_cur_features = &sun8iw15_de_features;
 #else
 #error "undefined platform!!!"
 #endif

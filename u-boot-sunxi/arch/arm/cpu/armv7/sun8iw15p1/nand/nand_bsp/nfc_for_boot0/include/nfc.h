@@ -59,15 +59,12 @@ extern __u32 NandIndex;
 #define NFC_REG_o_TIMING_CFG       0x0010
 #define NFC_REG_o_ADDR_LOW         0x0014
 #define NFC_REG_o_ADDR_HIGH        0x0018
-//#define NFC_REG_o_SECTOR_NUM       0x001C
 #define NFC_REG_o_BLOCK_MASK       0x001c
 #define NFC_REG_o_CNT              0x0020
 #define NFC_REG_o_CMD              0x0024
 #define NFC_REG_o_RCMD_SET         0x0028
 #define NFC_REG_o_WCMD_SET         0x002C
-#define NFC_REG_o_IO_DATA          0x0300
 #define NFC_REG_o_ECC_CTL          0x0034
-//#define NFC_REG_o_ECC_ST           0x0038
 #define NFC_REG_o_ERR_ST           0x0038
 #define NFC_REG_o_PAT_ST           0x003C
 #define NFC_REG_o_DEBUG            0x0040
@@ -85,83 +82,125 @@ extern __u32 NandIndex;
 #define NFC_REG_o_USER_DATA_LEN_X_BASE      0x0070
 #define NFC_REG_o_USER_DATA_x_BASE          0x0080 //0x0070
 
+#define NFC_REG_o_FLASH_STA        0x0100
+#define NFC_REG_o_CMD_REP_CNT      0x0104
+#define NFC_REG_o_CMD_REP_INT      0x0108
+
+
 #define NFC_REG_o_EFNAND_STATUS    0x0110 //0x00F0
 #define NFC_REG_o_SPARE_AREA       0x0114 //0x00F4
 
 #define NFC_REG_o_PATTERN_ID_0      0x0118 //0x00F8
-//#define NFC_REG_o_PATTERN_ID_1     0x00FC
-
-//#define NFC_REG_o_SPEC_CTL         0x0100
 #define NFC_REG_o_DDR2_SPEC_CTL      0x011c //   0x0100
 
-//#define NFC_REG_o_MDMA_ADDR        0x00C0
-//#define NFC_REG_o_DMA_CNT          0x00C4
-#define NFC_REG_o_DMA_DL_BASE      0x0200
-#define NFC_REG_o_DMA_INT_STA      0x0204
-#define NFC_REG_o_DMA_INT_MASK     0x0208
-#define NFC_REG_o_DMA_CUR_DESC     0x020C
-#define NFC_REG_o_DMA_CUR_BUF      0x0210
+#define NFC_REG_o_VAIID_DATA_DMA_CNT        0x012C
+#define NFC_REG_o_DATA_DMA_BASE			    0x0130
+#define NFC_REG_o_DATA_DMA_SIZE_2X          0x0170
+#define NFC_REG_o_DATA_DMA_SIZE_2X_1        0x0174
+#define NFC_REG_o_DATA_DMA_SIZE_2X_2        0x0178
+#define NFC_REG_o_DATA_DMA_SIZE_2X_3        0x017C
+#define NFC_REG_o_DATA_DMA_SIZE_2X_4        0x0180
+#define NFC_REG_o_DATA_DMA_SIZE_2X_5        0x0184
+#define NFC_REG_o_DATA_DMA_SIZE_2X_6        0x0188
+#define NFC_REG_o_DATA_DMA_SIZE_2X_7        0x018C
+#define NFC_REG_o_RANDOM_SEED_X             0x0190
+
 #define NFC_REG_o_DMA_CNT          0x0214
+
+#define NFC_REG_o_IO_DATA         0x02A0
+#define NFC_REG_o_LDPC_CTL		  0x02FC
+#define NFC_REG_o_ENC_LDPC_MODE_SET		0x0300
+#define NFC_REG_o_COR_LDPC_MODE_SET     0x0304
+#define NFC_REG_o_C0_LLR_TBL_ADDR       0x0308
+#define NFC_REG_o_C1_LLR_TBL_ADDR       0x0328
+#define NFC_REG_o_GLB_CFG         		0x0C00
+#define NFC_REG_o_CMD_DESCR_BASE_ADDR   0x0C04
+#define NFC_REG_o_CMD_DESCR_STA         0x0C08
+#define NFC_REG_o_CMD_DESCR_INTR        0x0C0C
+#define NFC_REG_o_CSIC_BIST_CTL         0x0C10
+#define NFC_REG_o_BIST_START_ADDR       0x0C14
+#define NFC_REG_o_BIST_END_ADDR         0x0C18
+#define NFC_REG_o_BIST_DATA_MASK        0x0C1C
 
 #define NFC_o_RAM0_BASE            0x0400
 #define NFC_o_RAM1_BASE            0x0800
 
 
   /* registers */
-#define NFC_REG_CTL                __NFC_REG( NFC_REG_o_CTL )
-#define NFC_REG_ST                 __NFC_REG( NFC_REG_o_ST )
-#define NFC_REG_INT                __NFC_REG( NFC_REG_o_INT )
-#define NFC_REG_TIMING_CTL         __NFC_REG( NFC_REG_o_TIMING_CTL )
-#define NFC_REG_TIMING_CFG         __NFC_REG( NFC_REG_o_TIMING_CFG )
-#define NFC_REG_ADDR_LOW           __NFC_REG( NFC_REG_o_ADDR_LOW )
-#define NFC_REG_ADDR_HIGH          __NFC_REG( NFC_REG_o_ADDR_HIGH )
-//#define NFC_REG_SECTOR_NUM         __NFC_REG( NFC_REG_o_SECTOR_NUM )
-#define NFC_REG_BLOCK_MASK         __NFC_REG( NFC_REG_o_BLOCK_MASK )
-#define NFC_REG_CNT                __NFC_REG( NFC_REG_o_CNT )
-#define NFC_REG_CMD                __NFC_REG( NFC_REG_o_CMD )
-#define NFC_REG_RCMD_SET           __NFC_REG( NFC_REG_o_RCMD_SET )
-#define NFC_REG_WCMD_SET           __NFC_REG( NFC_REG_o_WCMD_SET )
-#define NFC_REG_IO_DATA            __NFC_REG( NFC_REG_o_IO_DATA )
-#define NFC_REG_ECC_CTL            __NFC_REG( NFC_REG_o_ECC_CTL )
+#define NFC_REG_CTL                __NFC_REG(NFC_REG_o_CTL)
+#define NFC_REG_ST                 __NFC_REG(NFC_REG_o_ST)
+#define NFC_REG_INT                __NFC_REG(NFC_REG_o_INT)
+#define NFC_REG_TIMING_CTL         __NFC_REG(NFC_REG_o_TIMING_CTL)
+#define NFC_REG_TIMING_CFG         __NFC_REG(NFC_REG_o_TIMING_CFG)
+#define NFC_REG_ADDR_LOW           __NFC_REG(NFC_REG_o_ADDR_LOW)
+#define NFC_REG_ADDR_HIGH          __NFC_REG(NFC_REG_o_ADDR_HIGH)
+#define NFC_REG_BLOCK_MASK         __NFC_REG(NFC_REG_o_BLOCK_MASK)
+#define NFC_REG_CNT                __NFC_REG(NFC_REG_o_CNT)
+#define NFC_REG_CMD                __NFC_REG(NFC_REG_o_CMD)
+#define NFC_REG_RCMD_SET           __NFC_REG(NFC_REG_o_RCMD_SET)
+#define NFC_REG_WCMD_SET           __NFC_REG(NFC_REG_o_WCMD_SET)
+#define NFC_REG_IO_DATA            __NFC_REG(NFC_REG_o_IO_DATA)
+#define NFC_REG_ECC_CTL            __NFC_REG(NFC_REG_o_ECC_CTL)
 
-//#define NFC_REG_ECC_ST             __NFC_REG( NFC_REG_o_ECC_ST )
-#define NFC_REG_ERR_ST             __NFC_REG( NFC_REG_o_ERR_ST )
-#define NFC_REG_PAT_ST             __NFC_REG( NFC_REG_o_PAT_ST )
+#define NFC_REG_ERR_ST             __NFC_REG(NFC_REG_o_ERR_ST)
+#define NFC_REG_PAT_ST             __NFC_REG(NFC_REG_o_PAT_ST)
 
-#define NFC_REG_DEBUG              __NFC_REG( NFC_REG_o_DEBUG )
+#define NFC_REG_DEBUG              __NFC_REG(NFC_REG_o_DEBUG)
 
-#define NFC_REG_ECC_CNT0           __NFC_REG( NFC_REG_o_ECC_CNT0 )
-#define NFC_REG_ECC_CNT1           __NFC_REG( NFC_REG_o_ECC_CNT1 )
-#define NFC_REG_ECC_CNT2           __NFC_REG( NFC_REG_o_ECC_CNT2 )
-#define NFC_REG_ECC_CNT3           __NFC_REG( NFC_REG_o_ECC_CNT3 )
-#define NFC_REG_ECC_CNT4           __NFC_REG( NFC_REG_o_ECC_CNT4 )
-#define NFC_REG_ECC_CNT5           __NFC_REG( NFC_REG_o_ECC_CNT5 )
-#define NFC_REG_ECC_CNT6           __NFC_REG( NFC_REG_o_ECC_CNT6 )
-#define NFC_REG_ECC_CNT7           __NFC_REG( NFC_REG_o_ECC_CNT7 )
+#define NFC_REG_ECC_CNT0           __NFC_REG(NFC_REG_o_ECC_CNT0)
+#define NFC_REG_ECC_CNT1           __NFC_REG(NFC_REG_o_ECC_CNT1)
+#define NFC_REG_ECC_CNT2           __NFC_REG(NFC_REG_o_ECC_CNT2)
+#define NFC_REG_ECC_CNT3           __NFC_REG(NFC_REG_o_ECC_CNT3)
+#define NFC_REG_ECC_CNT4           __NFC_REG(NFC_REG_o_ECC_CNT4)
+#define NFC_REG_ECC_CNT5           __NFC_REG(NFC_REG_o_ECC_CNT5)
+#define NFC_REG_ECC_CNT6           __NFC_REG(NFC_REG_o_ECC_CNT6)
+#define NFC_REG_ECC_CNT7           __NFC_REG(NFC_REG_o_ECC_CNT7)
 
-//#define NFC_REG_USER_DATA(sct_num) __NFC_REG( NFC_REG_o_USER_DATA_BASE + 4 * sct_num )
-//#define NFC_REG_o_USER_DATA_LEN_X_BASE      0x0070
-#define NFC_REG_USER_DATA_LEN(blk_num)      __NFC_REG( NFC_REG_o_USER_DATA_LEN_X_BASE+ 4 * blk_num )
+#define NFC_REG_USER_DATA_LEN(blk_num)      __NFC_REG(NFC_REG_o_USER_DATA_LEN_X_BASE + 4 * blk_num)
 
-#define NFC_REG_USER_DATA(blk_num) __NFC_REG( NFC_REG_o_USER_DATA_x_BASE + 4 * blk_num )
+#define NFC_REG_USER_DATA(blk_num) __NFC_REG(NFC_REG_o_USER_DATA_x_BASE + 4 * blk_num)
 
-#define NFC_REG_EFNAND_STATUS      __NFC_REG( NFC_REG_o_EFNAND_STATUS )
-#define NFC_REG_SPARE_AREA         __NFC_REG( NFC_REG_o_SPARE_AREA )
-#define NFC_REG_PATTERN_ID_0       __NFC_REG( NFC_REG_o_PATTERN_ID_0 )
-#define NFC_REG_PATTERN_ID_1       __NFC_REG( NFC_REG_o_PATTERN_ID_1 )
+#define NFC_REG_FLASH_STA           	__NFC_REG(NFC_REG_o_FLASH_STA)
+#define NFC_REG_CMD_REP_CNT           	__NFC_REG(NFC_REG_o_CMD_REP_CNT)
+#define NFC_REG_CMD_REP_INT          	__NFC_REG(NFC_REG_o_CMD_REP_INT)
+#define NFC_REG_VAIID_DATA_DMA_CNT      __NFC_REG(NFC_REG_o_VAIID_DATA_DMA_CNT)
+#define NFC_REG_DATA_DMA_BASE         	__NFC_REG(NFC_REG_o_DATA_DMA_BASE)
+#define NFC_REG_DATA_DMA_SIZE_2X        __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X)
+#define NFC_REG_DATA_DMA_SIZE_2X_1      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_1)
+#define NFC_REG_DATA_DMA_SIZE_2X_2      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_2)
+#define NFC_REG_DATA_DMA_SIZE_2X_3      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_3)
+#define NFC_REG_DATA_DMA_SIZE_2X_4      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_4)
+#define NFC_REG_DATA_DMA_SIZE_2X_5      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_5)
+#define NFC_REG_DATA_DMA_SIZE_2X_6      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_6)
+#define NFC_REG_DATA_DMA_SIZE_2X_7      __NFC_REG(NFC_REG_o_DATA_DMA_SIZE_2X_7)
+#define NFC_REG_RANDOM_SEED_X           __NFC_REG(NFC_REG_o_RANDOM_SEED_X)
 
-//#define NFC_REG_MDMA_ADDR       __NFC_REG( NFC_REG_o_MDMA_ADDR )
-//#define NFC_REG_DMA_CNT         __NFC_REG( NFC_REG_o_DMA_CNT )
-#define NFC_REG_DMA_DL_BASE       __NFC_REG( NFC_REG_o_DMA_DL_BASE )
-#define NFC_REG_DMA_INT_STA       __NFC_REG( NFC_REG_o_DMA_INT_STA )
-#define NFC_REG_DMA_INT_MASK      __NFC_REG( NFC_REG_o_DMA_INT_MASK )
-#define NFC_REG_DMA_CUR_DESC      __NFC_REG( NFC_REG_o_DMA_CUR_DESC )
-#define NFC_REG_DMA_CUR_BUF       __NFC_REG( NFC_REG_o_DMA_CUR_BUF )
-#define NFC_REG_DMA_CNT           __NFC_REG( NFC_REG_o_DMA_CNT )
+#define NFC_REG_EFNAND_STATUS      __NFC_REG(NFC_REG_o_EFNAND_STATUS)
+#define NFC_REG_SPARE_AREA         __NFC_REG(NFC_REG_o_SPARE_AREA)
+#define NFC_REG_PATTERN_ID_0       __NFC_REG(NFC_REG_o_PATTERN_ID_0)
+#define NFC_REG_PATTERN_ID_1       __NFC_REG(NFC_REG_o_PATTERN_ID_1)
+
+#define NFC_REG_DMA_INT_STA       __NFC_REG(NFC_REG_o_DMA_INT_STA)
+#define NFC_REG_DMA_CNT           __NFC_REG(NFC_REG_o_DMA_CNT)
+
+#define NFC_REG_IO_DATA          		__NFC_REG(NFC_REG_o_IO_DATA)
+#define NFC_REG_LDPC_CTL           		__NFC_REG(NFC_REG_o_LDPC_CTL)
+#define NFC_REG_ENC_LDPC_MODE_SET       __NFC_REG(NFC_REG_o_ENC_LDPC_MODE_SET)
+#define NFC_REG_COR_LDPC_MODE_SET       __NFC_REG(NFC_REG_o_COR_LDPC_MODE_SET)
+#define NFC_REG_C0_LLR_TBL_ADDR         __NFC_REG(NFC_REG_o_C0_LLR_TBL_ADDR)
+#define NFC_REG_C1_LLR_TBL_ADDR         __NFC_REG(NFC_REG_o_C1_LLR_TBL_ADDR)
+#define NFC_REG_GLB_CFG             	__NFC_REG(NFC_REG_o_GLB_CFG)
+#define NFC_REG_CMD_DESCR_BASE_ADDR     __NFC_REG(NFC_REG_o_CMD_DESCR_BASE_ADDR)
+#define NFC_REG_CMD_DESCR_STA         	__NFC_REG(NFC_REG_o_CMD_DESCR_STA)
+#define NFC_REG_CMD_DESCR_INTR          __NFC_REG(NFC_REG_o_CMD_DESCR_INTR)
+#define NFC_REG_CSIC_BIST_CTL           __NFC_REG(NFC_REG_o_CSIC_BIST_CTL)
+#define NFC_REG_BIST_START_ADDR         __NFC_REG(NFC_REG_o_BIST_START_ADDR)
+#define NFC_REG_BIST_END_ADDR           __NFC_REG(NFC_REG_o_BIST_END_ADDR)
+#define NFC_REG_BIST_DATA_MASK          __NFC_REG(NFC_REG_o_BIST_DATA_MASK)
 
 
-#define NFC_RAM0_BASE              ( NFC_o_RAM0_BASE )
-#define NFC_RAM1_BASE              ( NFC_o_RAM1_BASE )
+#define NFC_RAM0_BASE              (NFC_o_RAM0_BASE)
+#define NFC_RAM1_BASE              (NFC_o_RAM1_BASE)
 
 
 
@@ -200,8 +239,8 @@ extern __u32 NandIndex;
 
 /*define	bit use in NFC_ST*/
 #define NFC_RB_B2R				(1 << 0)
-#define NFC_CMD_INT_FLAG		    (1 << 1)
-#define NFC_DMA_INT_FLAG		    (1 << 2)
+#define NFC_CMD_INT_FLAG		(1 << 1)
+#define NFC_DMA_INT_FLAG		(1 << 2)
 #define NFC_CMD_FIFO_STATUS		(1 << 3)
 #define NFC_STA					(1 << 4)
 //#define NFC_NATCH_INT_FLAG		(1 << 5)
@@ -259,6 +298,8 @@ extern __u32 NandIndex;
 #define NFC_ECC_MODE			(0xff << 8)
 #define NFC_RANDOM_SEED        (0x7fff << 16))
 
+/*define bit use in NDFC_GLB_CFG*/
+#define NDFC_CHANNEL_SEL	(1 << 2)
 
 #define NFC_IRQ_MAJOR		    13
 /*cmd flag bit*/

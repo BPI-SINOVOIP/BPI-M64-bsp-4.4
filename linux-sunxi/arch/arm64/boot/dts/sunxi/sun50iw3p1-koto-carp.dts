@@ -1,0 +1,160 @@
+/*
+ * Allwinner Technology CO., Ltd. sun50iw3p1 soc koto-carp board.
+ *
+ * soc board support.
+ */
+
+/dts-v1/;
+
+#include "sun50iw3p1.dtsi"
+
+/{
+	soc@03000000 {
+		twi0: twi@0x05002000{
+			status = "okay";
+			touchscreen: fts@38 {
+				compatible = "focaltech,fts";
+				reg = <0x38>;
+				focaltech,reset-gpio = <&r_pio PL 18 1 1 1 1>;
+				focaltech,irq-gpio = <&r_pio PL 19 6 1 1 1>;
+				focaltech,max-touch-number = <5>;
+				focaltech,display-coords = <0 0 1080 1920>;
+
+				/*focaltech,have-key;*/
+				focaltech,key-number = <3>;
+				focaltech,keys = <139 102 158>;
+				focaltech,key-y-coord = <2000>;
+				focaltech,key-x-coords = <200 600 800>;
+			};
+		};
+
+		spi1: spi@0x05011000 {
+			status = "ok";
+			adc: adc084s021@0 {
+				compatible = "ti,adc084s021";
+				reg = <0>;
+				spi-max-frequency = <1600000>;
+			};
+		};
+	};
+
+	gpio_keys:gpio_keys {
+		compatible = "gpio-keys";
+		status = "okay";
+		button_r:button_r {
+			label = "button_r";
+			gpios = <&r_pio PL 8 6 1 1 1>;
+			linux,code = <183>;
+			gpio-key,wakeup;
+		};
+		button_x:button_x {
+			label = "button_x";
+			gpios = <&r_pio PL 9 6 1 1 1>;
+			linux,code = <45>;
+			gpio-key,wakeup;
+		};
+		button_a:button_a {
+			label = "button_a";
+			gpios = <&r_pio PL 10 6 1 1 1>;
+			linux,code = <30>;
+			gpio-key,wakeup;
+		};
+		button_y:button_y {
+			label = "button_y";
+			gpios = <&r_pio PL 11 6 1 1 1>;
+			linux,code = <21>;
+			gpio-key,wakeup;
+		};
+		button_b:button_b {
+			label = "button_b";
+			gpios = <&r_pio PL 12 6 1 1 1>;
+			linux,code = <48>;
+			gpio-key,wakeup;
+		};
+		button_start:button_start {
+			label = "button_start";
+			gpios = <&r_pio PL 13 6 1 1 1>;
+			linux,code = <0x13b>;
+			gpio-key,wakeup;
+		};
+		button_home:button_home {
+			label = "button_home";
+			gpios = <&r_pio PL 14 6 1 1 1>;
+			linux,code = <102>;
+			gpio-key,wakeup;
+		};
+		button_zr:button_zr {
+			label = "button_zr";
+			gpios = <&r_pio PL 16 6 1 1 1>;
+			linux,code = <183>;
+			gpio-key,wakeup;
+		};
+		button_select:button_select {
+			label = "button_select";
+			gpios = <&pio PB 0 6 1 1 1>;
+			linux,code = <0x13a>;
+			gpio-key,wakeup;
+		};
+		button_voldown:button_voldown {
+			label = "button_voldown";
+			gpios = <&pio PB 1 6 1 1 1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+		};
+		button_down:button_down {
+			label = "button_down";
+			gpios = <&pio PB 2 6 1 1 1>;
+			linux,code = <108>;
+			gpio-key,wakeup;
+		};
+		button_right:button_right {
+			label = "button_right";
+			gpios = <&pio PB 3 6 1 1 1>;
+			linux,code = <106>;
+			gpio-key,wakeup;
+		};
+		button_zl:button_zl {
+			label = "button_zl";
+			gpios = <&pio PB 4 6 1 1 1>;
+			linux,code = <183>;
+			gpio-key,wakeup;
+		};
+		button_up:button_up {
+			label = "button_up";
+			gpios = <&pio PB 5 6 1 1 1>;
+			linux,code = <103>;
+			gpio-key,wakeup;
+		};
+		button_l:button_l {
+			label = "button_l";
+			gpios = <&pio PB 6 6 1 1 1>;
+			linux,code = <183>;
+			gpio-key,wakeup;
+		};
+		button_left:button_left {
+			label = "button_left";
+			gpios = <&pio PB 7 6 1 1 1>;
+			linux,code = <105>;
+			gpio-key,wakeup;
+		};
+		button_volup:button_volup {
+			label = "button_volup";
+			gpios = <&pio PB 8 6 1 1 1>;
+			linux,code = <115>;
+			gpio-key,wakeup;
+		};
+
+	};
+	wlan:wlan {
+		compatible = "allwinner,sunxi-wlan";
+		clocks = <&clk_losc_out>;
+                wlan_power1 = "vcc-wifi";
+                wlan_io_regulator = "vcc-wifi-io";
+                wlan_busnum = <1>;
+                wlan_regon = <&r_pio PG 10 1 1 1 0>;
+                wlan_hostwake = <&r_pio PM 0 6 0 0 0>;
+                status = "okay";
+        };
+
+
+};

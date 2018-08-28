@@ -769,7 +769,9 @@ int init_sys_pwr_dm(void)
 	axp_add_sys_pwr_dm("vdd-sys");
 	/*axp_add_sys_pwr_dm("vdd-vpu"); */
 	axp_add_sys_pwr_dm("vdd-cpus");
-	/*axp_add_sys_pwr_dm("vdd-drampll"); */
+#if defined(CONFIG_ARCH_SUN50IW3P1)
+	axp_add_sys_pwr_dm("vdd-drampll");
+#endif
 	axp_add_sys_pwr_dm("vcc-lpddr");
 	/*axp_add_sys_pwr_dm("vcc-adc"); */
 	axp_add_sys_pwr_dm("vcc-pl");

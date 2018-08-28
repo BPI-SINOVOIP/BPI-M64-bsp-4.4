@@ -15,3 +15,5 @@ obj-y += sunxi_dma_sun3iw1p1.o
 else
 obj-y += sunxi_dma.o
 endif
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_DMA_DIR) += -finstrument-functions

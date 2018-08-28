@@ -124,37 +124,58 @@ static struct snd_soc_card snd_soc_sunxi_snddaudio = {
 static int sunxi_snddaudio_dev_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct snd_soc_card *card = &snd_soc_sunxi_snddaudio;
+	struct snd_soc_card *card;
+	struct snd_soc_dai_link *dai_link;
+	unsigned int tdm_num;
 	int ret;
 	char name[30] = "snddaudio";
 
+	card = devm_kzalloc(&pdev->dev, sizeof(struct snd_soc_card),
+				GFP_KERNEL);
+	if (!card)
+		return -ENOMEM;
+
+	memcpy(card, &snd_soc_sunxi_snddaudio, sizeof(struct snd_soc_card));
+
 	card->dev = &pdev->dev;
-	sunxi_snddaudio_dai_link.cpu_dai_name = NULL;
-	sunxi_snddaudio_dai_link.cpu_of_node = of_parse_phandle(np,
+
+	dai_link = devm_kzalloc(&pdev->dev, sizeof(struct snd_soc_dai_link),
+				GFP_KERNEL);
+	if (!dai_link) {
+		ret = -ENOMEM;
+		goto err_kfree_card;
+	}
+
+	memcpy(dai_link, &sunxi_snddaudio_dai_link,
+			sizeof(struct snd_soc_dai_link));
+
+	card->dai_link = dai_link;
+
+	dai_link->cpu_dai_name = NULL;
+	dai_link->cpu_of_node = of_parse_phandle(np,
 				"sunxi,daudio0-controller", 0);
-	if (sunxi_snddaudio_dai_link.cpu_of_node)
+	if (dai_link->cpu_of_node)
 		goto cpu_node_find;
 
-	sunxi_snddaudio_dai_link.cpu_of_node = of_parse_phandle(np,
+	dai_link->cpu_of_node = of_parse_phandle(np,
 			"sunxi,daudio1-controller", 0);
-	if (sunxi_snddaudio_dai_link.cpu_of_node)
+	if (dai_link->cpu_of_node)
 		goto cpu_node_find;
 
-	sunxi_snddaudio_dai_link.cpu_of_node = of_parse_phandle(np,
+	dai_link->cpu_of_node = of_parse_phandle(np,
 			"sunxi,daudio-controller", 0);
-	if (sunxi_snddaudio_dai_link.cpu_of_node)
+	if (dai_link->cpu_of_node)
 		goto cpu_node_find;
 
-	dev_err(card->dev, "Perperty 'sunxi,daudio-controller' missing\n");
-	return -EINVAL;
+	dev_err(card->dev, "Porperty 'sunxi,daudio-controller' missing\n");
+	goto err_kfree_dai_link;
 
 cpu_node_find:
-	sunxi_snddaudio_dai_link.platform_name = NULL;
-	sunxi_snddaudio_dai_link.platform_of_node =
-				sunxi_snddaudio_dai_link.cpu_of_node;
+	dai_link->platform_name = NULL;
+	dai_link->platform_of_node = dai_link->cpu_of_node;
 
 	ret = of_property_read_string(np, "sunxi,snddaudio-codec",
-			&sunxi_snddaudio_dai_link.codec_name);
+			&dai_link->codec_name);
 	/*
 	 * As we setting codec & codec_dai in dtb, we just setting the
 	 * codec & codec_dai in the dai_link. But if we just not setting,
@@ -163,25 +184,39 @@ cpu_node_find:
 	 */
 	if (!ret) {
 		ret = of_property_read_string(np, "sunxi,snddaudio-codec-dai",
-				&sunxi_snddaudio_dai_link.codec_dai_name);
+				&dai_link->codec_dai_name);
 		if (ret < 0) {
 			dev_err(card->dev, "codec_dai name invaild in dtb\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto err_kfree_dai_link;
 		}
-		sprintf(name+3, "%s", sunxi_snddaudio_dai_link.codec_name);
+		sprintf(name+3, "%s", dai_link->codec_name);
 	} else {
-		sprintf(name+9, "%d", cnt++);
+		if (dai_link->cpu_of_node &&
+			of_property_read_u32(dai_link->cpu_of_node, "tdm_num",
+						&tdm_num) >= 0)
+			sprintf(name+9, "%u", tdm_num);
+		else
+			sprintf(name+9, "%d", cnt++);
 	}
 
 	card->name = name;
 	dev_info(card->dev, "codec: %s, codec_dai: %s.\n",
-			sunxi_snddaudio_dai_link.codec_name,
-			sunxi_snddaudio_dai_link.codec_dai_name);
+			dai_link->codec_name,
+			dai_link->codec_dai_name);
 
 	ret = snd_soc_register_card(card);
-	if (ret)
+	if (ret) {
 		dev_err(card->dev, "snd_soc_register_card failed\n");
+		ret = -EINVAL;
+		goto err_kfree_dai_link;
+	}
+	return ret;
 
+err_kfree_dai_link:
+	devm_kfree(&pdev->dev, dai_link);
+err_kfree_card:
+	devm_kfree(&pdev->dev, card);
 	return ret;
 }
 
@@ -189,7 +224,9 @@ static int sunxi_snddaudio_dev_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
+	devm_kfree(&pdev->dev, card->dai_link);
 	snd_soc_unregister_card(card);
+	devm_kfree(&pdev->dev, card);
 	return 0;
 }
 

@@ -217,6 +217,7 @@
 #define CONFIG_SYS_NS16550_COM2		SUNXI_UART1_BASE
 #define CONFIG_SYS_NS16550_COM3		SUNXI_UART2_BASE
 #define CONFIG_SYS_NS16550_COM4		SUNXI_UART3_BASE
+#define CONFIG_SYS_NS16550_COM5		SUNXI_SUART1_BASE
 #define CONFIG_NS16550_FIFO_ENABLE	(1)
 
 #define CONFIG_CONS_INDEX			1			/* which serial channel for console */
@@ -316,14 +317,15 @@
 #define CONFIG_ANDROID_BOOT_IMAGE      /*image is android boot image*/
 #define CONFIG_USBD_HS
 #define BOARD_LATE_INIT		      /* init the fastboot partitions */
-//#define CONFIG_SUNXI_KEY_BURN
+#define CONFIG_SUNXI_KEY_BURN
 
-#define CONFIG_AXP_USE_RSB
+/*#define CONFIG_AXP_USE_RSB*/
 #ifdef	CONFIG_AXP_USE_RSB
 #define CONFIG_SUNXI_RSB_NCAT
 #endif
-//#define CONFIG_AXP_USE_I2C
+#define CONFIG_AXP_USE_I2C
 #ifdef CONFIG_AXP_USE_I2C
+#define CONFIG_SYS_I2C
 #define CONFIG_SUNXI_I2C
 #define CONFIG_CPUS_I2C
 #define CONFIG_SYS_I2C_SPEED 400000
@@ -451,6 +453,7 @@
 
 #endif
 
+#define CONFIG_OPTEE25
 //#define CONFIG_SYS_DCACHE_OFF
 
 #endif /* __CONFIG_H */

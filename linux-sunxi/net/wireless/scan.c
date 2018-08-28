@@ -160,7 +160,7 @@ static bool __cfg80211_unlink_bss(struct cfg80211_registered_device *rdev,
 static void __cfg80211_bss_expire(struct cfg80211_registered_device *rdev,
 				  unsigned long expire_time)
 {
-	struct cfg80211_internal_bss *bss, *tmp;
+	struct cfg80211_internal_bss *bss = NULL, *tmp = NULL;
 	bool expired = false;
 
 	lockdep_assert_held(&rdev->bss_lock);
@@ -181,7 +181,7 @@ static void __cfg80211_bss_expire(struct cfg80211_registered_device *rdev,
 
 static bool cfg80211_bss_expire_oldest(struct cfg80211_registered_device *rdev)
 {
-	struct cfg80211_internal_bss *bss, *oldest = NULL;
+	struct cfg80211_internal_bss *bss = NULL, *oldest = NULL;
 	bool ret;
 
 	lockdep_assert_held(&rdev->bss_lock);
@@ -401,48 +401,54 @@ void cfg80211_bss_expire(struct cfg80211_registered_device *rdev)
 	__cfg80211_bss_expire(rdev, jiffies - IEEE80211_SCAN_RESULT_EXPIRE);
 }
 
-const u8 *cfg80211_find_ie(u8 eid, const u8 *ies, int len)
+const u8 *cfg80211_find_ie_match(u8 eid, const u8 *ies, int len,
+				 const u8 *match, int match_len,
+				 int match_offset)
 {
-	while (len > 2 && ies[0] != eid) {
+	/* match_offset can't be smaller than 2, unless match_len is
+	 * zero, in which case match_offset must be zero as well.
+	 */
+	if (WARN_ON((match_len && match_offset < 2) ||
+		    (!match_len && match_offset)))
+		return NULL;
+
+	while (len >= 2 && len >= ies[1] + 2) {
+		if ((ies[0] == eid) &&
+		    (ies[1] + 2 >= match_offset + match_len) &&
+		    !memcmp(ies + match_offset, match, match_len))
+			return ies;
+
 		len -= ies[1] + 2;
 		ies += ies[1] + 2;
 	}
-	if (len < 2)
-		return NULL;
-	if (len < 2 + ies[1])
-		return NULL;
-	return ies;
+
+	return NULL;
+}
+EXPORT_SYMBOL(cfg80211_find_ie_match);
+
+const u8 *cfg80211_find_ie(u8 eid, const u8 *ies, int len)
+{
+    return cfg80211_find_ie_match(eid, ies, len, NULL, 0, 0);
 }
 EXPORT_SYMBOL(cfg80211_find_ie);
 
 const u8 *cfg80211_find_vendor_ie(unsigned int oui, u8 oui_type,
 				  const u8 *ies, int len)
 {
-	struct ieee80211_vendor_ie *ie;
-	const u8 *pos = ies, *end = ies + len;
-	int ie_oui;
+	const u8 *ie;
+	u8 match[] = { oui >> 16, oui >> 8, oui, oui_type };
+	int match_len = (oui_type < 0) ? 3 : sizeof(match);
 
-	while (pos < end) {
-		pos = cfg80211_find_ie(WLAN_EID_VENDOR_SPECIFIC, pos,
-				       end - pos);
-		if (!pos)
-			return NULL;
+	if (WARN_ON(oui_type > 0xff))
+		return NULL;
 
-		ie = (struct ieee80211_vendor_ie *)pos;
+	ie = cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC, ies, len,
+				    match, match_len, 2);
 
-		/* make sure we can access ie->len */
-		BUILD_BUG_ON(offsetof(struct ieee80211_vendor_ie, len) != 1);
+	if (ie && (ie[1] < 4))
+		return NULL;
 
-		if (ie->len < sizeof(*ie))
-			goto cont;
-
-		ie_oui = ie->oui[0] << 16 | ie->oui[1] << 8 | ie->oui[2];
-		if (ie_oui == oui && ie->oui_type == oui_type)
-			return pos;
-cont:
-		pos += 2 + ie->len;
-	}
-	return NULL;
+	return ie;
 }
 EXPORT_SYMBOL(cfg80211_find_vendor_ie);
 
@@ -636,9 +642,9 @@ struct cfg80211_bss *cfg80211_get_bss(struct wiphy *wiphy,
 				      enum ieee80211_privacy privacy)
 {
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
-	struct cfg80211_internal_bss *bss, *res = NULL;
+	struct cfg80211_internal_bss *bss = NULL, *res = NULL;
 	unsigned long now = jiffies;
-	int bss_privacy;
+	int bss_privacy = 0;
 
 	trace_cfg80211_get_bss(wiphy, channel, bssid, ssid, ssid_len, bss_type,
 			       privacy);
@@ -734,9 +740,9 @@ static bool cfg80211_combine_bsses(struct cfg80211_registered_device *rdev,
 				   struct cfg80211_internal_bss *new)
 {
 	const struct cfg80211_bss_ies *ies;
-	struct cfg80211_internal_bss *bss;
+	struct cfg80211_internal_bss *bss = NULL;
 	const u8 *ie;
-	int i, ssidlen;
+	int i = 0, ssidlen = 0;
 	u8 fold = 0;
 	u32 n_entries = 0;
 
@@ -842,7 +848,7 @@ cfg80211_bss_update(struct cfg80211_registered_device *rdev,
 					  rcu_head);
 		} else if (rcu_access_pointer(tmp->pub.beacon_ies)) {
 			const struct cfg80211_bss_ies *old;
-			struct cfg80211_internal_bss *bss;
+			struct cfg80211_internal_bss *bss = NULL;
 
 			if (found->pub.hidden_beacon_bss &&
 			    !list_empty(&found->hidden_list)) {
@@ -1143,7 +1149,7 @@ cfg80211_inform_bss_frame_data(struct wiphy *wiphy,
 	else
 		rcu_assign_pointer(tmp.pub.beacon_ies, ies);
 	rcu_assign_pointer(tmp.pub.ies, ies);
-	
+
 	memcpy(tmp.pub.bssid, mgmt->bssid, ETH_ALEN);
 	tmp.pub.channel = channel;
 	tmp.pub.scan_width = data->scan_width;
@@ -1692,7 +1698,7 @@ static int ieee80211_scan_results(struct cfg80211_registered_device *rdev,
 {
 	char *current_ev = buf;
 	char *end_buf = buf + len;
-	struct cfg80211_internal_bss *bss;
+	struct cfg80211_internal_bss *bss = NULL;
 	int err = 0;
 
 	spin_lock_bh(&rdev->bss_lock);

@@ -460,7 +460,17 @@ struct sunxi_fdt_w_request {
 	uint32_t  node_offset;
 };
 
+struct sunxi_fdt_w_string_request {
+	char head_name[32];
+	char node_name[32];
+	char str[256];
+	uint32_t  node_offset;
+};
+
 struct sunxi_fdt_w_request  fdt_w_group[16];
+#ifdef CONFIG_BOOT_GUI
+struct sunxi_fdt_w_string_request  fdt_w_string_group[2];
+#endif
 
 int sunxi_fdt_getprop_store(void *fdt, const char *path, const char *name,
 				  uint32_t val)
@@ -482,9 +492,35 @@ int sunxi_fdt_getprop_store(void *fdt, const char *path, const char *name,
 	return 0;
 }
 
+#ifdef CONFIG_BOOT_GUI
+int sunxi_fdt_getprop_store_string(void *fdt, const char *path,
+				   const char *name, char *str)
+{
+	struct sunxi_fdt_w_string_request *fdt_w_string_pt;
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		fdt_w_string_pt = fdt_w_string_group + i;
+		if (!fdt_w_string_pt->head_name[0]) {
+			strcpy(fdt_w_string_pt->head_name, path);
+			strcpy(fdt_w_string_pt->node_name, name);
+			strcpy(fdt_w_string_pt->str, str);
+
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
+
 int sunxi_fdt_reflush_all(void)
 {
 	struct sunxi_fdt_w_request  *fdt_w_pt, *fdt_w_pt_pre;
+#ifdef CONFIG_BOOT_GUI
+	struct sunxi_fdt_w_string_request *fdt_w_string_pt,
+	    *fdt_w_string_pt_pre;
+#endif
 	int  node, ret;
 	int  i, j;
 
@@ -522,8 +558,52 @@ int sunxi_fdt_reflush_all(void)
 		}
 	}
 
+#ifdef CONFIG_BOOT_GUI
+	for (i = 0; i < 2; i++) {
+		fdt_w_string_pt = fdt_w_string_group + i;
+
+		if (fdt_w_string_pt->head_name[0]) {
+			node = 0;
+			for (j = 0; j < i; j++) {
+				fdt_w_string_pt_pre = fdt_w_string_group + j;
+				if (!strcmp(fdt_w_string_pt_pre->head_name,
+					    fdt_w_string_pt->head_name)) {
+					node = fdt_w_string_pt_pre->node_offset;
+					break;
+				}
+			}
+			if (!node) {
+				node = fdt_path_offset(
+				    working_fdt, fdt_w_string_pt->head_name);
+				if (node < 0) {
+					printf(
+					    "%s:disp_fdt_nodeoffset %s fail\n",
+					    __func__,
+					    fdt_w_string_pt->head_name);
+					return -1;
+				}
+				fdt_w_string_pt->node_offset = node;
+			}
+
+			ret = fdt_setprop_string(working_fdt, node,
+						 fdt_w_string_pt->node_name,
+						 fdt_w_string_pt->str);
+			if (ret < 0) {
+				printf("%s %s.%s(%s) fali err code:%s\n",
+				       __func__,
+				       fdt_w_string_pt->head_name,
+				       fdt_w_string_pt->node_name,
+				       fdt_w_string_pt->str, fdt_strerror(ret));
+				return -1;
+			}
+
+		} else {
+			break;
+		}
+	}
+#endif
+
 	return 0;
 }
 
 #endif
-

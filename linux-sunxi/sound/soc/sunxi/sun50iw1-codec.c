@@ -530,6 +530,7 @@ static int late_enable_dac(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec, SUNXI_MOD_CLK_ENA, (0x1<<DAC_DIGITAL_MOD_CLK_EN), (0x1<<DAC_DIGITAL_MOD_CLK_EN));
 			snd_soc_update_bits(codec, SUNXI_MOD_RST_CTL, (0x1<<DAC_DIGITAL_MOD_RST_CTL), (0x1<<DAC_DIGITAL_MOD_RST_CTL));
 			snd_soc_update_bits(codec, SUNXI_DAC_DIG_CTRL, (0x1<<ENDA), (0x1<<ENDA));
+			msleep(10);
 		}
 		sunxi_internal_codec->dac_enable++;
 		break;
@@ -595,9 +596,9 @@ static int ac_headphone_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/*open*/
 		snd_soc_update_bits(codec, HP_PA_CTRL, (0xf<<HPOUTPUTENABLE), (0xf<<HPOUTPUTENABLE));
-		snd_soc_update_bits(codec, HP_CTRL, (0x1<<HPPA_EN), (0x1<<HPPA_EN));
-		msleep(10);
 		snd_soc_update_bits(codec, MIX_DAC_CTRL, (0x3<<LHPPAMUTE), (0x3<<LHPPAMUTE));
+		msleep(10);
+		snd_soc_update_bits(codec, HP_CTRL, (0x1<<HPPA_EN), (0x1<<HPPA_EN));
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/*close*/
@@ -2233,9 +2234,9 @@ static ssize_t store_audio_reg(struct device *dev, struct device_attribute *attr
 	int ret;
 	int rw_flag;
 	int reg_val_read;
-	int input_reg_val = 0;
+	unsigned int input_reg_val = 0;
 	int input_reg_group = 0;
-	int input_reg_offset = 0;
+	unsigned int input_reg_offset = 0;
 
 	ret = sscanf(buf, "%d,%d,0x%x,0x%x", &rw_flag, &input_reg_group, &input_reg_offset, &input_reg_val);
 	printk("ret:%d, reg_group:%d, reg_offset:%d, reg_val:0x%x\n", ret, input_reg_group, input_reg_offset, input_reg_val);

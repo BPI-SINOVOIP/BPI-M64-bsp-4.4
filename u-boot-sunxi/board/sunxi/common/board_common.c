@@ -35,6 +35,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define PARTITION_NAME_MAX_SIZE  16
 #define ROOT_PART_NAME_MAX_SIZE  (PARTITION_NAME_MAX_SIZE + 5)
 
+int  __attribute__((weak)) sunxi_fastboot_status_read(void)
+{
+		return 0;
+}
 int __attribute__((weak)) mmc_request_update_boot0(int dev_num)
 {
 	return 0;
@@ -98,7 +102,22 @@ static void __set_part_name_for_sdmmc(int index, char* part_name,int part_type, 
 {
 	if(PART_TYPE_GPT == part_type)
 	{
-		sprintf(part_name, "mmcblk0p%d", index+1);
+		if((STORAGE_SD == get_boot_storage_type()) || (STORAGE_SD1 == get_boot_storage_type()))
+		{
+			/* temporary patch to fix partitions in cmdline for card0 with gpt */
+			if((index+1) == part_total)
+			{
+				strcpy(part_name, "mmcblk0p1");
+			}
+			else
+			{
+				sprintf(part_name, "mmcblk0p%d", index + 2);
+			}
+		}
+		else
+		{
+			sprintf(part_name, "mmcblk0p%d", index+1);
+		}
 	}
 	else
 	{
@@ -272,6 +291,26 @@ static int detect_other_boot_mode(void)
 	return ANDROID_NULL_MODE;
 }
 
+int switch_boot_partition(void)
+{
+	char  boot_partition[128];
+	memset(boot_partition, 0x0, 128);
+	strcpy(boot_partition, getenv("boot_partition"));
+	printf("boot_partition=%s\n", boot_partition);
+	if (strncmp(boot_partition, "boot", strlen("boot")) == 0) {
+		printf("now it is boot, switch to recovery\n");
+		setenv("boot_partition", "recovery");
+		saveenv();
+		printf("done! please reboot\n");
+	} else if (strncmp(boot_partition, "recovery", strlen("recovery")) == 0) {
+		printf("now it is recovery, switch to boot\n");
+		setenv("boot_partition", "boot");
+		saveenv();
+		printf("done! please reboot\n");
+	}
+	return 0;
+}
+
 int update_bootcmd(void)
 {
 	int   boot_mode;
@@ -289,6 +328,7 @@ int update_bootcmd(void)
 	pr_msg("base bootcmd=%s\n", boot_commond);
 
 	if ((storage_type == STORAGE_SD) ||
+		(storage_type == STORAGE_SD1)||
 		(storage_type == STORAGE_EMMC)||
 		storage_type == STORAGE_EMMC3) {
 		sunxi_str_replace(boot_commond, "setargs_nand", "setargs_mmc");
@@ -458,6 +498,7 @@ int update_fdt_para_for_kernel(void* dtb_base)
 			#endif
 			break;
 		case STORAGE_SD:
+		case STORAGE_SD1:
 		{
 			uint32_t dragonboard_test = 0;
 			ret = script_parser_fetch("target", "dragonboard_test", (int *)&dragonboard_test, 1);
@@ -499,18 +540,19 @@ int update_fdt_para_for_kernel(void* dtb_base)
 		return -1;
 	}
 
-#if defined(CONFIG_ARCH_SUN50IW6P1) ||  defined(CONFIG_ARCH_SUN50IW3P1)\
-	|| defined(CONFIG_ARCH_SUN50IW1P1) || defined(CONFIG_ARCH_SUN8IW7P1)
+	/* fix drm para */
+#ifndef CONFIG_ARCH_SUN3IW1P1
 	ulong drm_base = 0, drm_size = 0;
 
-	if ((gd->securemode == SUNXI_SECURE_MODE_WITH_SECUREOS) &&
-		(!smc_tee_probe_drm_configure(&drm_base, &drm_size))) {
-		pr_msg("drm_base=0x%lx\n", drm_base);
-		pr_msg("drm_size=0x%lx\n", drm_size);
-		ret = fdt_add_mem_rsv(dtb_base, drm_base, drm_size);
-		if (ret)
-			printf("##add mem rsv error: %s : %s\n",
-				__func__, fdt_strerror(ret));
+	if (gd->securemode == SUNXI_SECURE_MODE_WITH_SECUREOS) {
+		if (!smc_tee_probe_drm_configure(&drm_base, &drm_size)) {
+			pr_msg("drm_base=0x%lx\n", drm_base);
+			pr_msg("drm_size=0x%lx\n", drm_size);
+			ret = fdt_add_mem_rsv(dtb_base, drm_base, drm_size);
+			if (ret)
+				printf("##add mem rsv error: %s : %s\n",
+					__func__, fdt_strerror(ret));
+		}
 	}
 #endif
 
@@ -590,6 +632,7 @@ char *set_bootcmd_from_rtc(int mode, char *bootcmd)
 
 char *set_bootcmd_from_misc(int mode, char *bootcmd)
 {
+	int pmu_value;
 	u32   misc_offset = 0;
 	char  misc_args[2048];
 	char  misc_fill[2048];
@@ -607,10 +650,22 @@ char *set_bootcmd_from_misc(int mode, char *bootcmd)
 		strcpy(misc_message->command, "bootloader");
 		break;
 	case ANDROID_NULL_MODE:
+		pmu_value = axp_probe_pre_sys_mode();
+		if(pmu_value == PMU_PRE_FASTBOOT_MODE)
+		{
+			puts("PMU : ready to enter fastboot mode\n");
+			strcpy(misc_message->command, "bootloader");
+		}
+		else if(pmu_value == PMU_PRE_RECOVERY_MODE)
+		{
+			puts("PMU : ready to enter recovery mode\n");
+			strcpy(misc_message->command, "boot-recovery");
+		}
+		else
 		{
 			misc_offset = sunxi_partition_get_offset_byname("misc");
 			if (!misc_offset) {
-				pr_msg("no misc partition is found\n");
+				printf("no misc partition is found\n");
 			} else {
 				pr_msg("misc partition found\n");
 				sunxi_flash_read(misc_offset, 2048/512, misc_args);
@@ -780,7 +835,8 @@ int update_dram_para_for_ota(void)
 	}
 
 	if( (get_boot_work_mode() == WORK_MODE_BOOT) &&
-		(STORAGE_SD != get_boot_storage_type()))
+			(STORAGE_SD != get_boot_storage_type()) &&
+			(STORAGE_SD1 != get_boot_storage_type()))
 	{
 		if(get_boot_dram_update_flag()|| mmc_request_update_boot0(card_num))
 		{
@@ -803,6 +859,7 @@ int board_late_init(void)
 	int ret  = 0;
 	if (get_boot_work_mode() == WORK_MODE_BOOT) {
 
+		sunxi_fastboot_status_read();
 		sunxi_fastboot_init();
 		update_dram_para_for_ota();
 		update_bootcmd();
@@ -866,3 +923,16 @@ int sunxi_verify_checksum(void *buffer, uint length, uint src_sum)
 }
 
 
+static int do_switch_boot_partition(cmd_tbl_t *cmdtp, int flag, int argc,
+		       char * const argv[])
+{
+	printf("Switch boot partition...\n");
+
+	return switch_boot_partition() ? 1 : 0;
+}
+
+U_BOOT_CMD(
+	switch_boot_partition, 1, 0,	do_switch_boot_partition,
+	"Switch boot partition",
+	""
+);

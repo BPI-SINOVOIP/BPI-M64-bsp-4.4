@@ -71,21 +71,21 @@ __s32 NFB_PhyInit(void)
 {
 	__s32 ret;
 
+	printf("boot0:nand driver date:20180301\n");
+
 	ret = PHY_Init();
-	if (ret)
-	{
+	if (ret) {
 		NAND_Print("NB0 : nand phy init fail\n");
 		return ret;
 	}
 	ret = BOOT_AnalyzeNandSystem();
-	if (ret)
-	{
+	if (ret) {
 		NAND_Print("NB0 : nand scan fail\n");
 		return ret;
 	}
 	NAND_Print("NB0 : nand phy init ok\n");
 
-	return(PHY_ChangeMode(1));
+	return PHY_ChangeMode(1);
 }
 
 /*
@@ -104,7 +104,7 @@ __s32 NFB_PhyExit(void)
 {
 	PHY_Exit();
 	/* close nand flash bus clock gate */
-	//NAND_CloseAHBClock();
+	/* NAND_CloseAHBClock(); */
 
 	return 0;
 }
@@ -121,7 +121,7 @@ __s32 NFB_PhyExit(void)
 *               = FAIL    read fail.
 ************************************************************************************************************************
 */
-__s32 NFB_PhyRead (struct boot_physical_param *readop)
+__s32 NFB_PhyRead(struct boot_physical_param *readop)
 {
-	return(PHY_SimpleRead (readop));
+	return PHY_SimpleRead(readop);
 }

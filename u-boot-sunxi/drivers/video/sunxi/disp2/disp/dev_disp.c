@@ -289,6 +289,7 @@ extern __s32 hdmi_init(void);
 extern __s32 tv_init(void);
 extern int tv_ac200_init(void);
 extern void disp_fdt_init(void);
+extern struct disp_eink_manager *disp_get_eink_manager(unsigned int disp);
 
 s32 drv_disp_init(void)
 {
@@ -353,6 +354,16 @@ s32 drv_disp_init(void)
 	}
 #endif
 
+#if defined(SUPPORT_EINK)
+		para->reg_base[DISP_MOD_EINK] = disp_getprop_regbase(FDT_DISP_PATH, "reg", counter);
+		if (!para->reg_base[DISP_MOD_EINK]) {
+			__wrn("unable to map eink registers\n");
+			ret = -EINVAL;
+			goto exit;
+		}
+		counter++;
+#endif
+
 	/* parse and map irq */
 	/* lcd0/1/2.. - dsi */
 	counter = 0;
@@ -372,6 +383,20 @@ s32 drv_disp_init(void)
 			__wrn("irq_of_parse_and_map irq %d fail for dsi\n", i);
 		counter++;
 	}
+#endif
+#if defined(SUPPORT_EINK)
+		para->irq_no[DISP_MOD_DE] = disp_getprop_irq(FDT_DISP_PATH, "interrupts", counter);
+		if (!para->irq_no[DISP_MOD_DE]) {
+			__wrn("irq_of_parse_and_map de irq %d fail for dsi\n", counter);
+		}
+		counter++;
+
+
+		para->irq_no[DISP_MOD_EINK] = disp_getprop_irq(FDT_DISP_PATH, "interrupts", counter);
+		if (!para->irq_no[DISP_MOD_EINK]) {
+			__wrn("irq_of_parse_and_map irq %d fail for eink\n", counter);
+		}
+		counter++;
 #endif
 
 	node_offset = disp_fdt_nodeoffset("disp");
@@ -476,6 +501,10 @@ s32 drv_disp_init(void)
 	for (disp=0; disp<num_screens; disp++) {
 		g_disp_drv.mgr[disp] = disp_get_layer_manager(disp);
 	}
+#if defined(SUPPORT_EINK)
+		g_disp_drv.eink_manager[0] = disp_get_eink_manager(0);
+
+#endif
 	lcd_init();
 #if defined(SUPPORT_HDMI) && (defined(CONFIG_SUNXI_MODULE_HDMI2) || \
 				defined(CONFIG_SUNXI_MODULE_HDMI))
@@ -569,6 +598,8 @@ static int disp_blank(bool blank)
 	return 0;
 }
 
+struct eink_8bpp_image *cimage;
+
 long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	unsigned long karg[4];
@@ -580,6 +611,9 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct disp_enhance *enhance = NULL;
 	struct disp_smbl *smbl = NULL;
 	struct disp_capture *cptr = NULL;
+#if defined (SUPPORT_EINK)
+	struct disp_eink_manager *eink_manager = NULL;
+#endif
 
 	if (false == g_disp_drv.inited) {
 		printf("%s, display not init yet\n", __func__);
@@ -605,6 +639,13 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		smbl = mgr->smbl;
 		cptr = mgr->cptr;
 	}
+#if defined (SUPPORT_EINK)
+	eink_manager = g_disp_drv.eink_manager[0];
+
+	if (!eink_manager)
+		__wrn("eink_manager is NULL!\n");
+
+#endif
 
 	if (cmd < DISP_FB_REQUEST)	{
 		if (ubuffer[0] >= num_screens) {
@@ -616,7 +657,6 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		__wrn("ioctl:%x fail when in suspend!\n", cmd);
 		return -1;
 	}
-
 	if (cmd == DISP_print) {
 		__wrn("cmd:0x%x,%ld,%ld\n",cmd, ubuffer[0], ubuffer[1]);
 	}
@@ -755,6 +795,31 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
+#if defined(SUPPORT_EINK) && defined(CONFIG_EINK_PANEL_USED)
+
+	/*---eink ----*/
+	case DISP_EINK_UPDATE:
+	{
+		struct eink_8bpp_image current_image;
+		if (!eink_manager) {
+			printf("there is no eink manager!\n");
+			break;
+		}
+
+		memset(&current_image, 0, sizeof(struct eink_8bpp_image));
+		if (copy_from_user(&current_image, (void __user *)ubuffer[0], sizeof(struct eink_8bpp_image))) {
+			__wrn("copy_from_user fail\n");
+			return  -EFAULT;
+		}
+
+		ret = bsp_disp_eink_update(eink_manager, &current_image);
+		if (ret != 0)
+			__wrn("eink update wrong!\n");
+		break;
+	}
+
+#endif
+
 	case DISP_GET_OUTPUT:
 	{
 		struct disp_output para;
@@ -865,7 +930,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	//---- lcd ---
 	case DISP_LCD_SET_BRIGHTNESS:
 	{
-		if (dispdev && (DISP_OUTPUT_TYPE_LCD == dispdev->type)) {
+		if (dispdev && dispdev->set_bright) {
 			ret = dispdev->set_bright(dispdev, ubuffer[1]);
 		}
 		break;
@@ -873,7 +938,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case DISP_LCD_GET_BRIGHTNESS:
 	{
-		if (dispdev && (DISP_OUTPUT_TYPE_LCD == dispdev->type)) {
+		if (dispdev && dispdev->get_bright) {
 			ret = dispdev->get_bright(dispdev);
 		}
 		break;
@@ -934,6 +999,20 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case DISP_HDMI_SUPPORT_MODE:
 	{
 		ret = bsp_disp_hdmi_check_support_mode(ubuffer[0], ubuffer[1]);
+		break;
+	}
+
+	case DISP_HDMI_GET_SUPPORT_MODE:
+	{
+		ret = bsp_disp_hdmi_get_support_mode(ubuffer[0], ubuffer[1]);
+		if (ret <= 0)
+			ret = ubuffer[1];
+		break;
+	}
+
+	case DISP_HDMI_GET_WORK_MODE:
+	{
+		ret = bsp_disp_hdmi_get_work_mode(ubuffer[0]);
 		break;
 	}
 
@@ -1068,7 +1147,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 
 	case DISP_SET_EXIT_MODE:
-        ret = g_disp_drv.exit_mode = ubuffer[0];
+		ret = g_disp_drv.exit_mode = ubuffer[1];
 		break;
 
 	case DISP_LCD_CHECK_OPEN_FINISH:

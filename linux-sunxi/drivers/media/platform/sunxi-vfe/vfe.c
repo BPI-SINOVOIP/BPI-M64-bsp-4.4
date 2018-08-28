@@ -1494,12 +1494,10 @@ static int vidioc_enum_fmt_vid_cap(struct file *file, void  *priv,
 {
 	struct vfe_fmt *fmt;
 
-	vfe_dbg(0, "vidioc_enum_fmt_vid_cap, index=%d\n", f->index);
+	vfe_dbg(0, "vidioc_enum_fmt_vid_cap\n");
 
-	if (f->index > ARRAY_SIZE(formats) - 1) {
-		vfe_dbg(0, "vidioc_enum_fmt_vid_cap error, index=%d\n", f->index);
+	if (f->index > ARRAY_SIZE(formats) - 1)
 		return -EINVAL;
-	}
 
 	fmt = &formats[f->index];
 

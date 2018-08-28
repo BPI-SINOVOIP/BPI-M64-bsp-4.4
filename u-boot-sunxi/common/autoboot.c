@@ -11,7 +11,6 @@
 #include <fdtdec.h>
 #include <menu.h>
 #include <post.h>
-#include <sys_config_old.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -278,39 +277,10 @@ const char *bootdelay_process(void)
 	return s;
 }
 
-static void update_console(void)
-{
-#ifdef CONFIG_SUN50IW6P1
-	char cmdline[64] = {0};
-	char *penv;
-	int uart_id = 0;
-	penv = getenv("console");
-
-	if (penv != NULL) {
-		printf("penv is %s\n", penv);
-		if (strncmp(penv, "ttyS", 4) == 0) {
-			strncpy(cmdline, penv, sizeof(cmdline));
-			if (script_parser_fetch("uart_para", "uart_debug_port",
-				(int *)(&uart_id), 1)) {
-					printf("update_console get uart_debug_port failed \n");
-				return;
-			}
-			printf("uart_id is 0x%x \n", uart_id);
-			if (cmdline[4] != (uart_id + '0')) {
-				cmdline[4] = uart_id + '0';
-				printf("\nupdate_console :cmdline is %s\n", cmdline);
-				setenv("console", cmdline);
-				saveenv();
-			}
-		}
-	}
-#endif
-}
-
 void autoboot_command(const char *s)
 {
 	debug("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
-	update_console();
+
 	if (stored_bootdelay != -1 && s && !abortboot(stored_bootdelay)) {
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)
 		int prev = disable_ctrlc(1);	/* disable Control C checking */

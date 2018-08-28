@@ -71,7 +71,8 @@ int kbase_sync_fence_out_create(struct kbase_jd_atom *katom, int stream_fd)
 	/* Take an extra reference to the fence on behalf of the katom.
 	 * This is needed because sync_file_create() will take ownership of
 	 * one of these refs */
-	dma_fence_get(fence);
+	/* Avoid calling dma_fence_get here to fix the memory leak issue. */
+	/* dma_fence_get(fence); */
 
 	/* create a sync_file fd representing the fence */
 	sync_file = sync_file_create(fence);

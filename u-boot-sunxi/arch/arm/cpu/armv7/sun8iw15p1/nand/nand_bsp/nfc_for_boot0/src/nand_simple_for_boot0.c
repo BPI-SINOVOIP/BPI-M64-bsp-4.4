@@ -491,12 +491,7 @@ __s32 PHY_ChangeMode(__u8 serial_mode)
 		if (!PageCachePool.TmpPageCache)
 			return -1;
 	}
-	/*memory allocation for dma descriptor*/
-	if (!ndfc_dma_desc) {
-		ndfc_dma_desc = (_ndfc_dma_desc_t *)MALLOC(sizeof(_ndfc_dma_desc_t)*5);
-		if (!ndfc_dma_desc)
-			return -1;
-	}
+
     NFC_SetEccMode(ECC_MODE);
 
 	nand_info.bus_width = 0x0;

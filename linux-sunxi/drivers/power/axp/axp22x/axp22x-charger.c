@@ -317,9 +317,6 @@ static int axp22x_set_chg_vol(struct axp_charger_dev *cdev, int vol)
 }
 
 static struct axp_battery_info axp22x_batt_info = {
-	.acpresent_bit        = 7,
-	.vbuspresent_bit      = 5,
-	.pwrsrc_offset        = AXP22X_STATUS,
 	.chgstat_bit          = 6,
 	.chgstat_offset       = AXP22X_MODE_CHGSTATUS,
 	.det_bit              = 5,

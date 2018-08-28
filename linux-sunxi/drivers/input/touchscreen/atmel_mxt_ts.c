@@ -1011,6 +1011,10 @@ static void mxt_proc_t9_message(struct mxt_data *data, u8 *message)
 	if (data->max_y < 1024)
 		y >>= 2;
 
+	if (data->pdata->revert_x_flag != 0)
+		x = data->max_x - x;
+	if (data->pdata->revert_y_flag != 0)
+		y = data->max_y - y;
 	area = message[5];
 
 	amplitude = message[6];
@@ -3605,6 +3609,9 @@ static const struct mxt_platform_data *mxt_parse_dt(struct i2c_client *client)
 	}
 
 	of_property_read_u32(np, "atmel,suspend-mode", &pdata->suspend_mode);
+
+	of_property_read_u32(np, "atmel,revert_x_flag", &pdata->revert_x_flag);
+	of_property_read_u32(np, "atmel,revert_y_flag", &pdata->revert_y_flag);
 
 	pdata->irqflags = IRQF_TRIGGER_FALLING;
 	return pdata;

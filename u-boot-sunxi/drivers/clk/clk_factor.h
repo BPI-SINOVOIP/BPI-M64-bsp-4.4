@@ -22,7 +22,7 @@ struct clk_factors_value {
 /**
  * struct sunxi_clk_factors_config - factor config
  *
- * @nshift: shift to factor-n bit field
+ * @nshift:     shift to factor-n bit field
  * @nwidth:     width of factor-n bit field
  * @kshift:     shift to factor-k bit field
  * @kwidth:     width of factor-k bit field
@@ -43,7 +43,10 @@ struct clk_factors_value {
  * @sdmwidth    shift to factor sdm width bit filed
  * @sdmpat      sdmpat reg address offset
  * @sdmval      sdm default value
- * @updshift	shift to update bit (especial for ddr/ddr0/ddr1)
+ * @updshift    shift to update bit (especial for ddr/ddr0/ddr1)
+ * @delay       for flat factors delay.
+ * @mux_inshift shift to multiplexer(multiple 24M source clocks) bit field
+ * @out_enshift shift to enable pll clock output bit field
  */
 struct sunxi_clk_factors_config {
 	u8 nshift;
@@ -65,17 +68,21 @@ struct sunxi_clk_factors_config {
 	u8 outshift;
 	u8 modeshift;
 	u8 enshift;
-    
+
 	u8 lockshift;
 	u8 sdmshift;
 	u8 sdmwidth;
 
-	u32 sdmpat;
+	unsigned long sdmpat;
 	u32 sdmval;
 
 	u32 updshift;
 	u32 delay;
+
+	u32 mux_inshift;
+	u32 out_enshift;
 };
+
 struct sunxi_clk_factor_freq{
 	u32	factor;
 	u32	freq;
@@ -184,6 +191,37 @@ static struct sunxi_clk_factors_config sunxi_clk_factor_##name ={            \
 	.sdmval  =_sdmval,	\
 	.updshift = 0		\
 }
+
+#define SUNXI_CLK_FACTORS1(name, _nshift, _nwidth, _kshift, _kwidth, _mshift,  \
+			   _mwidth, _pshift, _pwidth, _d1shift, _d1width,      \
+			   _d2shift, _d2width, _frac, _outshift, _modeshift,   \
+			   _enshift, _sdmshift, _sdmwidth, _sdmpat, _sdmval,   \
+			   _mux_inshift, _out_enshift)                         \
+	static struct sunxi_clk_factors_config sunxi_clk_factor_##name = {     \
+	    .nshift = _nshift,                                                 \
+	    .nwidth = _nwidth,                                                 \
+	    .kshift = _kshift,                                                 \
+	    .kwidth = _kwidth,                                                 \
+	    .mshift = _mshift,                                                 \
+	    .mwidth = _mwidth,                                                 \
+	    .pshift = _pshift,                                                 \
+	    .pwidth = _pwidth,                                                 \
+	    .d1shift = _d1shift,                                               \
+	    .d1width = _d1width,                                               \
+	    .d2shift = _d2shift,                                               \
+	    .d2width = _d2width,                                               \
+	    .frac = _frac,                                                     \
+	    .outshift = _outshift,                                             \
+	    .modeshift = _modeshift,                                           \
+	    .enshift = _enshift,                                               \
+	    .sdmshift = _sdmshift,                                             \
+	    .sdmwidth = _sdmwidth,                                             \
+	    .sdmpat = _sdmpat,                                                 \
+	    .sdmval = _sdmval,                                                 \
+	    .updshift = 0,                                                     \
+	    .mux_inshift = _mux_inshift,                                       \
+	    .out_enshift = _out_enshift,                                       \
+	}
 
 #define FACTOR_ALL(nv,ns,nw,kv,ks,kw,mv,ms,mw, \
 			pv,ps,pw,d0v,d0s,d0w,d1v,d1s,d1w) \

@@ -31,6 +31,7 @@
 #include <sys_config_old.h>
 #include <power/sunxi/axp.h>
 #include <fdt_support.h>
+#include <private_uboot.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -49,6 +50,16 @@ static ulong pmu_nodeoffset_in_config = 0;
 	#define CHARGER_PMU 0
 #endif
 
+void sunxi_axp_dummy_init(void)
+{
+	int i;
+
+	printf("probe axp is dummy\n");
+	memset(sunxi_axp_dev, 0, SUNXI_AXP_DEV_MAX * 4);
+	for (i = 0; i < SUNXI_AXP_DEV_MAX; i++) {
+		sunxi_axp_dev[i] = &sunxi_axp_null;
+	}
+}
 
 int axp_probe(void)
 {
@@ -110,10 +121,10 @@ int axp_probe_factory_mode(void)
 	if(buffer_value == PMU_PRE_FACTORY_MODE)	//factory mode: need the power key and dc or vbus
 	{
 		printf("factory mode detect\n");
-		status = sunxi_axp_dev[0]->probe_power_status();
+		status = sunxi_axp_dev[CHARGER_PMU]->probe_power_status();
 		if(status > 0)  //has the dc or vbus
 		{
-			poweron_reason = sunxi_axp_dev[0]->probe_this_poweron_cause();
+			poweron_reason = sunxi_axp_dev[CHARGER_PMU]->probe_this_poweron_cause();
 			if(poweron_reason == AXP_POWER_ON_BY_POWER_KEY)
 			{
 				//set the system next powerom status as 0x0e(the system mode)
@@ -166,7 +177,18 @@ int axp_set_hardware_poweroff_vol(void)
 
 int  axp_set_power_off(void)
 {
-	return sunxi_axp_dev[CHARGER_PMU]->set_power_off();
+
+#ifdef	CONFIG_SUNXI_AXP2585
+	if (sunxi_axp_dev[CHARGER_PMU]->set_power_off()) {
+		puts("bmu power off err\n");
+		return -1;
+	}
+#endif
+	if (sunxi_axp_dev[0]->set_power_off()) {
+		puts("pmu power off err\n");
+		return -1;
+	}
+	return 0;
 }
 
 int axp_set_next_poweron_status(int value)
@@ -176,7 +198,11 @@ int axp_set_next_poweron_status(int value)
 
 int axp_probe_pre_sys_mode(void)
 {
+#ifdef	CONFIG_SUNXI_AXP2585
+	return sunxi_axp_dev[0]->probe_pre_sys_mode();
+#else
 	return sunxi_axp_dev[CHARGER_PMU]->probe_pre_sys_mode();
+#endif
 }
 
 int  axp_power_get_dcin_battery_exist(int *dcin_exist, int *battery_exist)
@@ -217,17 +243,17 @@ int  axp_probe_key(void)
 
 int  axp_probe_charge_current(void)
 {
-	return sunxi_axp_dev[0]->probe_charge_current();
+	return sunxi_axp_dev[CHARGER_PMU]->probe_charge_current();
 }
 
 int  axp_set_charge_current(int current)
 {
-	return sunxi_axp_dev[0]->set_charge_current(current);
+	return sunxi_axp_dev[CHARGER_PMU]->set_charge_current(current);
 }
 
 int  axp_set_charge_control(void)
 {
-	return sunxi_axp_dev[0]->set_charge_control();
+	return sunxi_axp_dev[CHARGER_PMU]->set_charge_control();
 }
 
 int axp_set_vbus_limit_dc(void)
@@ -236,8 +262,8 @@ int axp_set_vbus_limit_dc(void)
 		"pmu_ac_vol", (uint32_t *)&gd->limit_vol);
 	script_parser_fetch_by_offset(pmu_nodeoffset_in_config,
 		"pmu_ac_cur", (uint32_t *)&gd->limit_cur);
-	sunxi_axp_dev[0]->set_vbus_vol_limit(gd->limit_vol);
-	sunxi_axp_dev[0]->set_vbus_cur_limit(gd->limit_cur);
+	sunxi_axp_dev[CHARGER_PMU]->set_vbus_vol_limit(gd->limit_vol);
+	sunxi_axp_dev[CHARGER_PMU]->set_vbus_cur_limit(gd->limit_cur);
 	return 0;
 }
 
@@ -247,8 +273,8 @@ int axp_set_vbus_limit_pc(void)
 		"pmu_usbpc_vol", (uint32_t *)&gd->limit_pcvol);
 	script_parser_fetch_by_offset(pmu_nodeoffset_in_config,
 		"pmu_usbpc_cur", (uint32_t *)&gd->limit_pccur);
-	sunxi_axp_dev[0]->set_vbus_vol_limit(gd->limit_pcvol);
-	sunxi_axp_dev[0]->set_vbus_cur_limit(gd->limit_pccur);
+	sunxi_axp_dev[CHARGER_PMU]->set_vbus_vol_limit(gd->limit_pcvol);
+	sunxi_axp_dev[CHARGER_PMU]->set_vbus_cur_limit(gd->limit_pccur);
 	return 0;
 }
 
@@ -262,12 +288,12 @@ int axp_set_all_limit(void)
 
 int axp_set_suspend_chgcur(void)
 {
-	return sunxi_axp_dev[0]->set_charge_current(gd->pmu_suspend_chgcur);
+	return sunxi_axp_dev[CHARGER_PMU]->set_charge_current(gd->pmu_suspend_chgcur);
 }
 
 int axp_set_runtime_chgcur(void)
 {
-	return sunxi_axp_dev[0]->set_charge_current(gd->pmu_runtime_chgcur);
+	return sunxi_axp_dev[CHARGER_PMU]->set_charge_current(gd->pmu_runtime_chgcur);
 }
 
 int axp_set_charge_vol_limit(void)
@@ -327,7 +353,6 @@ int axp_set_power_supply_output(void)
 			}
 
 			pr_msg("%s = %d, onoff=%d\n", power_name, power_vol_d, onoff);
-			printf("%s = %d, onoff=%d\n", power_name, power_vol_d, onoff);
 
 			if(sunxi_axp_dev[0]->set_supply_status_byname(power_name, power_vol_d, onoff))
 			{
@@ -414,8 +439,8 @@ int axp_probe_power_supply_condition(void)
 	int   ratio;
 	int   safe_vol;
 
-	dcin_exist = sunxi_axp_dev[0]->probe_power_status();
-	bat_vol = sunxi_axp_dev[0]->probe_battery_vol();
+	dcin_exist = sunxi_axp_dev[CHARGER_PMU]->probe_power_status();
+	bat_vol = sunxi_axp_dev[CHARGER_PMU]->probe_battery_vol();
 
 	safe_vol = 0;
 	script_parser_fetch_by_offset(pmu_nodeoffset_in_config,"pmu_safe_vol", (uint32_t*)&safe_vol);
@@ -425,11 +450,11 @@ int axp_probe_power_supply_condition(void)
 		safe_vol = 3500;
 	}
 
-	ratio = sunxi_axp_dev[0]->probe_battery_ratio();
+	ratio = sunxi_axp_dev[CHARGER_PMU]->probe_battery_ratio();
 	if(ratio < 1)
 	{
-		sunxi_axp_dev[0]->set_coulombmeter_onoff(0);
-		sunxi_axp_dev[0]->set_coulombmeter_onoff(1);
+		sunxi_axp_dev[CHARGER_PMU]->set_coulombmeter_onoff(0);
+		sunxi_axp_dev[CHARGER_PMU]->set_coulombmeter_onoff(1);
 	}
 	pr_msg("bat_vol=%d, ratio=%d\n", bat_vol, ratio);
 	if(ratio < 1)
@@ -578,7 +603,7 @@ int axp_set_supply_status_byregulator(const char* id, int onoff)
 
 		for (index = 1; index <= ldo_count; index++)
 		{
-			sprintf(sub_key_name, "regulator%d", index);
+			sprintf(sub_key_name, "regulator%u", index);
 			main_hd = script_parser_fetch(main_key,sub_key_name,(int*)(sub_key_value), sizeof(sub_key_value)/sizeof(int));
 			if (main_hd != 0)
 			{
@@ -808,15 +833,16 @@ int set_sunxi_gpio_power_bias(void)
 		printf("set %s(%d) bias:%d\n", gpio_name,
 					port_index, bias_vol_set);
 		__pio_power_mode_select(bias_vol_set, port_index);
-
-		if (supply_set) {
-			printf("axp=%s, supply=%s, vol=%d\n", axp,
-				supply, bias_vol_set);
-			if (axp_set_supply_status_byname(axp, supply,
-							bias_vol_set, 1) < 0)
+		if (uboot_spare_head.boot_ext[0].data[0]) {
+			if (supply_set) {
+				printf("axp=%s, supply=%s, vol=%d\n", axp,
+						supply, bias_vol_set);
+				if (axp_set_supply_status_byname(axp, supply,
+						bias_vol_set, 1) < 0)
 				printf("pmu set fail!\n");
 			}
-		} while(1);
+		}
+	} while (1);
 
 		return 0;
 }

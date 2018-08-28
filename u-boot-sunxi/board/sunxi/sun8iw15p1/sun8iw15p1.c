@@ -153,8 +153,8 @@ ulong get_spare_head_size(void)
     return (ulong)sizeof(struct spare_boot_head_t);
 }
 
-extern int axp806_probe(void);
-
+extern int axp858_probe(void);
+extern int axp2585_probe(void);
 /**
  * platform_axp_probe -detect the pmu on  board
  * @sunxi_axp_dev_pt: pointer to the axp array
@@ -165,16 +165,22 @@ extern int axp806_probe(void);
 int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 {
 #ifdef CONFIG_SUNXI_MODULE_AXP
-    if(axp806_probe())
-    {
-        printf("probe axp806 failed\n");
-        sunxi_axp_dev_pt[0] = &sunxi_axp_null;
-        return 0;
-    }
+	if (!axp858_probe()) {
+		tick_printf("PMU: AXP858 found\n");
+		sunxi_axp_dev_pt[0] = &sunxi_axp_858;
+	} else {
+		printf("probe axp858 failed\n");
+		sunxi_axp_dev_pt[0] = &sunxi_axp_null;
+	}
 
-    /* pmu type AXP81X */
-    tick_printf("PMU: AXP806 found\n");
-    sunxi_axp_dev_pt[0] = &sunxi_axp_806;
+	/*bmu probe*/
+	if (!axp2585_probe()) {
+		sunxi_axp_dev_pt[1] = &sunxi_axp_2585;
+	} else {
+		printf("probe axp858 failed\n");
+		sunxi_axp_dev_pt[1] = &sunxi_axp_null;
+	}
+
 #else
     sunxi_axp_dev_pt[0] = &sunxi_axp_null;
 #endif
@@ -185,7 +191,7 @@ int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 
 char* board_hardware_info(void)
 {
-    static char * hardware_info  = "sun50iw6p1";
+    static char *hardware_info  = "sun8iw15p1";
     return hardware_info;
 }
 

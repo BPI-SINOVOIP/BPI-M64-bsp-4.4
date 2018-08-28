@@ -52,7 +52,7 @@
 #if defined(__GLIBC__) || defined(__MUSL__)
 
 /* Coordinate with glibc net/if.h header. */
-#if defined(_NET_IF_H) && defined(__USE_MISC)
+#if defined(_NET_IF_H) && (defined(__USE_MISC) || defined(__MUSL__))
 
 /* GLIBC headers included first so don't define anything
  * that would already be defined. */
@@ -65,7 +65,11 @@
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS 0
 /* For the future if glibc adds IFF_LOWER_UP, IFF_DORMANT and IFF_ECHO */
 #ifndef __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
+#if defined(__MUSL__)
+#define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO 0
+#else /* __MUSL__ */
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO 1
+#endif
 #endif /* __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO */
 
 #else /* _NET_IF_H */

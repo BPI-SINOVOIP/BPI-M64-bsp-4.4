@@ -31,6 +31,10 @@
 #define  TOC0_MAGIC             "TOC0.GLH"
 #define  TOC_MAIN_INFO_MAGIC    0x89119800
 
+
+#define  BOOT0_EXTEND_MSG_MAGIC             "BT0E.GLH"
+#define  BOOT0_EXTEND_MSG_MAIN_INFO_MAGIC    0x89119820
+
 #define  SECURE_SWITCH_OTHER   0
 #define  SECURE_SWITCH_NORMAL  1
 #define  SECURE_NON_SECUREOS   2
@@ -155,6 +159,7 @@ typedef struct SBROM_TOC0_ITEM_info {
 #define ITEM_MONITOR_NAME		"monitor"
 #define ITEM_UBOOT_NAME			"u-boot"
 #define ITEM_LOGO_NAME			"logo"
+#define ITEM_TONE_NAME			"tone"
 #define ITEM_DTB_NAME			"dtb"
 #define ITEM_SOCCFG_NAME		"soc-cfg"
 #define ITEM_BDCFG_NAME			"board-cfg"
@@ -162,6 +167,14 @@ typedef struct SBROM_TOC0_ITEM_info {
 #define ITEM_ANDROIDCHARGE_LOGO_NAME	"androidcharge"
 #define ITEM_EMMC_FW_NAME		"emmc-fw"
 #define ITEM_NAME_SBROMSW_KEY		0x010303
+
+typedef struct boot0_extend_msg
+{
+	__u32  magic;
+	__u32  valid_len;
+	__u32  add_sum;
+	__u32  dtb_index;
+}boot0_extend_msg_t;
 
 #endif     //  ifndef __toc_h
 

@@ -31,7 +31,7 @@
 //#define RSB_USE_INT
 
 #ifndef R_RSB_BASE
-#define R_RSB_BASE	(0x01f03400)//should modified acorrding to environment
+#define R_RSB_BASE	(0x07083000)
 #endif
 
 
@@ -51,27 +51,25 @@
 #define RSB_REG_INTE	(R_RSB_BASE + 0x08)
 #define RSB_REG_STAT	(R_RSB_BASE + 0x0c)
 #define RSB_REG_DADDR0	(R_RSB_BASE + 0x10)
-#define RSB_REG_DADDR1	(R_RSB_BASE + 0x14)
-//#define RSB_REG_DLEN	(R_RSB_BASE + 0x18)
 #define RSB_REG_DATA0	(R_RSB_BASE + 0x1c)
-#define RSB_REG_DATA1	(R_RSB_BASE + 0x20)
 #define RSB_REG_LCR		(R_RSB_BASE + 0x24)
 #define RSB_REG_PMCR	(R_RSB_BASE + 0x28)
 #define RSB_REG_CMD		(R_RSB_BASE + 0x2c)//RSB Command Register
 #define RSB_REG_SADDR	(R_RSB_BASE + 0x30)//RSB Slave address Register
+#define RSB_REG_ARBITER (R_RSB_BASE + 0x34)
+#define RSB_REG_VER     (R_RSB_BASE + 0x300)
 
 /* bit field */
 #define RSB_SOFT_RST		(1U << 0)
 #define RSB_GLB_INTEN		(1U << 1)
 #define RSB_ABT_TRANS		(1U << 6)
 #define RSB_START_TRANS		(1U << 7)
-#define	RSB_USE_RSB			(1U<<8)//Use RSB
 
 #define RSB_TOVER_INT		(1U << 0)
 #define RSB_TERR_INT		(1U << 1)
 #define RSB_LBSY_INT		(1U << 2)
-#define RSB_TRANS_ERR_ID	(0xFF<<8)
-#define RSB_TRANS_ERR_ID1	(0xFF<<16)//8¡¯b00000001 ¨C no ack
+#define RSB_TRANS_ERR_DATA	(0xFF<<8)
+#define RSB_TRANS_ERR_ACK	(0xFF<<16)
 
 #define RSB_PMU_INIT		(1U << 31)
 

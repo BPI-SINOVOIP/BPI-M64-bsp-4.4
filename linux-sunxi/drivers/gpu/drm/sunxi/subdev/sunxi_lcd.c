@@ -36,11 +36,22 @@ static struct lcd_clk_info clk_tbl[] = {
 	{LCD_IF_DSI,    4, 1, 4, 148500000},
 };
 
+static struct sunxi_lcd_private *sunxi_lcd_priv;
+
 int sunxi_lcd_bl_gpio_init(struct disp_lcd_cfg *lcd_cfg);
 static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd);
 /*static int sunxi_lcd_pin_disable(
 struct sunxi_lcd_private *sunxi_lcd);*/
 
+static sunxi_lcd_set_lcd_priv(struct sunxi_lcd_private *priv)
+{
+	sunxi_lcd_priv = priv;
+}
+
+static struct sunxi_lcd_private *sunxi_lcd_get_lcd_priv(void)
+{
+	return sunxi_lcd_priv;
+}
 
 
 
@@ -1487,6 +1498,128 @@ static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd)
 	return 0;
 }*/
 
+static ssize_t type_show(struct device *dev,
+			struct device_attribute *attr,
+					char *buf)
+{
+	ssize_t n = 0;
+
+	n += sprintf(buf + n, "%s\n", "raw");
+	return n;
+}
+
+static ssize_t type_store(struct device *dev, struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	if (count < 1)
+		return -EINVAL;
+
+	return count;
+}
+
+static DEVICE_ATTR(type, S_IRUGO|S_IWUSR|S_IWGRP, type_show, type_store);
+
+static ssize_t brightness_show(struct device *dev,
+			struct device_attribute *attr,
+					char *buf)
+{
+	ssize_t n = 0;
+	struct sunxi_lcd_private *lcd_priv = sunxi_lcd_get_lcd_priv();
+
+	n += sprintf(buf + n, "%d", lcd_priv->lcd_cfg->backlight_bright);
+
+	return n;
+}
+
+static ssize_t brightness_store(struct device *dev, struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	struct sunxi_lcd_private *lcd_priv = sunxi_lcd_get_lcd_priv();
+	unsigned long data;
+	int err;
+
+	err = kstrtoul(buf, 0, &data);
+	if (err) {
+		pr_err("Invalid size\n");
+		return err;
+	}
+
+	if (count < 1)
+		return -EINVAL;
+
+	sunxi_common_pwm_set_bl(lcd_priv, (unsigned int)data);
+
+	return count;
+}
+
+static DEVICE_ATTR(brightness, S_IRUGO|S_IWUSR|S_IWGRP,
+			brightness_show, brightness_store);
+
+static ssize_t max_brightness_show(struct device *dev,
+			struct device_attribute *attr,
+					char *buf)
+{
+	ssize_t n = 0;
+	unsigned int max = 255;
+
+	n += sprintf(buf + n, "%d\0", max);
+	return n;
+}
+
+static ssize_t max_brightness_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	if (count < 1)
+		return -EINVAL;
+
+	return count;
+}
+
+static DEVICE_ATTR(max_brightness, S_IRUGO|S_IWUSR|S_IWGRP,
+			max_brightness_show, max_brightness_store);
+
+static ssize_t actual_brightness_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	ssize_t n = 0;
+	struct sunxi_lcd_private *lcd_priv = sunxi_lcd_get_lcd_priv();
+
+	n += sprintf(buf + n, "%d", lcd_priv->lcd_cfg->backlight_bright);
+
+	return n;
+}
+
+static ssize_t actual_brightness_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	if (count < 1)
+		return -EINVAL;
+
+	return count;
+}
+
+static DEVICE_ATTR(actual_brightness, S_IRUGO|S_IWUSR|S_IWGRP,
+			actual_brightness_show, actual_brightness_store);
+static struct attribute *pwm_dev_attrs[] = {
+	&dev_attr_type.attr,
+	&dev_attr_brightness.attr,
+	&dev_attr_max_brightness.attr,
+	&dev_attr_actual_brightness.attr,
+	NULL
+};
+
+static const struct attribute_group pwm_dev_group = {
+	.attrs = pwm_dev_attrs,
+};
+
+static const struct attribute_group *pwm_attr_groups[] = {
+	&pwm_dev_group,
+	NULL
+};
+
 int sunxi_pwm_dev_init(struct sunxi_lcd_private *sunxi_lcd)
 {
 	__u64 backlight_bright;
@@ -1494,7 +1627,24 @@ int sunxi_pwm_dev_init(struct sunxi_lcd_private *sunxi_lcd)
 	struct disp_panel_para  *panel_info = sunxi_lcd->panel;
 	struct pwm_info_t  *pwm_info;
 
+	sunxi_lcd_set_lcd_priv(sunxi_lcd);
 	if (panel_info->lcd_pwm_used) {
+		alloc_chrdev_region(&sunxi_lcd->bright_devno,
+					0, 1, "backlight");
+
+		/*Create a path: sys/class/backlight*/
+		sunxi_lcd->bright_class = class_create(THIS_MODULE, "backlight");
+		if (IS_ERR(sunxi_lcd->bright_class)) {
+			DRM_ERROR("Error:brightness class_create fail\n");
+			return -1;
+		}
+
+		/*Create a path "sys/class/brightness/pwm"*/
+		sunxi_lcd->bright_dev =
+			device_create_with_groups(sunxi_lcd->bright_class,
+					sunxi_drm_get_dev(), sunxi_lcd->bright_devno, NULL,
+						pwm_attr_groups, "pwm");
+
 		pwm_info = kzalloc(sizeof(struct pwm_info_t), GFP_KERNEL);
 		if (!pwm_info) {
 			DRM_ERROR("failed to alloc pwm_info.\n");

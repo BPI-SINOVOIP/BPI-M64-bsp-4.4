@@ -716,4 +716,38 @@ U_BOOT_CMD(
 	"sunxi_card0_probe"
 );
 
+int do_card1_probe(cmd_tbl_t *cmdtp, int flag,
+			 int argc, char * const argv[])
+{
+	extern int get_boot_storage_type(void);
+	int boot_type = get_boot_storage_type() ;
+	struct mmc *mmc_boot = NULL;
+	static int card1_init = 0;
+
+	if(boot_type == STORAGE_SD1 || card1_init)
+	{
+		printf("card1 has inited\n");
+		return 0;
+	}
+
+	board_mmc_pre_init(1);
+	mmc_boot = find_mmc_device(1);
+	if(!mmc_boot){
+		printf("fail to find card1\n");
+		return -1;
+	}
+	if (mmc_init(mmc_boot)) {
+		puts("card1 init failed\n");
+		return  -1;
+	}
+	card1_init = 1;
+	return 0;
+}
+
+U_BOOT_CMD(
+	sunxi_card1_probe, 1, 0, do_card1_probe,
+	"probe sunxi card1 device",
+	"sunxi_card1_probe"
+);
+
 #endif /* !CONFIG_GENERIC_MMC */

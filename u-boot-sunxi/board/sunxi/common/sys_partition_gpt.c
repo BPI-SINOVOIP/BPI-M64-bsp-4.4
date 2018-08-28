@@ -471,7 +471,7 @@ int sunxi_partition_init(void)
 	{
 		int storage_type = get_boot_storage_type();
 		if(storage_type == STORAGE_EMMC || storage_type == STORAGE_EMMC3
-			|| storage_type == STORAGE_SD)
+			|| storage_type == STORAGE_SD || storage_type == STORAGE_SD1)
 		{
 			partition_op->partition_logic_offset = CONFIG_MMC_LOGICAL_OFFSET;
 		}
@@ -585,7 +585,9 @@ int check_card0_partition(char* sunxi_mbr_buf)
 	int         ret = 0;
 	char        buffer[1024];
 
-	if ((STORAGE_SD != get_boot_storage_type()) && (STORAGE_EMMC != get_boot_storage_type())) {
+	if ((STORAGE_SD != get_boot_storage_type()) &&
+			(STORAGE_SD1 != get_boot_storage_type()) &&
+			(STORAGE_EMMC != get_boot_storage_type())) {
 
 		return -1;
 	}

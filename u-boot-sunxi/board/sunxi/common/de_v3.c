@@ -28,6 +28,9 @@
 #include <bmp_layout.h>
 #include <fdt_support.h>
 
+#include <sunxi_board.h>
+#include <../drivers/video/sunxi/disp2/disp/de/include.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static __u32 screen_id = 0;
@@ -37,6 +40,27 @@ static __u32 disp_para2;
 static __u32 fb_base_addr = SUNXI_DISPLAY_FRAME_BUFFER_ADDR;
 extern __s32 disp_delay_ms(__u32 ms);
 extern long disp_ioctl(void *hd, unsigned int cmd, void *arg);
+
+static inline void *malloc_aligned(u32 size, u32 alignment)
+{
+	void *ptr = (void *)malloc(size + alignment);
+	if (ptr) {
+		void *aligned = (void *)(((long)ptr + alignment) & (~(alignment-1)));
+
+		/* Store the original pointer just before aligned pointer*/
+		((void **) aligned)[-1]  = ptr;
+		return aligned;
+	}
+
+	return NULL;
+}
+
+static inline void free_aligned(void *aligned_ptr)
+{
+	if (aligned_ptr)
+		free(((void **) aligned_ptr)[-1]);
+}
+
 
 static int board_display_update_para_for_kernel(char *name, int value)
 {
@@ -215,7 +239,7 @@ int board_display_set_exit_mode(int lcd_off_only)
 
 	if(lcd_off_only)
 	{
-		arg[0] = DISP_EXIT_MODE_CLEAN_PARTLY;
+		arg[1] = DISP_EXIT_MODE_CLEAN_PARTLY;
 		disp_ioctl(NULL, cmd, (void *)arg);
 	}
 	else
@@ -227,6 +251,91 @@ int board_display_set_exit_mode(int lcd_off_only)
 
 	return 0;
 }
+/*
+******************************************************************************
+*
+*    function
+*
+*    name          :
+*
+*    parmeters     :
+*
+*    return        :
+*
+*    note          :
+*
+*
+******************************************************************************
+*/
+
+static struct eink_8bpp_image cimage;
+int board_display_eink_update(char *name, __u32 update_mode)
+
+{
+	uint arg[4] = { 0 };
+	uint cmd = 0;
+	int ret;
+
+	u32 width = 800;
+	u32 height = 600;
+
+	char *bmp_buffer = NULL;
+	u32 buf_size = 0;
+
+	char primary_key[25];
+	s32 value = 0;
+	u32 disp = 0;
+	sprintf(primary_key, "lcd%d", disp);
+
+	ret = disp_sys_script_get_item(primary_key, "eink_width", &value, 1);
+	if (ret == 1)
+		width = value;
+
+	ret = disp_sys_script_get_item(primary_key, "eink_height", &value, 1);
+	if (ret == 1)
+		height = value;
+
+	buf_size = (width * height) << 2;
+
+	bmp_buffer = (char *)malloc_aligned(buf_size, ARCH_DMA_MINALIGN);
+	if (NULL == bmp_buffer)
+		printf("fail to alloc memory for display bmp.\n");
+
+	sunxi_Eink_Get_bmp_buffer(name, bmp_buffer);
+
+	cimage.update_mode = update_mode;
+	cimage.flash_mode = GLOBAL;
+	cimage.state = USED;
+	cimage.window_calc_enable = false;
+	cimage.size.height = height;
+	cimage.size.width = width;
+	cimage.size.align = 4;
+	cimage.paddr = bmp_buffer;
+	cimage.vaddr = bmp_buffer;
+	cimage.update_area.x_top = 0;
+	cimage.update_area.y_top = 0;
+	cimage.update_area.x_bottom = width - 1;
+	cimage.update_area.y_bottom = height - 1;
+
+	arg[0] = (uint)&cimage;
+	arg[1] = 0;
+	arg[2] = 0;
+	arg[3] = 0;
+
+	cmd = DISP_EINK_UPDATE;
+	ret = disp_ioctl(NULL, cmd, (void *)arg);
+	if (ret != 0) {
+		printf("update eink image fail\n");
+		return -1;
+	}
+	if (bmp_buffer) {
+		free_aligned(bmp_buffer);
+		bmp_buffer = NULL;
+	}
+
+	return 0;
+}
+
 /*
 *******************************************************************************
 *                     board_display_layer_open
@@ -632,6 +741,17 @@ int board_display_device_open(void)
 	{
 
 	}
+
+	int hdmi_work_mode = DISP_HDMI_SEMI_AUTO;
+
+	if (config.type == DISP_OUTPUT_TYPE_HDMI) {
+		arg[0] = screen_id;
+		arg[1] = config.mode;
+		hdmi_work_mode = disp_ioctl(NULL, DISP_HDMI_GET_WORK_MODE, (void *)arg);
+		if (hdmi_work_mode == DISP_HDMI_FULL_AUTO)
+			config.mode = disp_ioctl(NULL, DISP_HDMI_GET_SUPPORT_MODE, (void *)arg);
+	}
+
 	pr_notice("disp%d device type(%d) enable\n", screen_id, config.type);
 
 	arg[0] = screen_id;

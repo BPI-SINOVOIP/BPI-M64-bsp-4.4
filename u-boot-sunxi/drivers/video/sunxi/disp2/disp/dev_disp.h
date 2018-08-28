@@ -79,6 +79,7 @@ typedef struct
 
 	disp_init_para          disp_init;
 	struct disp_manager     *mgr[DISP_SCREEN_NUM];
+	struct disp_eink_manager *eink_manager[1];
 
 	struct proc_list        sync_proc_list;
 	struct proc_list        sync_finish_proc_list;

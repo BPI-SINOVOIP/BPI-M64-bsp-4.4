@@ -1116,4 +1116,5 @@ config  TOUCHSCREEN_GT82X
 source "drivers/input/touchscreen/gslx680new/Kconfig"
 source "drivers/input/touchscreen/ftxxxx/Kconfig"
 source "drivers/input/touchscreen/gt9xx/Kconfig"
+source "drivers/input/touchscreen/focaltech_touch/Kconfig"
 endif

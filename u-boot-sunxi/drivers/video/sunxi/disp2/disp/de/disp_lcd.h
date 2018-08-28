@@ -51,4 +51,8 @@ s32 disp_lcd_gpio_get_value(struct disp_device* lcd,u32 io_index);
 s32 disp_lcd_gpio_set_value(struct disp_device* lcd, u32 io_index, u32 data);
 s32 disp_lcd_is_enabled(struct disp_device* lcd);
 
+#if defined(SUPPORT_EINK) && defined(CONFIG_EINK_PANEL_USED)
+extern int diplay_finish_flag;
+#endif
+
 #endif

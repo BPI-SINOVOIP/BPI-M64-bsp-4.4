@@ -1,5 +1,8 @@
 #ifndef __VIDEO_HAL_H__
 #define __VIDEO_HAL_H__
+#include <compiler.h>
+#include <linux/types.h>
+#include <sunxi_display2.h>
 
 /*
 * ------- video device hal : start --------
@@ -8,6 +11,10 @@ typedef struct disp_device {
 	int screen_id;
 	int type;
 	int mode;
+	int format;
+	int bits;
+	int eotf;
+	int cs;
 	int do_hpd;
 	unsigned char hpd_state;
 	unsigned char be_force_open;

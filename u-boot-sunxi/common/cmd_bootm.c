@@ -112,7 +112,7 @@ static void update_bootargs(void)
 			strcat(cmdline," androidboot.mode=charger");
 		}
 	}
-	str = getenv("sunxi_serial");
+	str = getenv("snum");
 	sprintf(tmpbuf," androidboot.serialno=%s",str);
 	strcat(cmdline,tmpbuf);
 	/*boot type*/

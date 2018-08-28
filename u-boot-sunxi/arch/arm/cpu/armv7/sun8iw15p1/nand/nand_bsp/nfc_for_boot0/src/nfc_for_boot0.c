@@ -114,25 +114,21 @@ void _dma_config_start(__u8 rw, __u32 buff_addr, __u32 len)
 {
 	__u32 reg_val;
 
-	if (buff_addr & 0x3) {
-		PRINT("[!!!!]%s(): buff addr(0x%x) is not 32bit aligned, "
-				"and it will be clipped to 0x%x", "_dma_config_start", buff_addr, (buff_addr & 0x3));
+	if (buff_addr & 0xf) {
+		PRINT("[!!!!]%s(): buff addr(0x%x) is not 16bit aligned, "
+				"and it will be clipped to 0x%x", "_dma_config_start", buff_addr, (buff_addr & 0xf));
 	}
-	reg_val = NFC_READ_REG(NFC_REG_CTL);
-	reg_val &= (~(0x1<<15));
-	reg_val |= 0x1U<<14;
-	NFC_WRITE_REG(NFC_REG_CTL, reg_val);
-
-	ndfc_dma_desc[0].bcnt = 0;
-	ndfc_dma_desc[0].bcnt |= NDFC_DESC_BSIZE(len);
-	ndfc_dma_desc[0].buff = buff_addr;
-
-	ndfc_dma_desc[0].cfg = 0;
-	ndfc_dma_desc[0].cfg |= NDFC_DESC_FIRST_FLAG;
-	ndfc_dma_desc[0].cfg |= NDFC_DESC_LAST_FLAG;
-
-	NFC_REG_DMA_DL_BASE = (u32)ndfc_dma_desc;
-
+	reg_val = 1;
+	NFC_WRITE_REG(NFC_REG_VAIID_DATA_DMA_CNT, reg_val);
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_BASE, buff_addr);
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X, len | ((8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_1, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_2, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_3, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_4, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_5, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_6, (8 | (8<<16)));
+	NFC_WRITE_REG(NFC_REG_DATA_DMA_SIZE_2X_7, (8 | (8<<16)));
 }
 
 __s32 _wait_dma_end(void)
@@ -151,12 +147,13 @@ __s32 _reset(void)
 	__u32 cfg;
 	__s32 timeout = 0xffff;
 
-	/*reset NFC*/
-	cfg = NFC_READ_REG(NFC_REG_CTL);
+	/*ZZM reset NFC*/
+	cfg = NFC_READ_REG(NFC_REG_GLB_CFG);
 	cfg |= NFC_RESET;
-	NFC_WRITE_REG(NFC_REG_CTL, cfg);
+	NFC_WRITE_REG(NFC_REG_GLB_CFG, cfg);
 	//waiting reset operation end
-	while((timeout--) && (NFC_READ_REG(NFC_REG_CTL) & NFC_RESET));
+	while ((timeout--) && (NFC_READ_REG(NFC_REG_GLB_CFG) & NFC_RESET))
+		;
 	if (timeout <= 0)
 		return -ERR_TIMEOUT;
 
@@ -715,12 +712,18 @@ __s32 NFC_ChangMode(NFC_INIT_INFO *nand_info )
 	/*reset nfc*/
 	_reset();
 
+	/*zzm modify*/
+	/*set NFC_REG_GLB_CFG*/
+	cfg = 0;
+	cfg = NFC_REG_GLB_CFG & 0xffffffff;
+	cfg |= NFC_EN;
+	cfg &= ~NDFC_CHANNEL_SEL;
+	NFC_WRITE_REG(NFC_REG_GLB_CFG, cfg);
+
 	/*set NFC_REG_CTL*/
 	cfg = 0;
-	cfg |= NFC_EN;
-	cfg |= ( (nand_info->bus_width & 0x1) << 2);
 	cfg |= ( (nand_info->ce_ctl & 0x1) << 6);
-	cfg |= ( (nand_info->ce_ctl1 & 0x1) << 7);
+	/*cfg |= ( (nand_info->ce_ctl1 & 0x1) << 7);*/
 	if(nand_info->pagesize == 2 )            /*  1K  */
 		cfg |= ( 0x0 << 8 );
 	else if(nand_info->pagesize == 4 )       /*  2K  */
@@ -736,20 +739,16 @@ __s32 NFC_ChangMode(NFC_INIT_INFO *nand_info )
 	else                                      /* default 4K */
 		cfg |= ( 0x2 << 8 );
 	cfg |= ((nand_info->ddr_type & 0x3) << 18);   //set ddr type
-	cfg |= ((nand_info->debug & 0x1) << 31);
 	NFC_WRITE_REG(NFC_REG_CTL,cfg);
 
 	/*set NFC_TIMING */
 	cfg = 0;
-	if((nand_info->ddr_type & 0x3) == 0)
+	if ((nand_info->ddr_type & 0x3) == 0) {
 		cfg |=((nand_info->serial_access_mode & 0x1) & 0xf)<<8;
-	else if((nand_info->ddr_type & 0x3) == 2)
-	{
+	} else if ((nand_info->ddr_type & 0x3) == 2) {
 		cfg |= 0x3f;
 		cfg |= 0x3<<8;
-    }
-    else if((nand_info->ddr_type & 0x3) == 3)
-	{
+    } else if ((nand_info->ddr_type & 0x3) == 3) {
 		cfg |= 0x1f;
 		cfg |= 0x2<<8;
 	}
@@ -785,7 +784,7 @@ __s32 NFC_Init(NFC_INIT_INFO *nand_info )
 	__s32 ret;
 	__s32 i;
 
-	//init ddr_param
+	/*init ddr_param*/
 	for(i=0;i<8;i++)
 	ddr_param[i] = 0;
 
@@ -793,12 +792,11 @@ __s32 NFC_Init(NFC_INIT_INFO *nand_info )
 	NandIOBase[1] = (__u32)NAND_IORemap(NAND_IO_BASE_ADDR1, 4096);
 	NandIndex = 0;
 
-	//init pin
+	/*init pin*/
 	NAND_PIORequest(NandIndex);
 
-	//init clk
+	/*init clk*/
 	NAND_ClkRequest(NandIndex);
-	NAND_SetClk(NandIndex,10);
 
 	NFC_SetEccMode(0);
 
@@ -1586,6 +1584,7 @@ __s32 NFC_ReadRetry(__u32 chip, __u32 retry_count, __u32 read_retry_type)
 __s32 NFC_ReadRetryInit(__u32 read_retry_type)
 {
 	__u32 i,j;
+
 	//init
 	read_retry_mode = (read_retry_type>>16)&0xff;
 	read_retry_cycle =(read_retry_type>>8)&0xff;

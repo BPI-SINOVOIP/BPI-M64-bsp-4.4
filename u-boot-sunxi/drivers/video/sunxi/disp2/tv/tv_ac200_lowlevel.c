@@ -127,7 +127,7 @@ s32 aw1683_tve_init(const u16 *p_dac_cali, const u16 *p_bandgap)
 	aw1683_wr_reg(0x40f4,0x0230);	//dac level
 	aw1683_wr_reg(0x40f8,0x0064);	//detect start
 	aw1683_wr_reg(0x40fa,0x0c80);	//detect periods 100ms
-	aw1683_wr_reg(0x4040,0x0002);	//debounce 3
+	aw1683_wr_reg(0x4040, 0x000f);  /*debounce 3 */
 	aw1683_wr_reg(0x4030,0x0001);	//dac enable
 
 	return 0;

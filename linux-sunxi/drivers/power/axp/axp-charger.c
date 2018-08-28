@@ -179,50 +179,13 @@ static inline void axp_update_temp_status(struct axp_charger_dev *chg_dev)
 
 }
 
-/*
- * acin not presence + vbus no presence -> battery presence
- */
-static int pwrsrc_parse_bat_det(struct axp_battery_info *batt, u8 val)
-{
-	if (!(val & ((1 << batt->acpresent_bit) | (1 << batt->vbuspresent_bit))))
-		return 1;
-	else
-		return 0;
-}
-
-static int det_parse_bat_det(struct axp_battery_info *batt, u8 val)
-{
-	if ((val & (1 << batt->det_bit)) && (val & (1 << batt->det_valid_bit)))
-		return 1;
-	else
-		return 0;
-}
-
 void axp_charger_update_state(struct axp_charger_dev *chg_dev)
 {
 	u8 val;
-	u8 pwrsrc;
 	struct axp_ac_info *ac = chg_dev->spy_info->ac;
 	struct axp_usb_info *usb = chg_dev->spy_info->usb;
 	struct axp_battery_info *batt = chg_dev->spy_info->batt;
 	struct axp_regmap *map = chg_dev->chip->regmap;
-
-	axp_regmap_read(map, batt->det_offset, &val);
-	axp_regmap_read(map, batt->pwrsrc_offset, &pwrsrc);
-
-	mutex_lock(&chg_dev->charger_lock);
-	if (batt->det_unused == 0) {
-		if (batt->det_valid == 1) {
-			chg_dev->bat_det = pwrsrc_parse_bat_det(batt, pwrsrc);
-			if (chg_dev->bat_det == 0)
-				chg_dev->bat_det = det_parse_bat_det(batt, val);
-		} else if (batt->det_valid == 0) {
-			chg_dev->bat_det = (val & 1 << batt->det_bit) ? 1 : 0;
-		}
-	} else if (batt->det_unused == 1) {
-		chg_dev->bat_det = 0;
-	}
-	mutex_unlock(&chg_dev->charger_lock);
 
 	axp_regmap_read(map, ac->det_offset, &val);
 	mutex_lock(&chg_dev->charger_lock);
@@ -253,6 +216,31 @@ void axp_charger_update_state(struct axp_charger_dev *chg_dev)
 	}
 
 	chg_dev->ext_valid = (chg_dev->ac_det || chg_dev->usb_det);
+
+	axp_regmap_read(map, batt->det_offset, &val);
+	mutex_lock(&chg_dev->charger_lock);
+	if (batt->det_unused == 0) {
+		if (batt->det_valid == 1) {
+			if ((chg_dev->ac_det && chg_dev->ac_valid)
+				|| (chg_dev->usb_det && chg_dev->usb_valid)) {
+				if ((val & (1 << batt->det_bit))
+					&& (val & (1 << batt->det_valid_bit)))
+					chg_dev->bat_det = 1;
+				else
+					chg_dev->bat_det = 0;
+			} else {
+				if (val & (1 << batt->det_bit))
+					chg_dev->bat_det = 1;
+				else
+					chg_dev->bat_det = 0;
+			}
+		} else if (batt->det_valid == 0) {
+			chg_dev->bat_det = (val & 1 << batt->det_bit) ? 1 : 0;
+		}
+	} else if (batt->det_unused == 1) {
+		chg_dev->bat_det = 0;
+	}
+	mutex_unlock(&chg_dev->charger_lock);
 
 	axp_regmap_read(map, ac->in_short_offset, &val);
 	mutex_lock(&chg_dev->charger_lock);

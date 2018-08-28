@@ -1,7 +1,6 @@
 #include "disp_display.h"
 
 disp_dev_t gdisp;
-
 s32 bsp_disp_init(disp_bsp_init_para * para)
 {
 	u32 num_screens, disp;
@@ -35,6 +34,9 @@ s32 bsp_disp_init(disp_bsp_init_para * para)
 	disp_init_smbl(para);
 	disp_init_capture(para);
 
+#if defined SUPPORT_EINK
+	disp_init_eink(para);
+#endif
 	disp_init_connections(para);
 
 	return DIS_SUCCESS;
@@ -262,6 +264,18 @@ s32 bsp_disp_device_set_config(int disp, struct disp_device_config *config)
 				break;
 		}
 	}
+
+	return ret;
+}
+
+s32 bsp_disp_eink_update(struct disp_eink_manager *manager, struct eink_8bpp_image *cimage)
+{
+	int ret = -1;
+	struct eink_8bpp_image current_image;
+
+	memcpy(&current_image, cimage, sizeof(struct eink_8bpp_image));
+	if (manager)
+		ret = manager->eink_update(manager, &current_image);
 
 	return ret;
 }
@@ -1006,6 +1020,42 @@ s32 bsp_disp_set_edp_func(struct disp_tv_func *func)
 	}
 
 	return -1;
+}
+
+s32 bsp_disp_hdmi_get_support_mode(u32 disp, u32 init_mode)
+{
+	u32 num_screens = 0;
+	s32 ret = -1;
+
+	num_screens = bsp_disp_feat_get_num_screens();
+	for (disp = 0; disp < num_screens; disp++) {
+		struct disp_device *hdmi;
+		hdmi = disp_device_find(disp, DISP_OUTPUT_TYPE_HDMI);
+		if (hdmi && hdmi->get_support_mode) {
+			ret = hdmi->get_support_mode(hdmi, init_mode);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+s32 bsp_disp_hdmi_get_work_mode(u32 disp)
+{
+	u32 num_screens = 0;
+	s32 ret = -1;
+
+	num_screens = bsp_disp_feat_get_num_screens();
+	for (disp = 0; disp < num_screens; disp++) {
+		struct disp_device *hdmi;
+		hdmi = disp_device_find(disp, DISP_OUTPUT_TYPE_HDMI);
+		if (hdmi && hdmi->get_work_mode) {
+			ret = hdmi->get_work_mode(hdmi);
+			break;
+		}
+	}
+
+	return ret;
 }
 
 s32 bsp_disp_hdmi_check_support_mode(u32 disp, enum disp_output_type mode)

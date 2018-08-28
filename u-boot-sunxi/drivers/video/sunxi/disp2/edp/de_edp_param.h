@@ -30,7 +30,7 @@ struct sink_info {
 	unsigned int dp_rev;
 	unsigned int eDP_capable;
 	unsigned int dp_enhanced_frame_cap;
-	unsigned int dp_max_link_rate;
+	unsigned long long dp_max_link_rate;
 	unsigned int dp_max_lane_count;
 };
 

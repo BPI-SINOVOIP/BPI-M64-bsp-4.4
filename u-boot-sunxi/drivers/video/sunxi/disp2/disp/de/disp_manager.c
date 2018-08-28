@@ -798,7 +798,7 @@ static s32 disp_mgr_clk_enable(struct disp_manager *mgr)
 	return ret;
 }
 
-static s32 disp_mgr_clk_disable(struct disp_manager *mgr)
+s32 disp_mgr_clk_disable(struct disp_manager *mgr)
 {
 	struct disp_manager_private_data *mgrp = disp_mgr_get_priv(mgr);
 

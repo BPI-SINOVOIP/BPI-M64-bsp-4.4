@@ -10,6 +10,7 @@ struct serial_device {
 	int	(*start)(void);
 	int	(*stop)(void);
 	void	(*setbrg)(void);
+	void	(*setbaud)(int baud);
 	int	(*getc)(void);
 	int	(*tstc)(void);
 	void	(*putc)(const char c);

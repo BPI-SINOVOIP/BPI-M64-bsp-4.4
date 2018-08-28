@@ -15,6 +15,8 @@
 #define SECURE_BIT_OFFSET 11
 #endif
 
+#define SBROM_ACCELERATION_ENABLE_BIT	29
+
 #define EFUSE_DBG_E 0
 #if EFUSE_DBG_E
 static  void efuse_dump(char *str,unsigned char *data,\
@@ -176,6 +178,13 @@ static efuse_key_map_new_t g_key_info[] = {
 	EFUSE_DEF_ITEM(EFUSE_RESERVED_NAME, 0x118, 320, 20, 20, EFUSE_RW),
 	EFUSE_DEF_ITEM("", 0, 0, 0, 0, EFUSE_PRIVATE),
 };
+#elif defined(CONFIG_ARCH_SUN8IW15P1)
+static efuse_key_map_new_t g_key_info[] = {
+EFUSE_DEF_ITEM(EFUSE_CHIPID_NAME, 0x0, 128, -1, 0, EFUSE_RO),
+EFUSE_DEF_ITEM(EFUSE_ROTPK_NAME, EFUSE_ROTPK, 256, -1, 12, EFUSE_RO),
+EFUSE_DEF_ITEM(EFUSE_HDCP_HASH_NAME, EFUSE_HDCP_HASH, 128, -1, 15, EFUSE_RO),
+EFUSE_DEF_ITEM("", 0, 0, 0, 0, EFUSE_PRIVATE),
+};
 #else
 /*Please extend key_maps for new arch here*/
 static efuse_key_map_new_t g_key_info[] = {
@@ -267,7 +276,11 @@ static int uni_burn_key(uint key_index, uint key_value)
 void sid_set_security_mode(void)
 {
 	#ifdef EFUSE_LCJS
-    uni_burn_key(EFUSE_LCJS, (0x1<<SECURE_BIT_OFFSET));
+	#ifdef CONFIG_ARCH_SUN50IW1P1
+	uni_burn_key(EFUSE_LCJS, ((0x1 << SECURE_BIT_OFFSET) | (0x1 << SBROM_ACCELERATION_ENABLE_BIT)));
+	#else
+	uni_burn_key(EFUSE_LCJS, (0x1<<SECURE_BIT_OFFSET));
+	#endif
 	#endif
 	return;
 }
@@ -523,6 +536,7 @@ int sunxi_efuse_read(void *key_name, void *rd_buf, int *len)
 	efuse_key_map_new_t *key_map = g_key_info;
 	uint tmp=0,i=0,k_u32_l=0,bit_lft = 0;
 	int offset =0,tmp_sz = 0;
+	int show_status = 0;
 	unsigned int *u32_p = (unsigned int *)rd_buf;
 	unsigned char *u8_p = (unsigned char *)rd_buf;
 
@@ -537,6 +551,13 @@ int sunxi_efuse_read(void *key_name, void *rd_buf, int *len)
 	{
 		if (!memcmp(key_name, key_map->name, strlen(key_map->name)))
 		{
+			if (key_map->burned_flg_offset > 0) {
+				show_status = (sid_read_key(EFUSE_WRITE_PROTECT) >> key_map->burned_flg_offset) & 1;
+				if (!show_status) {
+					pr_force("key %s have not been burned yet\n", key_map->name);
+					return -1;
+				}
+			}
 			break;
 		}
 	}

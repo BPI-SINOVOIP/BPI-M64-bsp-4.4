@@ -38,3 +38,6 @@ obj-$(CONFIG_ARC_SERIAL) += serial_arc.o
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_USB_TTY) += usbtty.o
 endif
+
+ccflags-$(CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE) += -finstrument-functions-exclude-file-list=serial.c
+ccflags-$(CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE) += -finstrument-functions-exclude-file-list=ns16550.c

@@ -1149,7 +1149,7 @@ static void chan_reg_rule_print_dbg(const struct ieee80211_regdomain *regd,
 			 power_rule->max_antenna_gain);
 
 	if (reg_rule->flags & NL80211_RRF_AUTO_BW)
-		snprintf(bw, sizeof(bw), "%d KHz, %d KHz AUTO",
+		snprintf(bw, sizeof(bw), "%d KHz, %u KHz AUTO",
 			 freq_range->max_bandwidth_khz,
 			 reg_get_max_bandwidth(regd, reg_rule));
 	else
@@ -1494,9 +1494,9 @@ static void wiphy_update_new_beacon(struct wiphy *wiphy,
  */
 static void wiphy_update_beacon_reg(struct wiphy *wiphy)
 {
-	unsigned int i;
-	struct ieee80211_supported_band *sband;
-	struct reg_beacon *reg_beacon;
+	unsigned int i = 0;
+	struct ieee80211_supported_band *sband = NULL;
+	struct reg_beacon *reg_beacon = NULL;
 
 	list_for_each_entry(reg_beacon, &reg_beacon_list, list) {
 		if (!wiphy->bands[reg_beacon->chan.band])
@@ -1740,8 +1740,8 @@ static void wiphy_update_regulatory(struct wiphy *wiphy,
 
 static void update_all_wiphy_regulatory(enum nl80211_reg_initiator initiator)
 {
-	struct cfg80211_registered_device *rdev;
-	struct wiphy *wiphy;
+	struct cfg80211_registered_device *rdev = NULL;
+	struct wiphy *wiphy = NULL;
 
 	ASSERT_RTNL();
 
@@ -2203,8 +2203,8 @@ out_free:
 
 static bool reg_only_self_managed_wiphys(void)
 {
-	struct cfg80211_registered_device *rdev;
-	struct wiphy *wiphy;
+	struct cfg80211_registered_device *rdev = NULL;
+	struct wiphy *wiphy = NULL;
 	bool self_managed_found = false;
 
 	ASSERT_RTNL();
@@ -2270,8 +2270,8 @@ static void reg_process_pending_hints(void)
 /* Processes beacon hints -- this has nothing to do with country IEs */
 static void reg_process_pending_beacon_hints(void)
 {
-	struct cfg80211_registered_device *rdev;
-	struct reg_beacon *pending_beacon, *tmp;
+	struct cfg80211_registered_device *rdev = NULL;
+	struct reg_beacon *pending_beacon = NULL, *tmp = NULL;
 
 	/* This goes through the _pending_ beacon list */
 	spin_lock_bh(&reg_pending_beacons_lock);
@@ -2293,8 +2293,8 @@ static void reg_process_pending_beacon_hints(void)
 
 static void reg_process_self_managed_hints(void)
 {
-	struct cfg80211_registered_device *rdev;
-	struct wiphy *wiphy;
+	struct cfg80211_registered_device *rdev = NULL;
+	struct wiphy *wiphy = NULL;
 	const struct ieee80211_regdomain *tmp;
 	const struct ieee80211_regdomain *regd;
 	enum ieee80211_band band;
@@ -2399,6 +2399,7 @@ int regulatory_hint_user(const char *alpha2,
 
 	return 0;
 }
+EXPORT_SYMBOL(regulatory_hint_user);
 
 int regulatory_hint_indoor(bool is_indoor, u32 portid)
 {
@@ -2610,9 +2611,9 @@ static void restore_regulatory_settings(bool reset_user)
 {
 	char alpha2[2];
 	char world_alpha2[2];
-	struct reg_beacon *reg_beacon, *btmp;
+	struct reg_beacon *reg_beacon = NULL, *btmp = NULL;
 	LIST_HEAD(tmp_reg_req_list);
-	struct cfg80211_registered_device *rdev;
+	struct cfg80211_registered_device *rdev = NULL;
 
 	ASSERT_RTNL();
 
@@ -2771,7 +2772,7 @@ static void print_rd_rules(const struct ieee80211_regdomain *rd)
 		power_rule = &reg_rule->power_rule;
 
 		if (reg_rule->flags & NL80211_RRF_AUTO_BW)
-			snprintf(bw, sizeof(bw), "%d KHz, %d KHz AUTO",
+			snprintf(bw, sizeof(bw), "%d KHz, %u KHz AUTO",
 				 freq_range->max_bandwidth_khz,
 				 reg_get_max_bandwidth(rd, reg_rule));
 		else
@@ -2895,7 +2896,8 @@ static int reg_set_rd_user(const struct ieee80211_regdomain *rd,
 		return -EINVAL;
 
 	kfree(rd);
-	rd = NULL;
+/*	rd = NULL;
+*/
 	reset_regdomains(false, intersected_rd);
 
 	return 0;
@@ -2951,7 +2953,8 @@ static int reg_set_rd_driver(const struct ieee80211_regdomain *rd,
 	rcu_assign_pointer(request_wiphy->regd, rd);
 	rcu_free_regdom(tmp);
 
-	rd = NULL;
+/*	rd = NULL;
+*/
 
 	reset_regdomains(false, intersected_rd);
 
@@ -3156,14 +3159,16 @@ void wiphy_regulatory_deregister(struct wiphy *wiphy)
 	rcu_free_regdom(get_wiphy_regdom(wiphy));
 	RCU_INIT_POINTER(wiphy->regd, NULL);
 
-	if (lr)
+	if (NULL != lr)
 		request_wiphy = wiphy_idx_to_wiphy(lr->wiphy_idx);
 
 	if (!request_wiphy || request_wiphy != wiphy)
 		return;
 
-	lr->wiphy_idx = WIPHY_IDX_INVALID;
-	lr->country_ie_env = ENVIRON_ANY;
+	if (NULL != lr) {
+		lr->wiphy_idx = WIPHY_IDX_INVALID;
+		lr->country_ie_env = ENVIRON_ANY;
+	}
 }
 
 /*
@@ -3249,8 +3254,8 @@ int __init regulatory_init(void)
 
 void regulatory_exit(void)
 {
-	struct regulatory_request *reg_request, *tmp;
-	struct reg_beacon *reg_beacon, *btmp;
+	struct regulatory_request *reg_request = NULL, *tmp = NULL;
+	struct reg_beacon *reg_beacon = NULL, *btmp = NULL;
 
 	cancel_work_sync(&reg_work);
 	cancel_crda_timeout_sync();

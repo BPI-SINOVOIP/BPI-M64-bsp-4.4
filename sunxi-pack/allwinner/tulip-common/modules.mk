@@ -46,6 +46,21 @@ endef
 
 $(eval $(call KernelPackage,sunxi-uvc))
 
+define KernelPackage/sunxi-drm
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=sunxi-drm support
+  DEPENDS:=
+  FILES+=$(LINUX_DIR)/drivers/gpu/drm/sunxi/sunxidrm.ko
+  KCONFIG:=\
+    CONFIG_DRM=y \
+    CONFIG_DRM_FBDEV_EMULATION=y \
+    CONFIG_DRM_SUNXI=m
+  AUTOLOAD:=$(call AutoLoad,10,sunxidrm,1)
+endef
+define KernelPackage/sunxi-drm/description
+  Kernel modules for sunxi-drm support
+endef
+$(eval $(call KernelPackage,sunxi-drm))
 define KernelPackage/sunxi-disp
   SUBMENU:=$(VIDEO_MENU)
   TITLE:=sunxi-disp support

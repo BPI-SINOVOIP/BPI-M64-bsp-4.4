@@ -36,7 +36,7 @@
 #include "common.h"
 #include "asm/arch/nand_boot0.h"
 
-//#pragma arm section  code="load_and_check_in_one_blk"
+/* #pragma arm section  code="load_and_check_in_one_blk" */
 /*******************************************************************************
 *函数名称: load_and_check_in_one_blk
 *函数原型：int32 load_and_check_in_one_blk( __u32 blk_num, void *buf,

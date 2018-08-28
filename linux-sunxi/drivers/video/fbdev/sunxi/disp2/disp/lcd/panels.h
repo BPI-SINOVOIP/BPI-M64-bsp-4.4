@@ -91,4 +91,5 @@ extern struct __lcd_panel lq101r1sx03_panel;
 extern struct __lcd_panel WilliamLcd_panel;
 extern struct __lcd_panel tm_dsi_panel;
 extern struct __lcd_panel S070WV20_MIPI_RGB_panel;
+extern struct __lcd_panel ili9881c_dsi_panel;
 #endif

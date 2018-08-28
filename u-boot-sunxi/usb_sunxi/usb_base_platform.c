@@ -355,7 +355,8 @@ int sunxi_usb_init(int delaytime)
 
 #if defined(CONFIG_ARCH_SUN50IW3P1) || \
 	defined(CONFIG_ARCH_SUN50IW6P1) || \
-	defined(CONFIG_ARCH_SUN8IW12P1)
+	defined(CONFIG_ARCH_SUN8IW12P1) || \
+	defined(CONFIG_ARCH_SUN8IW15P1)
 	reg_val = readl(SUNXI_USBOTG_BASE+USBC_REG_o_PHYCTL);
 	reg_val &= ~(0x01<<USBC_PHY_CTL_SIDDQ);
 	reg_val |= 0x01<<USBC_PHY_CTL_VBUSVLDEXT;

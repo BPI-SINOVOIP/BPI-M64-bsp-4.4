@@ -134,4 +134,27 @@ U_BOOT_CMD(
 	"    - write file 'filename' from the address 'addr' in RAM\n"
 	"      to 'dev' on 'interface'"
 );
+
+
+#ifdef CONFIG_SUNXI_FINS_FUNC
+int __attribute__((__no_instrument_function__))
+	ff_write_fun_trace_data2flash(void *data_buffer, unsigned int data_size)
+{
+	char addrstr[32] = {0};
+	char lenstr[32] = {0};
+
+	sprintf(addrstr, "%lx", (ulong)data_buffer);
+	sprintf(lenstr, "%x", data_size);
+	char *file_argv[6] = { "fatdown", "sunxi_flash", "1:0",
+		addrstr, "aw_uboot_fun_trace_data.bin", lenstr};
+
+	if (do_fat_fswrite(0, 0, 6, file_argv)) {
+		printf("Warining: Write performance data error, %s:%s\n",
+			addrstr, lenstr);
+		return -1;
+	}
+	return 0;
+}
+#endif
+
 #endif

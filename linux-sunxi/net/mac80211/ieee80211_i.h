@@ -964,8 +964,14 @@ ieee80211_get_sdata_band(struct ieee80211_sub_if_data *sdata)
 
 	rcu_read_lock();
 	chanctx_conf = rcu_dereference(sdata->vif.chanctx_conf);
-	if (!WARN_ON(!chanctx_conf))
-		band = chanctx_conf->def.chan->band;
+
+	if (chanctx_conf == NULL)
+		WARN_ON(1);
+	else{
+		if (!WARN_ON(0))
+			band = chanctx_conf->def.chan->band;
+	}
+
 	rcu_read_unlock();
 
 	return band;

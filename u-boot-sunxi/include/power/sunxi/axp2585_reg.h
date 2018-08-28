@@ -10,19 +10,24 @@
 #ifndef   __AXP2585_REGS_H__
 #define   __AXP2585_REGS_H__
 
-#define   AXP2585_ADDR              (0x36)
+#define   AXP2585_ADDR			(0x56)
 
-#define   PMU_INPUT_CURRENT_LIMIT   (0x00)
-#define   PMU_INPUT_VOL_LIMIT       (0x02)
-#define   PMU_IC_TYPE               (0x03)
-#define   PMU_VBUS_CHARG_STATUS     (0x0C)
-#define   PMU_POWER_ON_STATUS       (0x65)
-#define   PMU_BAT_VOL_H             (0x78)
-#define   PMU_BAT_VOL_L             (0x79)
-#define   PMU_DATA_BUFFER0          (0x98)
-#define   PMU_DATA_BUFFER1          (0x9C)
-#define   PMU_BAT_PERCENTAGE        (0xE5)
-#define   PMU_ADDR_EXTENSION        (0xff)
+/* For BMU1760 */
+#define	PMU_CHG_STATUS			(0x00)
+#define PMU_BAT_STATUS			(0x02)
+#define PMU_IC_TYPE			(0x03)
+#define PMU_BATFET_CTL			(0x10)
+#define PMU_BOOST_EN                    (0x12)
+#define PMU_BOOST_CTL                   (0x13)
+#define PWR_ON_CTL			(0x17)
+#define PMU_POWER_ON_STATUS		(0x4A)
+#define	PMU_BAT_VOL_H			(0x78)
+#define	PMU_BAT_VOL_L			(0x79)
+#define PMU_CHG_CUR_LIMIT		(0x8b)
+#define PMU_BAT_PERCENTAGE		(0xB9)
+#define	PMU_REG_LOCK			(0xF2)
+#define	PMU_REG_EXTENSION_EN		(0xF4)
+#define	PMU_ADDR_EXTENSION		(0xFF)
 
-#endif /* __AXP1506_REGS_H__ */
+#endif /* __AXP2585_REGS_H__ */
 

@@ -6,6 +6,7 @@
 #include "video_hal.h"
 #include "video_misc_hal.h"
 
+
 #define DISPLAY_PARTITION_NAME "Reserve0"
 #define DISPLAY_RSL_FILENAME "disp_rsl.fex"
 
@@ -110,7 +111,7 @@ static disp_device_t *do_hpd_detect(disp_device_t *disp_dev, int dev_num)
 			disp_dev->hpd_state = hal_get_hpd_state(
 				devices[0]->screen_id, disp_dev->type);
 			if (disp_dev->hpd_state) {
-				printf("main-hpd:count=%d,sel=%d,type=%d\n",
+				printf("main-hpd:count=%u,sel=%d,type=%d\n",
 					HPD_DETECT_COUNT0 - count,
 					disp_dev->screen_id, disp_dev->type);
 				return disp_dev;
@@ -124,7 +125,7 @@ static disp_device_t *do_hpd_detect(disp_device_t *disp_dev, int dev_num)
 				disp_dev->hpd_state = hal_get_hpd_state(
 					disp_dev->screen_id, disp_dev->type);
 				if (disp_dev->hpd_state) {
-					printf("ext-hpd:count=%d,sel=%d,type=%d\n",
+					printf("ext-hpd:count=%u,sel=%d,type=%d\n",
 						HPD_DETECT_COUNT1 - count,
 						disp_dev->screen_id, disp_dev->type);
 					return disp_dev;
@@ -154,10 +155,11 @@ int disp_devices_open(void)
 	disp_device_t devices[DISP_DEV_NUM];
 	int actual_dev_num = DISP_DEV_NUM;
 	int def_output_dev;
+	int verify_mode;
 	disp_device_t *output_dev = NULL;
 
 	/* 1.get display devices list */
-	memset((void *)devices, 0, sizeof(devices) / sizeof(devices[0]));
+	memset((void *)devices, 0, sizeof(devices));
 	def_output_dev = get_device_configs(devices, &actual_dev_num);
 
 	/* 2.chose one as output by doing hpd */
@@ -173,8 +175,39 @@ int disp_devices_open(void)
 			/* Todo: force open hdmi device */
 		} else {
 			int vendor_id;
-			output_dev->mode = hdmi_verify_mode(
+			struct disp_device_config saved;
+			if (!hal_get_disp_device_config(DISP_OUTPUT_TYPE_HDMI, &saved)) {
+				output_dev->bits = saved.bits;
+				output_dev->format = saved.format;
+				output_dev->cs = saved.cs;
+				output_dev->eotf = saved.eotf;
+			} else {
+				output_dev->format = (output_dev->type == DISP_OUTPUT_TYPE_LCD) ?
+						DISP_CSC_TYPE_RGB : DISP_CSC_TYPE_YUV444;
+				output_dev->bits = DISP_DATA_8BITS;
+				output_dev->eotf = DISP_EOTF_GAMMA22;
+				output_dev->cs = DISP_BT709;
+			}
+
+			verify_mode = hdmi_verify_mode(
 				output_dev->screen_id, output_dev->mode, &vendor_id);
+			if (verify_mode != output_dev->mode) {
+				/* If the mode is change, need to reset the
+				 * other configs (format/bits/cs).
+				 * TODO: select format and bits according to edid*/
+				output_dev->mode = verify_mode;
+				if (verify_mode == DISP_TV_MOD_3840_2160P_50HZ
+						|| verify_mode == DISP_TV_MOD_3840_2160P_60HZ) {
+					output_dev->bits = DISP_DATA_8BITS;
+					output_dev->format = DISP_CSC_TYPE_YUV420;
+					output_dev->cs = DISP_BT709;
+				} else {
+					output_dev->bits = DISP_DATA_8BITS;
+					output_dev->format = DISP_CSC_TYPE_YUV444;
+					output_dev->cs = verify_mode > DISP_TV_MOD_720P_50HZ ?
+						DISP_BT709 : DISP_BT601;
+				}
+			}
 			hal_switch_device(output_dev, FB_ID_0); /* fixme */
 		}
 		break;
@@ -204,6 +237,10 @@ int disp_devices_open(void)
 	}
 	if (0 != init_disp)
 		hal_save_int_to_kernel("init_disp", init_disp);
+
+	/* update display device config to kerner */
+	if (hal_save_disp_device_config_to_kernel(0, 0))
+		printf("save disp device failed\n");
 #endif
 
 	return 0;
@@ -219,9 +256,8 @@ int disp_device_open_ex(int dev_id, int fb_id, int flag)
 	disp_device_t *output_dev = NULL;
 
 	/* 1.get display devices list */
-	memset((void *)devices, 0, sizeof(devices) / sizeof(devices[0]));
+	memset((void *)devices, 0, sizeof(devices));
 	def_output_dev = get_device_configs(devices, &actual_dev_num);
-	def_output_dev = def_output_dev;
 	if (dev_id >= actual_dev_num) {
 		printf("invalid para: dev_id=%d, actual_dev_num=%d\n",
 			dev_id, actual_dev_num);

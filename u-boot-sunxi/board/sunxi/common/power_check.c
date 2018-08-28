@@ -59,7 +59,13 @@ static void EnterNormalShutDownMode(void)
 static void EnterLowPowerShutDownMode(void)
 {
 	printf("battery ratio is low without  dc or ac, should be ShowDown\n");
+	#ifdef CONFIG_EINK_PANEL_USED
+	board_display_eink_update("bat\\low_pwr.bmp", 0x04);
+	#else
+	#if defined(CONFIG_SUNXI_DISPLAY)
 	sunxi_bmp_display("bat\\low_pwr.bmp");
+	#endif
+	#endif
 	__msdelay(3000);
 	sunxi_board_shutdown();
 	for(;;);
@@ -68,7 +74,13 @@ static void EnterLowPowerShutDownMode(void)
 static void EnterShutDownWithChargeMode(void)
 {
 	printf("battery low power and vol with dc or ac, should charge longer\n");
+	#ifdef CONFIG_EINK_PANEL_USED
+	board_display_eink_update("bat\\bempty.bmp", 0x04);
+	#else
+	#if defined(CONFIG_SUNXI_DISPLAY)
 	sunxi_bmp_display("bat\\bempty.bmp");
+	#endif
+	#endif
 	__msdelay(3000);
 	sunxi_board_shutdown();
 	for(;;);
@@ -77,14 +89,28 @@ static void EnterShutDownWithChargeMode(void)
 static void EnterAndroidChargeMode(void)
 {
 	printf("sunxi_bmp_charger_display\n");
+	#ifdef CONFIG_EINK_PANEL_USED
+	board_display_eink_update("bat\\battery_charge.bmp", 0x04);
+	#else
+	#if defined(CONFIG_SUNXI_DISPLAY)
 	sunxi_bmp_display("bat\\battery_charge.bmp");
+	#endif
+	#endif
+
 	UpdateChargeVariable();
 }
 
 static void EnterNormalBootMode(void)
 {
 	printf("sunxi_bmp_logo_display\n");
+	#ifdef CONFIG_EINK_PANEL_USED
+	board_display_eink_update("bootlogo.bmp", 0x04);
+	#else
+	#if defined(CONFIG_SUNXI_DISPLAY)
 	sunxi_bmp_display("bootlogo.bmp");
+	#endif
+	#endif
+
 }
 
 
@@ -300,13 +326,14 @@ int PowerCheck(void)
 	{
 		SafeVol = 3500;
 	}
-
 	LowBatRatioFlag =  (BatRatio<1) ? 1:0;
 	LowVoltageFlag  =  (BatVol<SafeVol) ? 1:0;
 	PowerOnCause = ProbeStartupCause();
-
-
+	#ifdef	CONFIG_SUNXI_AXP2585
+	if (LowBatRatioFlag || LowVoltageFlag)
+	#else
 	if(LowBatRatioFlag)
+	#endif
 	{
 		//low battery ratio
 		BootPowerState = GetStateOnLowBatteryRatio(PowerBus,LowVoltageFlag,PowerOnCause);

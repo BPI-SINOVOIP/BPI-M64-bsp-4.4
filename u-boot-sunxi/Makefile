@@ -661,6 +661,7 @@ libs-y += drivers/sunxi_usb/
 libs-y += drivers/sunxi_crypto/
 libs-y += common/
 libs-y += lib/libfdt/
+libs-$(CONFIG_OF_LIBUFDT) += lib/libufdt/
 libs-$(CONFIG_API) += api/
 libs-$(CONFIG_HAS_POST) += post/
 libs-y += test/
@@ -857,9 +858,11 @@ u-boot.bin: u-boot FORCE
 
 u-boot-$(CONFIG_TARGET_NAME).bin:   u-boot.bin
 	@cp -v $<    $@
-#BPI
-#	@cp -v $@ $(objtree)/../../../target/allwinner/$(TARGET_PLATFORM)-common/bin/$@
-	@cp -v $@ $(objtree)/../target/allwinner/$(TARGET_PLATFORM)-common/bin/$@
+	@if [ "x$(TINA_BUILD_SYS)" = "xYocto" ] ; then \
+		cp -v $@ $(objtree)/../../../../sources/meta-tina/recipes-bsp/tina-board/$(TARGET_PLATFORM)-common/bin/$@; \
+	else \
+		cp -v $@ $(objtree)/../target/allwinner/$(TARGET_PLATFORM)-common/bin/$@; \
+	fi
 ifdef CONFIG_SUNXI_MODULE_NAND
 	@if [ -d nand_sunxi/$(SOC)/lib-nand ];  then \
 		cp -v  nand_sunxi/$(SOC)/lib-nand/built-in.o nand_sunxi/$(SOC)/libnand-$(SOC); \
@@ -1216,8 +1219,7 @@ tpl/u-boot-tpl.bin: tools prepare
 TAG_SUBDIRS := $(u-boot-dirs) include $(SPLDIR)
 
 FIND := find
-FINDFLAGS := -L \
--R --c++-kinds=+p --fields=+iaS --extra=+q
+FINDFLAGS := -L
 tags ctags:
 		ctags -w -o ctags `$(FIND) $(FINDFLAGS) $(TAG_SUBDIRS) \
 						-name '*.[chS]' -print`
@@ -1371,7 +1373,7 @@ $(mrproper-dirs):
 mrproper: clobber $(mrproper-dirs)
 	$(call cmd,rmdirs)
 	$(call cmd,rmfiles)
-	@rm -f arch/*/include/asm/arch
+	@rm -rf arch/*/include/asm/arch
 
 # distclean
 #

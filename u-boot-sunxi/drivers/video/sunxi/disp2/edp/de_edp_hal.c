@@ -40,9 +40,9 @@ void edp_hal_video_timing_cfg(u32 sel, struct disp_video_timings *tmg)
 	dp_dev[sel]->dp_vtotal.bits.vtotal = tmg->ver_total_time;
 	dp_dev[sel]->dp_hstart.bits.hstart = tmg->hor_back_porch;
 	dp_dev[sel]->dp_vstart.bits.vstart = tmg->ver_back_porch;
-	/*Synchronization signal is high valid*/
-	dp_dev[sel]->dp_hsp_hsw.bits.hsync_polarity = 1;
-	dp_dev[sel]->dp_vsp_vsw.bits.vsync_polarity = 1;
+	/*Synchronization signal is low valid*/
+	dp_dev[sel]->dp_hsp_hsw.bits.hsync_polarity = 0;
+	dp_dev[sel]->dp_vsp_vsw.bits.vsync_polarity = 0;
 	dp_dev[sel]->dp_hsp_hsw.bits.hsync_width = tmg->hor_sync_time;
 	dp_dev[sel]->dp_vsp_vsw.bits.vsync_width = tmg->ver_sync_time;
 }
@@ -172,7 +172,7 @@ void edp_hal_phy_pll_set(u32 sel, unsigned long long bit_rate)
 
 	if (bit_rate == BR_5P4G) {
 		dp_dev[sel]->dp_pll_ctrl0.bits.sdiv3_5 = 1;
-		dp_dev[sel]->dp_pll_ctrl0.bits.N = 0x5a; /* pll 5.4G */
+		dp_dev[sel]->dp_pll_ctrl0.bits.N = 0x2d; /* pll 5.4G */
 		dp_dev[sel]->dp_drv_ctrl1.bits.reg_ckss = 0;
 	} else if (bit_rate == BR_2P7G) {
 		dp_dev[sel]->dp_pll_ctrl0.bits.sdiv3_5 = 1;

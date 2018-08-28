@@ -195,6 +195,32 @@
 
 #define DSI_VERSION_28
 
+#elif defined(CONFIG_ARCH_SUN8IW15P1)
+
+#define DEVICE_NUM	1
+#define DE_NUM	1
+#define CHN_NUM		4
+#define VI_CHN_NUM	1
+#define UI_CHN_NUM	(CHN_NUM - VI_CHN_NUM)
+#define LAYER_NUM_PER_CHN_PER_VI_CHN	4
+#define LAYER_NUM_PER_CHN_PER_UI_CHN	4
+#define LAYER_MAX_NUM_PER_CHN 4
+
+#define SUPPORT_DSI
+#define DSI_VERSION_28
+#define CLK_NUM_PER_DSI 2
+#define DEVICE_DSI_NUM 1
+/*#define SUPPORT_SMBL*/
+#define HAVE_DEVICE_COMMON_MODULE
+#define SUPPORT_LVDS
+
+/* #define SUPPORT_EINK */
+/* #define EINK_PANEL_USED */
+/* #define SUPPORT_WB */
+/* #define EINK_DMABUF_USED */
+
+/* #define LVDS_REVERT */
+
 #else
 
 /* default features */

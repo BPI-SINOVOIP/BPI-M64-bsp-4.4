@@ -13,3 +13,5 @@ obj-y += sprite_draw/sprite_draw.o
 obj-y += sprite_char/sprite_char.o
 obj-y += sprite_char/sfte/FontEngine.o
 obj-y += sprite_char/sfte/sfte.o
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_BOARD_DIR) += -finstrument-functions

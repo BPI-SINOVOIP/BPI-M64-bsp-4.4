@@ -86,7 +86,7 @@ void set_pll_periph0(void)
 
 	/* set default val*/
 	writel(0x63<<8, CCMU_PLL_PERI0_CTRL_REG);
-	
+
 	/* lock enable */
 	reg_val = readl(CCMU_PLL_PERI0_CTRL_REG);
 	reg_val |= (1<<29);
@@ -105,7 +105,7 @@ void set_pll_periph0(void)
 	reg_val = readl(CCMU_PLL_PERI0_CTRL_REG);
 	reg_val &= (~(1<<29));
 	writel(reg_val, CCMU_PLL_PERI0_CTRL_REG);
-	
+
 }
 
 void set_ahb(void)
@@ -158,13 +158,13 @@ void set_pll_mbus(void)
 	/* set MBUS div */
 	reg_val = readl(CCMU_MBUS_CFG_REG);
 	reg_val |= (2<<0);
-	writel(reg_val, CCMU_MBUS_CFG_REG); 
+	writel(reg_val, CCMU_MBUS_CFG_REG);
 	__usdelay(1);
 
 	/* set MBUS clock source to pll6(2x), mbus=pll6/(m+1) = 400M*/
 	reg_val = readl(CCMU_MBUS_CFG_REG);
 	reg_val |= (1<<24);
-	writel(reg_val, CCMU_MBUS_CFG_REG); 
+	writel(reg_val, CCMU_MBUS_CFG_REG);
 	__usdelay(1);
 
 	/* open MBUS clock */

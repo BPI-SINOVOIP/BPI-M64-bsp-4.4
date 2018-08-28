@@ -7,3 +7,4 @@
 
 obj-y	+= board.o
 
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_ARMV7_DIR) += -finstrument-functions

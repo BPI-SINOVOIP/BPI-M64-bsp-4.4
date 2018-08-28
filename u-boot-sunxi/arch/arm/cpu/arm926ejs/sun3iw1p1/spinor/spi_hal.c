@@ -299,6 +299,36 @@ int spic_rw( u32 tcnt, void* txbuf, u32 rcnt, void* rxbuf)
 
 int spic_exit(u32 spi_no)
 {
+    uint reg_val;
+    spi_no = 0;
+
+    spi_onoff(spi_no, 0);
+    spi_reg =(volatile __spi_reg_t *)(SPI0_BASE + spi_no *SPIC_BASE_OS);
+
+    reg_val = 0x00000080;
+    spi_reg->global_control = reg_val;
+    reg_val = 0x00002087;
+    spi_reg->transfer_control = reg_val ;
+    reg_val = 0x00000002;
+    spi_reg->clock_rate_control = reg_val;
+
+    /* disable  dma APB BUS gating clock*/
+    reg_val  = readl(CCMU_BUS_CLK_GATING_REG0);
+    reg_val &= ~(0x01 << 6);
+    writel(reg_val, CCMU_BUS_CLK_GATING_REG0);
+
+    /* disable dma auto gating clock */
+    reg_val  = readl(DMA_PTY_CFG_REG);
+    reg_val |= 0x01 << 16;
+    writel(reg_val, DMA_PTY_CFG_REG);
+    reg_val = 0x00000000;
+    spi_reg->interrupt_control = reg_val;
+    reg_val = 0x00000022;
+    spi_reg->interrupt_status = reg_val;
+    reg_val = 0x00400001;
+    spi_reg->fifo_control = reg_val;
+    reg_val = 0x00000000;
+    spi_reg->fifo_status = reg_val;
     return 0;
 }
 

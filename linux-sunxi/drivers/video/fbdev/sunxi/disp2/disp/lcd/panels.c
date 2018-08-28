@@ -27,6 +27,7 @@ struct __lcd_panel *panel_array[] = {
 	&inet_dsi_panel,
 	&tm_dsi_panel,
 	&lq101r1sx03_panel,
+	&ili9881c_dsi_panel,
 	/* add new panel below */
 	&WilliamLcd_panel,
 	&S070WV20_MIPI_RGB_panel,

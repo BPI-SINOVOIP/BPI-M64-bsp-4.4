@@ -36,3 +36,4 @@ else
 	obj-$(CONFIG_SUNXI_I2C) += sunxi_i2c.o
 endif
 
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_I2C_DIR) += -finstrument-functions

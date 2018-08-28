@@ -172,7 +172,7 @@ static s32 disp_smbl_tasklet(struct disp_smbl* smbl)
 	mgr = smbl->manager;
 	if (mgr && mgr->device) {
 		struct disp_device *dispdev = mgr->device;
-		if (DISP_OUTPUT_TYPE_LCD == dispdev->type && dimming_update) {
+		if (dispdev->set_bright_dimming && dimming_update) {
 			if (dispdev->set_bright_dimming)
 				dispdev->set_bright_dimming(dispdev, smblp->info.backlight_dimming);
 		}

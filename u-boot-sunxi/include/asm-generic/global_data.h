@@ -117,6 +117,7 @@ typedef struct global_data {
 	ulong          bootfile_mode;
 	int            pmu_saved_status;
 	int 		   need_shutdown;
+	int            logo_status_multiboot;
 
 #endif
 	struct arch_global_data arch;	/* architecture-specific data */

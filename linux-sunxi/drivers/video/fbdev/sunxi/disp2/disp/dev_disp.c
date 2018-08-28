@@ -22,7 +22,7 @@ struct disp_drv_info g_disp_drv;
 /* alloc based on 4K byte */
 #define MY_BYTE_ALIGN(x) (((x + (4*1024-1)) >> 12) << 12)
 
-static u32 suspend_output_type[DISP_SCREEN_NUM] = {0};
+static u32 suspend_output_type[4] = {0};
 /*
  * 0:normal;
  * suspend_status&1 != 0:in early_suspend;
@@ -87,7 +87,7 @@ static ssize_t disp_sys_show(struct device *dev,
 
 	num_screens = bsp_disp_feat_get_num_screens();
 	for (screen_id = 0; screen_id < num_screens; screen_id++) {
-		int width = 0, height = 0;
+		u32 width = 0, height = 0;
 		int fps = 0;
 		struct disp_health_info info;
 
@@ -115,25 +115,25 @@ static ssize_t disp_sys_show(struct device *dev,
 				dispdev->get_bright(dispdev), fps / 10,
 				fps % 10);
 		} else if (dispdev->type == DISP_OUTPUT_TYPE_HDMI) {
-			unsigned int mode = dispdev->get_mode(dispdev);
+			int mode = dispdev->get_mode(dispdev);
 
 			count += sprintf(buf + count,
 					 "\thdmi output mode(%d)\tfps:%d.%d",
 					 mode, fps / 10, fps % 10);
 		} else if (dispdev->type == DISP_OUTPUT_TYPE_TV) {
-			unsigned int mode = dispdev->get_mode(dispdev);
+			int mode = dispdev->get_mode(dispdev);
 
 			count += sprintf(buf + count,
 					 "\ttv output mode(%d)\tfps:%d.%d",
 					 mode, fps / 10, fps % 10);
 		} else if (dispdev->type == DISP_OUTPUT_TYPE_VGA) {
-			unsigned int mode = dispdev->get_mode(dispdev);
+			int mode = dispdev->get_mode(dispdev);
 
 			count += sprintf(buf + count,
 					 "\tvga output mode(%d)\tfps:%d.%d",
 					 mode, fps / 10, fps % 10);
 		}  else if (dispdev->type == DISP_OUTPUT_TYPE_VDPO) {
-			unsigned int mode = dispdev->get_mode(dispdev);
+			int mode = dispdev->get_mode(dispdev);
 
 			count += sprintf(buf + count,
 					 "\tvdpo output mode(%d)\tfps:%d.%d",
@@ -193,7 +193,7 @@ static DEVICE_ATTR(sys, 0660,
 static ssize_t disp_disp_show(struct device *dev,
 			      struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", g_disp);
+	return sprintf(buf, "%u\n", g_disp);
 }
 
 static ssize_t disp_disp_store(struct device *dev,
@@ -225,7 +225,7 @@ static DEVICE_ATTR(disp, 0660,
 static ssize_t disp_enhance_mode_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", g_enhance_mode);
+	return sprintf(buf, "%u\n", g_enhance_mode);
 }
 
 static ssize_t disp_enhance_mode_store(struct device *dev,
@@ -285,7 +285,7 @@ static DEVICE_ATTR(enhance_mode, 0660,
 static ssize_t disp_cvbs_enhance_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", g_cvbs_enhance_mode);
+	return sprintf(buf, "%u\n", g_cvbs_enhance_mode);
 }
 
 static ssize_t disp_cvbs_enhance_store(struct device *dev,
@@ -364,9 +364,9 @@ unsigned int disp_boot_para_parse(const char *name)
 	unsigned int value = 0;
 
 	if (of_property_read_u32(g_disp_drv.dev->of_node, name, &value) < 0)
-		__wrn("of_property_read disp.%s fail\n", name);
+		__inf("of_property_read disp.%s fail\n", name);
 
-	pr_info("[DISP] %s:0x%x\n", name, value);
+	__inf("[DISP] %s:0x%x\n", name, value);
 	return value;
 }
 EXPORT_SYMBOL(disp_boot_para_parse);
@@ -438,7 +438,7 @@ static s32 parser_disp_init_para(const struct device_node *np,
 	    init_para->output_type[0] != DISP_OUTPUT_TYPE_LCD)
 		init_para->output_mode[0] = value;
 
-	if (DISP_SCREEN_NUM > 1) {
+#if DISP_SCREEN_NUM > 1
 		/* screen1 */
 		if (of_property_read_u32(np,
 					 "screen1_output_type",
@@ -467,12 +467,12 @@ static s32 parser_disp_init_para(const struct device_node *np,
 		}
 
 		if (of_property_read_u32(np, "screen1_output_mode", &value) < 0)
-			__wrn
+			__inf
 			    ("of_property_read screen1_output_mode fail\n");
 		if (init_para->output_type[1] != DISP_OUTPUT_TYPE_NONE &&
 		    init_para->output_type[1] != DISP_OUTPUT_TYPE_LCD)
 			init_para->output_mode[1] = value;
-	}
+#endif
 
 	/* fb0 */
 	init_para->buffer_num[0] = 2;
@@ -485,14 +485,20 @@ static s32 parser_disp_init_para(const struct device_node *np,
 	}
 	init_para->format[0] = value;
 
-	if (of_property_read_u32(np, "fb0_width", &value) == 0)
+	if (of_property_read_u32(np, "fb0_width", &value) < 0) {
+		__wrn("of_property_read fb0_width fail\n");
+		return -1;
+	}
 		init_para->fb_width[0] = value;
 
-	if (of_property_read_u32(np, "fb0_height", &value) < 0)
+	if (of_property_read_u32(np, "fb0_height", &value) < 0) {
+		__wrn("of_property_read fb0_height fail\n");
+		return -1;
+	}
 		init_para->fb_height[0] = value;
 
 	/* fb1 */
-	if (DISP_SCREEN_NUM > 1) {
+#if DISP_SCREEN_NUM > 1
 		init_para->buffer_num[1] = 2;
 
 		if (of_property_read_u32(np, "fb1_buffer_num", &value) == 0)
@@ -506,7 +512,7 @@ static s32 parser_disp_init_para(const struct device_node *np,
 
 		if (of_property_read_u32(np, "fb1_height", &value) == 0)
 			init_para->fb_height[1] = value;
-	}
+#endif
 
 	__inf("====display init para begin====\n");
 	__inf("b_init:%d\n", init_para->b_init);
@@ -593,11 +599,8 @@ s32 disp_tv_register(struct disp_tv_func *func)
 }
 EXPORT_SYMBOL(disp_tv_register);
 
-static void resume_proc(unsigned disp)
+static void resume_proc(unsigned disp, struct disp_manager *mgr)
 {
-	struct disp_manager *mgr = NULL;
-
-	mgr = g_disp_drv.mgr[disp];
 	if (!mgr || !mgr->device)
 		return;
 
@@ -607,13 +610,15 @@ static void resume_proc(unsigned disp)
 
 static void resume_work_0(struct work_struct *work)
 {
-	resume_proc(0);
+	resume_proc(0, g_disp_drv.mgr[0]);
 }
 
+#if DISP_SCREEN_NUM > 1
 static void resume_work_1(struct work_struct *work)
 {
-	resume_proc(1);
+	resume_proc(1, g_disp_drv.mgr[1]);
 }
+#endif
 
 static void start_work(struct work_struct *work)
 {
@@ -951,8 +956,9 @@ static s32 disp_init(struct platform_device *pdev)
 	__inf("%s !\n", __func__);
 
 	INIT_WORK(&g_disp_drv.resume_work[0], resume_work_0);
-	if (DISP_SCREEN_NUM > 1)
+#if DISP_SCREEN_NUM > 1
 		INIT_WORK(&g_disp_drv.resume_work[1], resume_work_1);
+#endif
 	/* INIT_WORK(&g_disp_drv.resume_work[2], resume_work_2); */
 	INIT_WORK(&g_disp_drv.start_work, start_work);
 	INIT_LIST_HEAD(&g_disp_drv.sync_proc_list.list);
@@ -2161,12 +2167,12 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			return  -EFAULT;
 		}
 
-		for (i = 0; (i < lyr_cfg_size) && (i < ubuffer[2]); ++i) {
+		/*for (i = 0; (i < lyr_cfg_size) && (i < ubuffer[2]); ++i) {
 			if (lyr_cfg[i].enable == 0) {
 				memset(&(lyr_cfg[i].info), 0,
 					sizeof(lyr_cfg[i].info));
 			}
-		}
+		}*/
 
 #if !defined(CONFIG_EINK_PANEL_USED)
 		if (mgr && mgr->set_layer_config)
@@ -2611,6 +2617,7 @@ static void __exit disp_module_exit(void)
 	dispdbg_exit();
 #endif
 
+	disp_exit();
 	platform_driver_unregister(&disp_driver);
 #ifndef CONFIG_OF
 	platform_device_unregister(&disp_device);

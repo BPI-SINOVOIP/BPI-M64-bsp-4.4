@@ -299,6 +299,11 @@ EXPORT_SYMBOL(sysctl_tcp_mem);
 EXPORT_SYMBOL(sysctl_tcp_rmem);
 EXPORT_SYMBOL(sysctl_tcp_wmem);
 
+int sysctl_tcp_delack_seg __read_mostly = TCP_DELACK_SEG;
+EXPORT_SYMBOL(sysctl_tcp_delack_seg);
+int sysctl_tcp_use_userconfig __read_mostly;
+EXPORT_SYMBOL(sysctl_tcp_use_userconfig);
+
 atomic_long_t tcp_memory_allocated;	/* Current allocated memory. */
 EXPORT_SYMBOL(tcp_memory_allocated);
 
@@ -1369,7 +1374,7 @@ static int tcp_recv_urg(struct sock *sk, struct msghdr *msg, int len, int flags)
 
 static int tcp_peek_sndq(struct sock *sk, struct msghdr *msg, int len)
 {
-	struct sk_buff *skb;
+	struct sk_buff *skb = NULL;
 	int copied = 0, err = 0;
 
 	/* XXX -- need to support SO_PEEK_OFF */
@@ -1407,8 +1412,11 @@ static void tcp_cleanup_rbuf(struct sock *sk, int copied)
 		   /* Delayed ACKs frequently hit locked sockets during bulk
 		    * receive. */
 		if (icsk->icsk_ack.blocked ||
-		    /* Once-per-two-segments ACK was not sent by tcp_input.c */
-		    tp->rcv_nxt - tp->rcv_wup > icsk->icsk_ack.rcv_mss ||
+		/* Once-per-sysctl_tcp_delack_seg segments
+		* ACK was not sent by tcp_input.c
+		*/
+		tp->rcv_nxt - tp->rcv_wup > (icsk->icsk_ack.rcv_mss) *
+			sysctl_tcp_delack_seg ||
 		    /*
 		     * If this read emptied read buffer, we send ACK, if
 		     * connection is not bidirectional, user drained
@@ -2958,7 +2966,7 @@ static bool tcp_md5sig_pool_populated = false;
 
 static void __tcp_alloc_md5sig_pool(void)
 {
-	int cpu;
+	int cpu = 0;
 
 	for_each_possible_cpu(cpu) {
 		if (!per_cpu(tcp_md5sig_pool, cpu).md5_desc.tfm) {

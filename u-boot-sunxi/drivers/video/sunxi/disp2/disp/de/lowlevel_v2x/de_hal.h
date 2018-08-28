@@ -3,6 +3,11 @@
 #include "de_rtmx.h"
 #include "de_scaler.h"
 #include "de_csc.h"
+#include "de_eink.h"
+#include "de_wb_type.h"
+#include "disp_waveform.h"
+#include "disp_eink_data.h"
+/* #include "de_wb_type.h" */
 
 extern int de_al_mgr_apply(unsigned int screen_id,
 			   struct disp_manager_data *data);

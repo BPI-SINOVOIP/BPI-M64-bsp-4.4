@@ -1489,9 +1489,8 @@ standby_with_power_on:
 }
 
 
-static int ft5x_ts_suspend(struct device *dev, pm_message_t mesg)
+static int ft5x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-	struct i2c_client *client = to_i2c_client(dev);
 	struct ft5x_ts_data *data = i2c_get_clientdata(client);
 	int ret = 0;
 	dprintk(DEBUG_SUSPEND,"==ft5x_ts_suspend=\n");
@@ -1500,7 +1499,7 @@ static int ft5x_ts_suspend(struct device *dev, pm_message_t mesg)
 	data->is_suspended = true;
 #endif
 	if (data->is_suspended == true) {
-		//ft5x_ts_release();
+	//	ft5x_ts_release();
 		flush_workqueue(ft5x_resume_wq);
 		ret = input_set_int_enable(&(config_info.input_type), 0);
 		if (ret < 0)
@@ -1514,9 +1513,8 @@ static int ft5x_ts_suspend(struct device *dev, pm_message_t mesg)
 	return 0;
 }
 
-static int ft5x_ts_resume(struct device *dev)
+static int ft5x_ts_resume(struct i2c_client *client)
 {
-	struct i2c_client *client = to_i2c_client(dev);
 	struct ft5x_ts_data *data = i2c_get_clientdata(client);
 	dprintk(DEBUG_SUSPEND,"==CONFIG_PM:ft5x_ts_resume== \n");
 	data->is_suspended = true;
@@ -1816,11 +1814,11 @@ static struct i2c_driver ft5x_ts_driver = {
 	.probe		= ft5x_ts_probe,
 	.remove		= ft5x_ts_remove,
 	.id_table	= ft5x_ts_id,
+	.suspend        = ft5x_ts_suspend,
+	.resume         = ft5x_ts_resume,
 	.driver	= {
 		.name	= CTP_NAME,
 		.owner	= THIS_MODULE,
-		.suspend        = ft5x_ts_suspend,
-		.resume         = ft5x_ts_resume,
 	},
 	.address_list	= normal_i2c,
 

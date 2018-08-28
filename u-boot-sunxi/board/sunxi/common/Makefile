@@ -51,4 +51,4 @@ endif
 
 obj-y   += board_common.o
 
-
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_BOARD_DIR) += -finstrument-functions

@@ -6,7 +6,7 @@
 
 #if defined(CONFIG_ARCH_SUN8IW10P1)
 #include "./lowlevel_sun8iw10/disp_al.h"
-#elif defined(CONFIG_ARCH_SUN8IW11P1)
+#elif defined(CONFIG_ARCH_SUN8IW11P1) || defined(CONFIG_ARCH_SUN8IW15P1)
 #include "./lowlevel_v2x/disp_al.h"
 #elif defined(CONFIG_ARCH_SUN8IW12P1)
 #include "./lowlevel_v2x/disp_al.h"
@@ -56,6 +56,14 @@ extern s32 disp_init_mgr(disp_bsp_init_para * para);
 extern s32 disp_init_enhance(disp_bsp_init_para * para);
 extern s32 disp_init_smbl(disp_bsp_init_para * para);
 extern s32 disp_init_capture(disp_bsp_init_para *para);
+extern int eink_display_one_frame(struct disp_eink_manager *manager);
+extern struct disp_eink_manager *disp_get_eink_manager(unsigned int disp);
+extern s32 disp_init_eink(disp_bsp_init_para *para);
+extern s32 write_edma(struct disp_eink_manager *manager);
+extern struct disp_eink_manager *disp_get_eink_manager(unsigned int disp);
+extern s32 disp_mgr_clk_disable(struct disp_manager *mgr);
+extern int __eink_clk_disable(struct disp_eink_manager *manager);
+
 
 #include "disp_device.h"
 

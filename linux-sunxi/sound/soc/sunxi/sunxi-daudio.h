@@ -311,6 +311,24 @@ defined(CONFIG_ARCH_SUN50IW1)
 #if defined(CONFIG_ARCH_SUN8IW11) || defined(CONFIG_ARCH_SUN8IW12)
 #define DRQDST_DAUDIO_3_TX	0
 #define DRQSRC_DAUDIO_3_RX	0
+#define DAUDIO_NUM_MAX		3
+#endif
+
+#if defined(CONFIG_ARCH_SUN50IW1)
+#define DRQSRC_DAUDIO_2_RX	0
+#define DRQSRC_DAUDIO_3_RX	0
+#define DRQDST_DAUDIO_3_TX	0
+#define DAUDIO_NUM_MAX		3
+#endif
+
+#if defined(CONFIG_ARCH_SUN50IW3)
+#define DRQSRC_DAUDIO_3_RX	0
+#define DRQDST_DAUDIO_3_TX	0
+#define DAUDIO_NUM_MAX		3
+#endif
+
+#ifndef DAUDIO_NUM_MAX
+#define DAUDIO_NUM_MAX		4
 #endif
 
 #define SUNXI_DAUDIO_BCLK			0
@@ -345,6 +363,25 @@ defined(CONFIG_ARCH_SUN50IW1)
 #else
 #undef SUNXI_DAUDIO_NONE_HDMI
 #endif
+
+#ifndef DAUDIO_NUM_MAX
+#define DAUDIO_NUM_MAX		4
+#endif
+
+struct sunxi_reg_label {
+	const char *name;
+	int value;
+};
+
+#define LABEL(constant)				\
+{						\
+	#constant, constant			\
+}
+
+#define LABEL_END				\
+{						\
+	NULL, -1				\
+}
 
 extern int daudio_set_clk_onoff(struct snd_soc_dai *dai, u32 mask, u32 onoff);
 

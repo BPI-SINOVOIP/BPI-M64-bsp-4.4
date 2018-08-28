@@ -22,3 +22,4 @@
 
 obj-y += sun50iw3p1.o
 
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_BOARD_DIR) += -finstrument-functions

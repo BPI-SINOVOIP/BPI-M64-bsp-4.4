@@ -29,6 +29,8 @@
 #include <asm/io.h>
 #include <power/sunxi/pmu.h>
 #include <asm/arch/ccmu.h>
+#include <i2c.h>
+#include <sunxi_i2c.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -165,6 +167,10 @@ extern int axp858_probe(void);
 int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 {
 #ifdef CONFIG_SUNXI_MODULE_AXP
+#ifdef CONFIG_AXP_USE_I2C
+	i2c_set_bus_num(SUNXI_R_I2C0);
+	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+#endif
     if (axp858_probe()) {
 	printf("probe axp858 failed\n");
         sunxi_axp_dev_pt[0] = &sunxi_axp_null;

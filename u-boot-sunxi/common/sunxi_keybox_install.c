@@ -130,3 +130,52 @@ out:
 
 #endif
 
+#ifdef CONFIG_KEYMASTER_KEY_INSTALL
+DECLARE_GLOBAL_DATA_PTR;
+
+int sunxi_keymaster_keybox_install(void)
+{
+	int ret = -1;
+	int i;
+	int workmode;
+	sunxi_secure_storage_info_t secure_object;
+	char key_name[][16] = {{"ec_key"}, {"rsa_key"}, {"ec_cert1"}, {"ec_cert2"},
+		{"ec_cert3"}, {"rsa_cert1"}, {"rsa_cert2"}, {"rsa_cert3"} };
+
+	workmode =  get_boot_work_mode();
+	if (workmode != WORK_MODE_BOOT)
+		return 0;
+
+	if (gd->securemode != SUNXI_SECURE_MODE_WITH_SECUREOS)
+		return 0;
+
+	memset(&secure_object, 0, sizeof(secure_object));
+	if (sunxi_secure_storage_init() < 0) {
+		pr_error("secure storage init fail\n");
+		ret = -1;
+		goto out;
+	}
+
+	for (i = 0; i < 8; i++) {
+		ret = sunxi_secure_object_up(key_name[i],
+			(void *)&secure_object, sizeof(secure_object));
+		if (ret)
+			continue;
+		else
+			pr_error("secure storage read %s success\n", key_name[i]);
+
+		ret = smc_tee_keybox_store(key_name[i],
+			(void *)&secure_object, sizeof(secure_object));
+		if (ret)
+			continue;
+		else
+			pr_error("key install %s success\n", key_name[i]);
+	}
+	pr_msg("keymasters key install finish\n");
+	return 0;
+out:
+	pr_error("keymaster keys install fail !!!\n");
+	return -1;
+}
+
+#endif

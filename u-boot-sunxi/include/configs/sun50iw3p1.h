@@ -266,4 +266,52 @@
 
 #define CONFIG_OPTEE25
 #define CONFIG_WIDEVINE_KEY_INSTALL
+#define CONFIG_KEYMASTER_KEY_INSTALL
+
+
+/*
+ * below macro are used for uboot finstrument-functions trace
+ */
+/* #define CONFIG_SUNXI_FINS_FUNC */
+#ifdef CONFIG_SUNXI_FINS_FUNC
+/* excluding files to avoid trace print-function */
+/* #define CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE */
+
+/* for board directory */
+#define CONFIG_SUNXI_FINS_FUNC_BOARD_DIR
+/* for arch/arm directory */
+#define CONFIG_SUNXI_FINS_FUNC_ARMV7_DIR
+#define CONFIG_SUNXI_FINS_FUNC_ARCH_ARM_LIB_DIR
+
+/* for lib directory */
+#define CONFIG_SUNXI_FINS_FUNC_LIB_DIR
+/* for common directory */
+#define CONFIG_SUNXI_FINS_FUNC_COMMON_DIR
+
+/* for usb_sunxi directory */
+/* #define CONFIG_SUNXI_FINS_FUNC_USB_SUNXI_DIR */
+
+/* for driver directory */
+#if 1
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_ARISC_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_BLOCK_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_CLK_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_DMA_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_GIC_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_I2C_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_MMC_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_POWER_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_PWM_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_SMC_DIR
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_SUNXI_FLASH_DIR
+/* #define CONFIG_SUNXI_FINS_FUNC_DRIVER_TIMER_DIR */
+
+#ifndef CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE
+#define CONFIG_SUNXI_FINS_FUNC_DRIVER_SERIAL_DIR
+#endif
+#endif
+
+#define CONFIG_FAT_WRITE
+#endif /* end of CONFIG_SUNXI_FINS_FUNC */
+
 #endif /* __CONFIG_H */

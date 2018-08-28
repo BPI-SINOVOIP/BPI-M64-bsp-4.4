@@ -13,6 +13,7 @@
 #include "ss_op.h"
 
 #define ALG_SHA256  (0x13)
+#define ALG_SHA512  (0x15)
 #define ALG_RSA     (0x20)
 #define ALG_MD5		(0x10)
 #define ALG_TRANG	(0x1C)
@@ -416,7 +417,143 @@ int sunxi_create_rssk(u8 *rssk_buf, u32 rssk_byte)
 
 
 }
+#if defined(SHA256_MULTISTEP_PACKAGE) || defined(SHA512_MULTISTEP_PACKAGE)
+/**************************************************************************
+*function():
+*	sunxi_hash_init(): used for the first package data;
+*	sunxi_hash_final(): used for the last package data;
+*	sunxi_hash_update(): used for other package data;
+*
+* Note: these functions just used for CE2.0 in hash_alg
+*
+**************************************************************************/
+int  sunxi_sha_process(u8 *dst_addr, u32 dst_len, u8 *src_addr, u32 src_len,
+					int iv_mode, int last_flag, u32 total_len)
+{
+	u32 word_len = 0;
+	u32 src_align_len = 0;
+	u32 total_bit_len = 0;
+	uint iv_addr = 0;
+	u32 cur_bit_len = 0;
+	int	alg_hash = ALG_SHA256;
+	task_queue task0  __aligned(CACHE_LINE_SIZE) = {0};
+	/* sha256  2word, sha512 4word*/
+	ALLOC_CACHE_ALIGN_BUFFER(u32, total_package_len, 4);
+	ALLOC_CACHE_ALIGN_BUFFER(u8, p_sign, CACHE_LINE_SIZE);
 
+	memset(p_sign, 0, sizeof(p_sign));
+
+#ifdef SHA512_MULTISTEP_PACKAGE
+	alg_hash = ALG_SHA512;
+#endif
+
+	if (iv_mode == 1) {
+		iv_addr = (uint)dst_addr;
+		task0.iv_descriptor = iv_addr;
+		flush_cache((u32)iv_addr, dst_len);
+	}
+
+	/* CE2.0 */
+	src_align_len = ALIGN(src_len, 4);
+
+	if ((last_flag == 0) && (alg_hash == ALG_SHA256)) {
+		cur_bit_len = (ALIGN(src_len, 64))<<3;
+	} else if ((last_flag == 0) && (alg_hash == ALG_SHA512)) {
+		cur_bit_len = (ALIGN(src_len, 128))<<3;
+	} else {
+	cur_bit_len = src_len<<3;
+	}
+	word_len = src_align_len>>2;
+	total_bit_len = total_len<<3;
+	total_package_len[0] = total_bit_len;
+	total_package_len[1] = 0;
+
+	task0.task_id = 0;
+	task0.common_ctl = (alg_hash)|(last_flag << 15)|(iv_mode << 16)|(1U << 31);
+	task0.key_descriptor = (u32)total_package_len;		/* total_len in bits */
+	task0.data_len = cur_bit_len;					/* cur_data_len in bits */
+
+	task0.source[0].addr = (uint)src_addr;
+	task0.source[0].length = word_len;				/* cur_data_len in words */
+	task0.destination[0].addr = (uint)p_sign;
+	task0.destination[0].length = dst_len>>2;
+	task0.next_descriptor = 0;
+
+	flush_cache((u32)&task0, sizeof(task0));
+	flush_cache((u32)p_sign, CACHE_LINE_SIZE);
+	flush_cache((u32)src_addr, src_align_len);
+	flush_cache((u32)total_package_len, sizeof(total_package_len));
+
+	ss_set_drq((u32)&task0);
+	ss_irq_enable(task0.task_id);
+	ss_ctrl_start(alg_hash);
+	ss_wait_finish(task0.task_id);
+	ss_pending_clear(task0.task_id);
+	ss_ctrl_stop();
+	ss_irq_disable(task0.task_id);
+	if (ss_check_err()) {
+		printf("SS %s fail 0x%x\n", __func__, ss_check_err());
+		return -1;
+	}
+
+	if (alg_hash == ALG_SHA512) {
+		invalidate_dcache_range((ulong)p_sign, (ulong)p_sign+CACHE_LINE_SIZE*2);
+	} else {
+		invalidate_dcache_range((ulong)p_sign, (ulong)p_sign+CACHE_LINE_SIZE);
+	}
+	/* copy data */
+	memcpy(dst_addr, p_sign, dst_len);
+	return 0;
+}
+
+int sunxi_hash_init(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len)
+{
+	u32 dst_len = 32;
+	int ret = 0;
+
+#ifdef SHA512_MULTISTEP_PACKAGE
+	dst_len = 64;
+#endif
+	ret = sunxi_sha_process(dst_addr, dst_len, src_addr, src_len, 0, 0, total_len);
+	if (ret) {
+		printf("sunxi hash init failed!\n");
+		return -1;
+	}
+	return 0;
+}
+
+int sunxi_hash_update(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len)
+{
+	u32 dst_len = 32;
+	int ret = 0;
+
+#ifdef SHA512_MULTISTEP_PACKAGE
+	dst_len = 64;
+#endif
+	ret = sunxi_sha_process(dst_addr, dst_len, src_addr, src_len, 1, 0, total_len);
+	if (ret) {
+		printf("sunxi hash update failed!\n");
+		return -1;
+	}
+	return 0;
+}
+
+int sunxi_hash_final(u8 *dst_addr, u8 *src_addr, u32 src_len, u32 total_len)
+{
+	u32 dst_len = 32;
+	int ret = 0;
+
+#ifdef SHA512_MULTISTEP_PACKAGE
+	dst_len = 64;
+#endif
+	ret = sunxi_sha_process(dst_addr, dst_len, src_addr, src_len, 1, 1, total_len);
+	if (ret) {
+		printf("sunxi hash final failed!\n");
+		return -1;
+	}
+	return 0;
+}
+#endif
 
 #ifdef SUNXI_HASH_TEST
 int do_sha256_test(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])

@@ -19,4 +19,7 @@ extern u32 hdmi_edid_is_hdmi(void);
 extern u32 hdmi_edid_is_yuv(void);
 extern uintptr_t hdmi_edid_get_data(void);
 
+s32 hdmi_edid_check_init_vic_and_get_supported_vic(int init_vic);
+s32 hdmi_get_edid_dt_timing_info(int dt_mode,
+		struct disp_video_timings *timing);
 #endif //__HDMI_EDID_H_

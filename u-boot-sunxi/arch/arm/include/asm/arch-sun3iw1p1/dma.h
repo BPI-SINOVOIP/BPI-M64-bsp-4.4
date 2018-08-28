@@ -139,6 +139,7 @@ extern    void      sunxi_dma_init(void);
 extern    void      sunxi_dma_exit(void);
 
 extern    ulong     sunxi_dma_request(unsigned int dmatype);
+extern    ulong     sunxi_dma_request_from_last(unsigned int dmatype);
 extern    int       sunxi_dma_release(ulong hdma);
 extern    int       sunxi_dma_setting(ulong hdma, sunxi_dma_setting_t *cfg);
 extern    int       sunxi_dma_start(ulong hdma, unsigned int saddr, unsigned int daddr, unsigned int bytes);

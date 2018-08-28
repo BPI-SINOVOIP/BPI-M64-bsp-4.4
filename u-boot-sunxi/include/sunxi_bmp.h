@@ -37,6 +37,13 @@ typedef struct
 extern int sunxi_bmp_decode(unsigned long addr, sunxi_bmp_store_t *bmp_info);
 extern int sunxi_bmp_dipslay_screen(sunxi_bmp_store_t bmp_info);
 extern int sunxi_bmp_display_mem(unsigned char *source, sunxi_bmp_store_t *bmp_info);
+extern int show_bmp_on_fb(char *bmp_head_addr, unsigned int fb_id);
+extern int sunxi_partition_get_partno_byname(const char *part_name);
+
+#define IDLE_STATUS 0
+#define DISPLAY_DRIVER_INIT_OK  1
+#define DISPLAY_LOGO_LOAD_OK 2
+#define DISPLAY_LOGO_LOAD_FAIL 3
 
 #endif  /* __SUNXI_BAT_H__ */
 

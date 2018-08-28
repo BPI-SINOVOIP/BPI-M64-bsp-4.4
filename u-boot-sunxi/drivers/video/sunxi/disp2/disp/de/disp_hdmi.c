@@ -605,6 +605,37 @@ static s32 disp_hdmi_check_support_mode(struct disp_device* hdmi, u32 mode)
 	return hdmip->hdmi_func.mode_support(mode);
 }
 
+static s32 disp_hdmi_get_work_mode(struct disp_device *hdmi)
+{
+	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
+
+	if ((NULL == hdmi) || (NULL == hdmip)) {
+		DE_WRN("hdmi set func null  hdl!\n");
+		return DIS_FAIL;
+	}
+
+	if (!hdmip->hdmi_func.get_work_mode)
+		return -1;
+
+	return hdmip->hdmi_func.get_work_mode();
+}
+
+static s32 disp_hdmi_get_support_mode(struct disp_device *hdmi, u32 init_mode)
+{
+	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
+
+	if ((NULL == hdmi) || (NULL == hdmip)) {
+		DE_WRN("hdmi set func null  hdl!\n");
+		return DIS_FAIL;
+	}
+
+	if (hdmip->hdmi_func.get_support_mode == NULL)
+		return -1;
+
+	return hdmip->hdmi_func.get_support_mode(init_mode);
+}
+
+
 static s32 disp_hdmi_get_input_csc(struct disp_device* hdmi)
 {
 	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
@@ -909,6 +940,8 @@ s32 disp_init_hdmi(disp_bsp_init_para * para)
 			hdmi->get_static_config = disp_hdmi_get_static_config;
 			hdmi->set_dynamic_config = disp_hdmi_set_dynamic_config;
 			hdmi->check_config_dirty = disp_hdmi_check_config_dirty;
+			hdmi->get_support_mode = disp_hdmi_get_support_mode;
+			hdmi->get_work_mode = disp_hdmi_get_work_mode;
 			hdmi->get_input_csc = disp_hdmi_get_input_csc;
 			hdmi->get_input_color_range =
 			    disp_hdmi_get_input_color_range;

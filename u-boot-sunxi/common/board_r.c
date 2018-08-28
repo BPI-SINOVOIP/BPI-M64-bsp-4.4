@@ -71,6 +71,15 @@
 #include <cputask.h>
 #endif
 #endif
+#include "sunxi_bmp.h"
+
+#ifdef CONFIG_SUNXI_MOZART
+#include <fs.h>
+#include <private_toc.h>
+#include <boot0_extend.h>
+#endif
+
+#include <sun3i-sound.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -93,7 +102,6 @@ int __board_flash_wp_on(void)
 int board_flash_wp_on(void)
 	__attribute__ ((weak, alias("__board_flash_wp_on")));
 
-
 __weak int sunxi_hdcp_keybox_install(void)
 {
 	return 0;
@@ -105,6 +113,11 @@ __weak int sunxi_widevine_keybox_install(void)
 }
 
 __weak int sunxi_get_hdcp_cfg(void)
+{
+	return 0;
+}
+
+__weak int sunxi_keymaster_keybox_install(void)
 {
 	return 0;
 }
@@ -341,7 +354,7 @@ int initr_sunxi_display(void)
 	}
 	pr_msg("display init start\n");
 	drv_disp_init();
-
+#ifndef CONFIG_EINK_PANEL_USED
 	/* wait flash init for prepare hdcp key */
 	if (sunxi_get_hdcp_cfg())
 		while (!get_sunxi_flash_init_flag())
@@ -355,12 +368,136 @@ int initr_sunxi_display(void)
 	disp_devices_open();
 	fb_init();
 #endif
+#endif
 	pr_msg("display init end\n");
 #endif
 	return 0;
 }
 
+#ifdef CONFIG_SUNXI_MOZART
+int get_boardid(int *key)
+{
+	char buff[16];
+	char partition[10];
+	char private_filename[64] = CONFIG_SUNXI_MOZART_FILENAME;
+	const char * filename = private_filename;
+	unsigned long bytes = 0;
+	unsigned long pos = 0;
+	int len_read;
+	int i;
 
+	int index =sunxi_partition_get_partno_byname(CONFIG_SUNXI_MOZART_PARTITION);
+	if(!index)
+	{
+		printf("Can't get the partition %s index\n",CONFIG_SUNXI_MOZART_PARTITION);
+		return -1;
+	}
+	debug("fatload partition name: %s -> %d\n",CONFIG_SUNXI_MOZART_PARTITION,index);
+	sprintf(partition,"%d",index);
+
+	if (fs_set_blk_dev(CONFIG_SUNXI_MOZART_IFNAME,partition, FS_TYPE_FAT))
+		return -1;
+
+	len_read = fs_read(filename, (unsigned long)&buff, pos, bytes);
+	if (len_read <= 0)
+	{
+		printf("%d bytes read\n", len_read);
+		return -1;
+	}
+	debug("%d bytes read\n", len_read);
+	debug("boardid is :");
+	for(i = 0 ;i < len_read ;i++)
+	{
+		debug("%c",buff[i]);
+	}
+	debug("\n");
+	debug("The key is %c\n",buff[CONFIG_SUNXI_MOZART_BOARDID_POST]);
+	if(buff[CONFIG_SUNXI_MOZART_BOARDID_POST]=='0')
+	{
+		* key = 0;
+	}
+	else if(buff[CONFIG_SUNXI_MOZART_BOARDID_POST]=='1')
+	{
+		* key = 1;
+	}
+	else
+	{
+		printf("boardid key is %c,we will set it to 0\n",buff[CONFIG_SUNXI_MOZART_BOARDID_POST]);
+		* key = 0;
+	}
+	return 0;
+}
+
+int get_boardid_flag(struct boot0_extend_msg * boardid_msg,int *flag)
+{
+	if(get_boot0_extend_msg(boardid_msg))
+	{
+		printf("Get boardid_msg faile\n");
+		return -1;
+	}
+	else
+	{
+		print_boot0_extend_msg(boardid_msg);
+		* flag = boardid_msg->dtb_index;
+	}
+	return 0;
+}
+
+int check_boardid(void)
+{
+	int workmode = get_boot_work_mode();
+	if ((workmode == WORK_MODE_USB_PRODUCT) ||
+		(workmode == WORK_MODE_USB_UPDATE) ||
+		(workmode == WORK_MODE_USB_DEBUG)) {
+		return 0;
+	}
+
+	int key = 0;
+	if(!get_boardid(&key))
+	{
+		debug("Get boardid is %d\n",key);
+	}
+	else
+	{
+		printf("Get boardid faile\n");
+		return -1;
+	}
+
+	struct boot0_extend_msg boardid_msg;
+	int flag = 0;
+	if(!get_boardid_flag(&boardid_msg,&flag))
+	{
+		debug("Get boardid flag is %d\n",flag);
+	}
+	else
+	{
+		printf("Get boardid flag faile\n");
+		return -1;
+	}
+
+	if(boardid_msg.magic != BOOT0_EXTEND_MSG_MAIN_INFO_MAGIC)
+	{
+		printf("Set boot0_extend magic!\nReboot now...\n");
+		boardid_msg.magic = BOOT0_EXTEND_MSG_MAIN_INFO_MAGIC;
+		boardid_msg.dtb_index = key;
+		set_boot0_extend_msg(&boardid_msg);
+		do_reset(NULL, 0, 0, NULL);
+	}
+	if(flag != key)
+	{
+		printf("flag is %d,key is %d\n",flag,key);
+		printf("dtb is not right!\nReboot now...\n");
+		boardid_msg.dtb_index = key;
+		set_boot0_extend_msg(&boardid_msg);
+		do_reset(NULL, 0, 0, NULL);
+	}
+	else
+	{
+		printf("dtb is right!\n");
+	}
+	return 0;
+}
+#endif
 
 static int initr_sunxi_flash(void)
 {
@@ -377,18 +514,64 @@ static int initr_sunxi_flash(void)
 	/* install key box for DRM */
 	sunxi_hdcp_keybox_install();
 	sunxi_widevine_keybox_install();
+	sunxi_keymaster_keybox_install();
 	/* flash ready, set the flag */
 	set_sunxi_flash_init_flag();
 	pr_msg("flash init end\n");
 
+#ifdef CONFIG_SUNXI_MOZART
+	if(check_boardid())
+	{
+		printf("check boardid faile,will used default soccfg and dtb!\n");
+	}
+#endif
+
 	return ret;
 }
 
-#ifdef CONFIG_SUNXI_MULITCORE_BOOT
+#ifdef CONFIG_EINK_PANEL_USED
+int initr_sunxi_eink(void)
+{
+	int workmode = uboot_spare_head.boot_data.work_mode;
 
+	if (!((workmode == WORK_MODE_BOOT) ||
+				(workmode == WORK_MODE_CARD_PRODUCT) ||
+				(workmode == WORK_MODE_SPRITE_RECOVERY)))
+		return 0;
+
+	board_display_eink_update("bootlogo.bmp", 0x04);
+	__msdelay(3000);
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_SUNXI_MULITCORE_BOOT) && defined(ENABLE_ADVERT_PICTURE)
+static int sunxi_load_logo_multiboot(void)
+{
+	int ret, advert_enable;
+	if (uboot_spare_head.boot_data.work_mode != WORK_MODE_BOOT)
+		return 0;
+	ret = script_parser_fetch("target", "advert_enable",
+				  (int *)&advert_enable, sizeof(int) / 4);
+	if (ret || !advert_enable)
+		return 0;
+	while (gd->logo_status_multiboot == IDLE_STATUS)
+		;
+	printf("cpu1 disp init ok\n");
+	ret = sunxi_bmp_load("bootlogo.bmp");
+	if (!ret)
+		gd->logo_status_multiboot = DISPLAY_LOGO_LOAD_OK;
+	else
+		gd->logo_status_multiboot = DISPLAY_LOGO_LOAD_FAIL;
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_SUNXI_MULITCORE_BOOT)
 static int initr_multi_core(void)
 {
 
+	gd->logo_status_multiboot = IDLE_STATUS;
 	if (get_boot_work_mode() == WORK_MODE_BOOT) {
 
 		/* we use multi-core only at boot mode */
@@ -509,6 +692,10 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_SUNXI
 	platform_dma_init,
 
+#ifdef CONFIG_BOOT_TONE
+	codec_play_audio_prepare,
+#endif
+
 #ifdef CONFIG_AUTO_UPDATE
 	auto_update_check,
 #endif
@@ -522,6 +709,14 @@ init_fnc_t init_sequence_r[] = {
 	initr_env,
 	initr_sunxi_base,
 
+#ifdef CONFIG_BOOT_TONE
+	codec_play_audio,
+#endif
+
+#ifdef CONFIG_EINK_PANEL_USED
+      /* initr_sunxi_eink, */
+#endif
+
 #ifndef CONFIG_SUNXI_MULITCORE_BOOT
 #ifndef CONFIG_SUNXI_MODULE_AXP
 	sunxi_show_logo,
@@ -529,6 +724,9 @@ init_fnc_t init_sequence_r[] = {
 	PowerCheck,
 #endif
 #endif /*END CONFIG_SUNXI_MULITCORE_BOOT*/
+#if defined(CONFIG_SUNXI_MULITCORE_BOOT) && defined(ENABLE_ADVERT_PICTURE)
+	sunxi_load_logo_multiboot,
+#endif
 
 #endif
 	usb_net_init,

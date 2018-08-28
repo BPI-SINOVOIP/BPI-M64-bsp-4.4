@@ -448,7 +448,7 @@ static int axp803_charger_init(struct axp_dev *axp_dev)
 
 	val = ((((axp803_config.pmu_init_chg_pretime - 40) / 10) << 6)
 			| ((axp803_config.pmu_init_chg_csttime - 360) / 120));
-	axp_regmap_update(map, AXP803_CHARGE2, val, 0xC2);
+	axp_regmap_update(map, AXP803_CHARGE2, val, 0xC3);
 
 	/* adc set */
 	val = AXP803_ADC_BATVOL_ENABLE | AXP803_ADC_BATCUR_ENABLE;

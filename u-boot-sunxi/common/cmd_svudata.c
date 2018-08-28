@@ -635,7 +635,7 @@ void check_user_data(void)
 	int i, j;
 
 	//command_p = getenv("boot_base");  //合并nand和mmc启动参数后的方法，暂时不璿
-	if((get_boot_storage_type() == STORAGE_SD) || (get_boot_storage_type() == STORAGE_EMMC))
+	if((get_boot_storage_type() == STORAGE_SD) || (get_boot_storage_type() == STORAGE_SD1) || (get_boot_storage_type() == STORAGE_EMMC))
 	{
 		command_p = getenv("setargs_mmc");
 	}
@@ -673,12 +673,12 @@ void check_user_data(void)
 		}
 		temp_name[i] = '\0';
 		if (i != 0) {
-			for (j = 0; j < sizeof(IGNORE_ENV_VARIABLE) / sizeof(int); j++) {
+			for (j = 0; j < sizeof(IGNORE_ENV_VARIABLE) / sizeof(char*); j++) {
 				if (!strcmp(IGNORE_ENV_VARIABLE[j], temp_name)) {			//查词典库，排除系统的环境变量，得到用户的数据
 					break;
 				}
 			}
-			if (j >= sizeof(IGNORE_ENV_VARIABLE) / sizeof(int)) {
+			if (j >= sizeof(IGNORE_ENV_VARIABLE) / sizeof(char*)) {
 				if (!strcmp(temp_name, "mac_addr")) {						//处理mac_addr和mac不相等的情况（特殊情况）
 					strcpy(USER_DATA_NAME[USER_DATA_NUM], "mac");
 				}

@@ -840,6 +840,7 @@
 			frametype =  <0x0>;
 			tdm_config =  <0x01>;
 			mclk_div = <0x1>;
+			clk_active = <0x0>;
 			tdm_num = <0x0>;
 			status = "okay";
 		};
@@ -863,6 +864,7 @@
 			tdm_config =  <0x01>;
 			tdm_num = <0x1>;
 			mclk_div = <0x1>;
+			clk_active = <0x0>;
 			status = "okay";
 		};
 		daudio2:daudio@0x01c22800{

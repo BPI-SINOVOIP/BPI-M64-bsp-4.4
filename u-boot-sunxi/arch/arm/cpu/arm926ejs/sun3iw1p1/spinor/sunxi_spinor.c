@@ -56,6 +56,7 @@ __s32 spinor_test_read_rdid(__u32 *id)
 
 int spinor_exit(int stage)
 {
+    spic_exit(0);
     return 0;
 }
 

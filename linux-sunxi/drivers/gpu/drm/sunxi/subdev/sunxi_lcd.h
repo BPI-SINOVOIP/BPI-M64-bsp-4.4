@@ -25,6 +25,9 @@ struct sunxi_lcd_private {
 	struct disp_lcd_cfg  *lcd_cfg;
 	bool      bl_enalbe;
 	bool      ex_power_on;
+	struct class *bright_class;
+	struct device *bright_dev;
+	dev_t  bright_devno;
 };
 
 int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd);

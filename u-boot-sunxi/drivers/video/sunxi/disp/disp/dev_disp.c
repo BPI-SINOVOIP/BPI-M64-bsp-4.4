@@ -1018,7 +1018,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case DISP_CMD_SET_EXIT_MODE:
-        ret = g_disp_drv.exit_mode = ubuffer[0];
+		ret = g_disp_drv.exit_mode = ubuffer[1];
 		break;
 
 	case DISP_CMD_LCD_CHECK_OPEN_FINISH:

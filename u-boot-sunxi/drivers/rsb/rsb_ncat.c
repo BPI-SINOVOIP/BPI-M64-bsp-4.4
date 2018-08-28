@@ -61,6 +61,11 @@ static struct sunxi_rsb_slave_set rsb_slave[SUNXI_RSB_SLAVE_MAX] = \
 	/*slave_addr, runtime_addr, ID */
 	{0x745,       0x2d,         0x14},
 	{0,           0,            0,}
+    #elif defined(CONFIG_ARCH_SUN8IW15P1)
+    /*AXP858_CHIP_ID*/
+	/*slave_addr, runtime_addr, ID */
+	{0x745,       0x2d,         0x14},
+	{0x3a3,       0x3a,         0x56}
 	#endif
 };
 
@@ -509,7 +514,7 @@ static int rsb_get_rtaaddr(u32 slave_id)
 			printf("sunxi_rsb_write err: bad id\n");
 			return 0;
 		}
-		i++;
+
 	}
 
 	return rsb_slave[i].m_rtaddr;
@@ -595,8 +600,7 @@ int sunxi_rsb_write(u32 slave_id, u32 daddr, u8 *data, u32 len)
 
 int sunxi_rsb_init(u32 uused)
 {
-	if(sunxi_probe_secure_monitor())
-	{
+	if (sunxi_probe_secure_monitor() || sunxi_probe_secure_os()) {
 		pr_msg("rsb init by cpus\n");
 		sunxi_rsb_config_pt = rsb_config_by_cpus;
 		sunxi_rsb_read_pt   = rsb_read_by_cpux;

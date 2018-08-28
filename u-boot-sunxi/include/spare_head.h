@@ -36,6 +36,7 @@
 #define WORK_MODE_SPRITE_RECOVERY 0x13	//update firmware from internal backup part
 #define WORK_MODE_CARD_UPDATE   0x14	//update firmware from sdcard
 #define WORK_MODE_USB_UPDATE    0x20    //usb update mode
+#define WORK_MODE_UDISK_UPDATE    0x15
 #define WORK_MODE_OUTER_UPDATE  0x21
 
 #define WORK_MODE_USB_TOOL_PRODUCT  0x04
@@ -77,6 +78,7 @@
 #define UBOOT_START_SECTOR_IN_SDMMC             (32800)
 #define UBOOT_BACKUP_START_SECTOR_IN_SDMMC      (24576)
 
+#define BOOT0_EXTEND_MSG_START_SECTOR_IN_SDMMC  (10240)
 
 #define SUNXI_NORMAL_MODE                            0
 #define SUNXI_SECURE_MODE_WITH_SECUREOS              1
@@ -163,6 +165,7 @@ typedef enum
 	STORAGE_NOR,
 	STORAGE_EMMC3,
 	STORAGE_SPI_NAND,
+	STORAGE_SD1,
 }SUNXI_BOOT_STORAGE;
 
 #endif

@@ -446,7 +446,8 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 		}
 
 		//update dram param
-		if(uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_PRODUCT)
+		if (uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_PRODUCT ||
+			uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE)
 		{
 			memcpy((void *)toc0_config->dram_para, (void *)(uboot_spare_head.boot_data.dram_para), 32 * 4);
 			//toc0_config->dram_para[4] += toc0_config->secure_dram_mbytes;
@@ -669,7 +670,7 @@ int sunxi_mbr_convert_to_gpt(void *sunxi_mbr_buf, char *gpt_buf,int storage_type
 	}
 
 	if(storage_type == STORAGE_EMMC || storage_type == STORAGE_EMMC3
-		|| storage_type == STORAGE_SD)
+		|| storage_type == STORAGE_SD ||storage_type == STORAGE_SD1)
 	{
 		logic_offset = CONFIG_MMC_LOGICAL_OFFSET;
 	}

@@ -32,6 +32,22 @@ struct sunxi_clks {
 	struct clk *core;
 };
 
+enum scene_ctrl_cmd {
+	SCENE_CTRL_NORMAL_MODE,
+	SCENE_CTRL_PERFORMANCE_MODE
+};
+
+struct sunxi_levels {
+	int max_level;
+	int max_normal_level;
+	int current_level;
+};
+
+struct sunxi_vf_table {
+	int vol;
+	unsigned long freq;
+};
+
 #ifdef CONFIG_DEBUG_FS
 struct sunxi_debug {
 	bool enable;
@@ -39,6 +55,11 @@ struct sunxi_debug {
 	bool voltage;
 	bool power;
 	bool idle;
+	bool scenectrl;
+#ifdef CONFIG_MALI_DEVFREQ
+	bool dvfs;
+#endif
+	bool level;
 };
 #endif /* CONFIG_DEBUG_FS */
 
@@ -48,5 +69,9 @@ struct sunxi_private {
 	struct sunxi_clk *clks;
 	struct device_node *np;
 };
+
+#ifdef CONFIG_DEBUG_FS
+void kbasep_gpu_utilisation_debugfs_init(struct kbase_device *kbdev);
+#endif /* CONFIG_DEBUG_FS */
 
 #endif /* _PLATFORM_H_ */

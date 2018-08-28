@@ -8,3 +8,5 @@ obj-y += sunxi_smc.o
 endif
 
 obj-y += smc_helps.o
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_SMC_DIR) += -finstrument-functions

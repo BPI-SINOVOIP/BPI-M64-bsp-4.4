@@ -20,5 +20,7 @@ struct sunxi_drm_private {
 	struct sunxi_rotate_private *rotate_private;
 };
 
+struct device *sunxi_drm_get_dev(void);
+
 #endif
 

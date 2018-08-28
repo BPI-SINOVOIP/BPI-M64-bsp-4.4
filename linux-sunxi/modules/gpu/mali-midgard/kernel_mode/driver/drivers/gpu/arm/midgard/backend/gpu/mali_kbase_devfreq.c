@@ -27,6 +27,8 @@
 #include <linux/devfreq_cooling.h>
 #endif
 
+#include "mali_kbase_devfreq.h"
+
 #include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
 #include <linux/pm_opp.h>
@@ -107,6 +109,11 @@ kbase_devfreq_target(struct device *dev, unsigned long *target_freq, u32 flags)
 	}
 
 	freq = opp_translate(kbdev, nominal_freq, &core_mask);
+
+	sunxi_update_vf(&freq, &voltage);
+
+	nominal_freq = freq;
+
 #ifdef CONFIG_REGULATOR
 	if (kbdev->regulator && kbdev->current_voltage != voltage
 			&& kbdev->current_freq < freq) {
@@ -139,6 +146,10 @@ kbase_devfreq_target(struct device *dev, unsigned long *target_freq, u32 flags)
 	if (kbdev->pm.backend.ca_current_policy->id ==
 			KBASE_PM_CA_POLICY_ID_DEVFREQ)
 		kbase_devfreq_set_core_mask(kbdev, core_mask);
+
+#ifdef CONFIG_ARCH_SUNXI
+	revise_current_level();
+#endif
 
 	*target_freq = nominal_freq;
 	kbdev->current_voltage = voltage;

@@ -5,7 +5,7 @@
 
 #if defined(CONFIG_ARCH_SUN8IW10P1)
 #include "./lowlevel_sun8iw10/de_feat.h"
-#elif defined(CONFIG_ARCH_SUN8IW11P1)
+#elif defined(CONFIG_ARCH_SUN8IW11P1) || defined(CONFIG_ARCH_SUN8IW15P1)
 #include "./lowlevel_v2x/de_feat.h"
 #elif defined(CONFIG_ARCH_SUN8IW12P1)
 #include "./lowlevel_v2x/de_feat.h"

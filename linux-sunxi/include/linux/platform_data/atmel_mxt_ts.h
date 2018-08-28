@@ -30,6 +30,8 @@ struct mxt_platform_data {
 	int gpio_int;
 	const char *reg_vdd_name;
 	const char *reg_avdd_name;
+	unsigned int revert_x_flag;
+	unsigned int revert_y_flag;
 };
 
 #endif /* __LINUX_PLATFORM_DATA_ATMEL_MXT_TS_H */

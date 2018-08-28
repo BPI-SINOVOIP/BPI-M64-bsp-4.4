@@ -31,7 +31,7 @@
 				ref_chip_addr = <0x3b>;
 				ref_channel_num = <0x2>;
 				pa_double_used = <0x1>;
-				codec_mic_used = <0x1>;
+				codec_mic_used = <0x0>;
 				gpio-power = <&r_pio PL 12 1 1 1 1>;
 				twi_bus = <1>;
 				voltage_enable = "nocare";
@@ -48,7 +48,7 @@
 				ref_chip_addr = <0x3b>;
 				ref_channel_num = <0x2>;
 				pa_double_used = <0x1>;
-				codec_mic_used = <0x1>;
+				codec_mic_used = <0x0>;
 				twi_bus = <1>;
 				voltage_enable = "nocare";
 				gpio-power = <&r_pio PL 12 1 1 1 1>;

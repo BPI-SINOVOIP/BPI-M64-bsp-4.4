@@ -220,9 +220,6 @@ struct axp_usb_info {
 };
 
 struct axp_battery_info {
-	int acpresent_bit;
-	int vbuspresent_bit;
-	int pwrsrc_offset;
 	int chgstat_bit;
 	int chgstat_offset;
 	int bat_temp_offset;

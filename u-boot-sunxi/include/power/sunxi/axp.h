@@ -59,7 +59,8 @@
 #define  RSB_SADDR_AXP809		        (0x3A3)
 #define  RSB_SADDR_AXP806		        (0x745)
 #define  RSB_SADDR_AXP81X		        (0x3A3)
-#define  RSB_SADDR_AXP858               (0x745)
+#define  RSB_SADDR_AXP858				(0x745)
+#define  RSB_SADDR_AXP2585				(0x3A3)
 
 #define AXP_SLAVE  ("slave")
 #define AXP_MAIN   ("main")
@@ -200,7 +201,7 @@ sunxi_axp_module_ext(SUNXI_AXP_NULL);
 static inline int axp_i2c_read(unsigned char chip, unsigned char addr, unsigned char *buffer)
 {
 #if defined(CONFIG_AXP_USE_I2C)
-	return i2c_read(chip, addr, 1, buffer, 1);
+	return i2c_read(CONFIG_SYS_I2C_SLAVE, addr, 1, buffer, 1);
 #elif defined(CONFIG_AXP_USE_P2WI)
 	return p2wi_read(&addr, buffer, 1);
 #elif defined(CONFIG_AXP_USE_RSB)
@@ -213,7 +214,7 @@ static inline int axp_i2c_read(unsigned char chip, unsigned char addr, unsigned 
 static inline int axp_i2c_write(unsigned char chip, unsigned char addr, unsigned char data)
 {
 #if defined(CONFIG_AXP_USE_I2C)
-	return i2c_write(chip, addr, 1, &data, 1);
+	return i2c_write(CONFIG_SYS_I2C_SLAVE, addr, 1, &data, 1);
 #elif defined(CONFIG_AXP_USE_P2WI)
 	return p2wi_write(&addr, &data, 1);
 #elif defined(CONFIG_AXP_USE_RSB)
@@ -255,6 +256,13 @@ static inline int axp_i2c_config(unsigned int chip, unsigned char slave_id)
 		sunxi_rsb_config(slave_id, RSB_SADDR_AXP858);
 	}
 #endif
+
+#if defined(CONFIG_SUNXI_AXP2585)
+	if (chip == SUNXI_AXP_2585) {
+		sunxi_rsb_config(slave_id, RSB_SADDR_AXP2585);
+	}
+#endif
+
 #endif
 
     return 0;

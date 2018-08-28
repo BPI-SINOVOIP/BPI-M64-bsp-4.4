@@ -32,7 +32,15 @@
 
 #ifdef CONFIG_SND_SOC_AC108
 #include "sunxi_rw_func.h"
-#include "sun50iw1-codec.h"
+/* #include "sun50iw1-codec.h" */
+/* for i2s regs */
+#define SUNXI_DA_RXCNT (0x2c)
+#define SUNXI_DA_FCTL  (0x14)
+#define SUNXI_DA_INT   (0x1c)
+/* for reg offset */
+#define RX_DRQ (3)
+#define FRX    (24)
+#define RX_CNT (0)
 #endif
 
 #include "sunxi-daudio.h"
@@ -62,11 +70,13 @@ struct sunxi_daudio_platform_data {
 	unsigned int tdm_config;
 	unsigned int tdm_num;
 	unsigned int mclk_div;
+	unsigned int clk_active;
 };
 
 struct sunxi_daudio_info {
 	struct device *dev;
 	struct regmap *regmap;
+	void __iomem *membase;
 	struct clk *pllclk;
 	struct clk *moduleclk;
 	struct mutex mutex;
@@ -112,6 +122,174 @@ static bool daudio_loop_en;
 module_param(daudio_loop_en, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(daudio_loop_en,
 		"SUNXI Digital audio loopback debug(Y=enable, N=disable)");
+
+static int device_count;
+static struct sunxi_daudio_info *sunxi_daudio_global[DAUDIO_NUM_MAX];
+
+static struct sunxi_reg_label reg_labels[] = {
+	LABEL(SUNXI_DAUDIO_CTL),
+	LABEL(SUNXI_DAUDIO_FMT0),
+	LABEL(SUNXI_DAUDIO_FMT1),
+	LABEL(SUNXI_DAUDIO_INTSTA),
+	LABEL(SUNXI_DAUDIO_FIFOCTL),
+	LABEL(SUNXI_DAUDIO_FIFOSTA),
+	LABEL(SUNXI_DAUDIO_INTCTL),
+	LABEL(SUNXI_DAUDIO_CLKDIV),
+	LABEL(SUNXI_DAUDIO_TXCNT),
+	LABEL(SUNXI_DAUDIO_RXCNT),
+	LABEL(SUNXI_DAUDIO_CHCFG),
+	LABEL(SUNXI_DAUDIO_TX0CHSEL),
+	LABEL(SUNXI_DAUDIO_TX1CHSEL),
+	LABEL(SUNXI_DAUDIO_TX2CHSEL),
+	LABEL(SUNXI_DAUDIO_TX3CHSEL),
+#if defined(SUNXI_DAUDIO_MODE_B)
+	LABEL(SUNXI_DAUDIO_TX0CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX0CHMAP1),
+	LABEL(SUNXI_DAUDIO_TX1CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX1CHMAP1),
+	LABEL(SUNXI_DAUDIO_TX2CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX2CHMAP1),
+	LABEL(SUNXI_DAUDIO_TX3CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX3CHMAP1),
+	LABEL(SUNXI_DAUDIO_RXCHSEL),
+	LABEL(SUNXI_DAUDIO_RXCHMAP0),
+	LABEL(SUNXI_DAUDIO_RXCHMAP1),
+	LABEL(SUNXI_DAUDIO_DEBUG),
+#else
+	LABEL(SUNXI_DAUDIO_TX0CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX1CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX2CHMAP0),
+	LABEL(SUNXI_DAUDIO_TX3CHMAP0),
+	LABEL(SUNXI_DAUDIO_RXCHSEL),
+	LABEL(SUNXI_DAUDIO_RXCHMAP),
+	LABEL(SUNXI_DAUDIO_DEBUG),
+#endif
+	LABEL_END,
+};
+
+/*
+ * ex:
+ * param 1: 0 read;1 write
+ * param 2: 0 daudio0; 1 daudio1;
+ * param 3: address;
+ * param 4: write value;
+ * read:
+ *	echo 0,0 > daudio_reg_debug
+ *	echo 0,1 > daudio_reg_debug
+ *	echo 0,0,0x4 > daudio_reg_debug
+ *	echo 0,1,0x0a > daudio_reg_debug
+ * write:
+ *	echo 1,0,0x00,0xa > daudio_reg_debug
+ *	echo 1,0,0x00,0xff > daudio_reg_debug
+ */
+static ssize_t daudio_class_debug_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	int rw_flag;
+	int reg_val_read;
+	unsigned int input_reg_val = 0;
+	int reg_group = 0;
+	unsigned int input_reg_offset = 0;
+	int i = 0;
+
+	ret = sscanf(buf, "%d,%d,0x%x,0x%x", &rw_flag, &reg_group,
+			&input_reg_offset, &input_reg_val);
+
+	if (!(rw_flag == 1 || rw_flag == 0)) {
+		pr_err("not rw_flag\n");
+		return count;
+	}
+
+	if ((reg_group >= DAUDIO_NUM_MAX) || !sunxi_daudio_global[reg_group]) {
+		pr_err("not exist daudio[%d] driver or device\n", reg_group);
+		pr_err("Daudio device list:\n\n");
+		for (i = 0; i < DAUDIO_NUM_MAX; i++) {
+			if (sunxi_daudio_global[i] != NULL)
+				pr_err("    Daudio[%d]\n", i);
+		}
+		return count;
+	}
+
+	pr_err("Dump daudio reg:\n");
+
+	if (rw_flag) {
+		if (ret == 4) {
+			writel(input_reg_val,
+				sunxi_daudio_global[reg_group]->membase +
+					input_reg_offset);
+			reg_val_read = readl(
+				sunxi_daudio_global[reg_group]->membase +
+					input_reg_offset);
+			pr_err("\n\n Daudio[%d] Reg[0x%x] : 0x%x\n\n",
+				reg_group, input_reg_offset,
+				reg_val_read);
+		} else {
+			pr_err("\nnum of params invalid\n");
+		}
+	} else {
+		switch (ret) {
+		case 2:
+			while (reg_labels[i].name != NULL) {
+				pr_err("%s 0x%p: 0x%x\n", reg_labels[i].name,
+				(sunxi_daudio_global[reg_group]->membase +
+							reg_labels[i].value),
+				readl(sunxi_daudio_global[reg_group]->membase +
+							reg_labels[i].value));
+				i++;
+			}
+			break;
+		case 3:
+			reg_val_read = readl(
+				sunxi_daudio_global[reg_group]->membase +
+					input_reg_offset);
+			pr_err("\n\n Daudio[%d] Reg[0x%x] : 0x%x\n\n",
+				reg_group, input_reg_offset,
+				reg_val_read);
+			break;
+		default:
+			pr_err("\nnum of params invalid\n");
+			break;
+		}
+	}
+
+	return count;
+}
+
+static ssize_t daudio_class_debug_show(struct class *class,
+			struct class_attribute *attr, char *buf)
+{
+	int count = 0;
+	int i = 0;
+
+	count += sprintf(buf, "Example(:daudio_num->%d):\n", DAUDIO_NUM_MAX);
+	count += sprintf(buf + count, "param 1: 0 read; 1 write;\n");
+	count += sprintf(buf + count, "param 2: 0 daudio0; 1 dauido1...;\n");
+	count += sprintf(buf + count, "param 3: address\n");
+	count += sprintf(buf + count, "param 4: reg value\n\n");
+	count += sprintf(buf + count, "echo 0,0 > daudio_reg_debug\n");
+	count += sprintf(buf + count, "echo 0,1,0x4 > daudio_reg_debug\n");
+	count += sprintf(buf + count, "echo 1,0,0x4,0x1 > daudio_reg_debug\n");
+	count += sprintf(buf + count, "echo 1,1,0x14,0xa > daudio_reg_debug\n");
+
+	count += sprintf(buf + count, "\ndaudio device list:\n\n");
+	for (i = 0; i < DAUDIO_NUM_MAX; i++) {
+		if (sunxi_daudio_global[i] != NULL)
+			count += sprintf(buf + count, "    Daudio[%d]\n", i);
+	}
+
+	return count;
+}
+
+static struct class_attribute daudio_class_attrs[] = {
+	__ATTR(daudio_reg_debug, S_IRUGO|S_IWUSR,
+		daudio_class_debug_show, daudio_class_debug_store),
+	__ATTR_NULL,
+};
+static struct class daudio_class = {
+	.name = "daudio",
+	.class_attrs = daudio_class_attrs,
+};
 
 /*
 *	Some codec on electric timing need debugging
@@ -212,8 +390,8 @@ static int sunxi_daudio_set_hub_mode(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static const char *daudio_format_function[] = {"null",
-			"hub_disable", "hub_enable"};
+static const char * const daudio_format_function[] = {"null",
+		"hub_disable", "hub_enable"};
 static const struct soc_enum daudio_format_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(daudio_format_function),
 			daudio_format_function),
@@ -223,6 +401,8 @@ static const struct soc_enum daudio_format_enum[] = {
 static const struct snd_kcontrol_new sunxi_daudio_controls[] = {
 	SOC_ENUM_EXT("sunxi daudio audio hub mode", daudio_format_enum[0],
 		sunxi_daudio_get_hub_mode, sunxi_daudio_set_hub_mode),
+	SOC_SINGLE("sunxi daudio loopback debug", SUNXI_DAUDIO_CTL,
+		LOOP_EN, 1, 0),
 };
 
 static void sunxi_daudio_txctrl_enable(struct sunxi_daudio_info *sunxi_daudio,
@@ -231,8 +411,8 @@ static void sunxi_daudio_txctrl_enable(struct sunxi_daudio_info *sunxi_daudio,
 	pr_debug("Enter %s, enable %d\n", __func__, enable);
 	if (enable) {
 		/* HDMI audio Transmit Clock just enable at startup */
-		if (sunxi_daudio->pdata->daudio_type
-			!= SUNXI_DAUDIO_TDMHDMI_TYPE)
+		if (sunxi_daudio->pdata->daudio_type !=
+				SUNXI_DAUDIO_TDMHDMI_TYPE)
 			regmap_update_bits(sunxi_daudio->regmap,
 					SUNXI_DAUDIO_CTL,
 					(1<<CTL_TXEN), (1<<CTL_TXEN));
@@ -241,8 +421,9 @@ static void sunxi_daudio_txctrl_enable(struct sunxi_daudio_info *sunxi_daudio,
 	} else {
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_INTCTL,
 					(1<<TXDRQEN), (0<<TXDRQEN));
-		if (sunxi_daudio->pdata->daudio_type
-			!= SUNXI_DAUDIO_TDMHDMI_TYPE)
+		if ((sunxi_daudio->pdata->daudio_type !=
+				SUNXI_DAUDIO_TDMHDMI_TYPE) &&
+			(!sunxi_daudio->pdata->clk_active))
 			regmap_update_bits(sunxi_daudio->regmap,
 					SUNXI_DAUDIO_CTL,
 					(1<<CTL_TXEN), (0<<CTL_TXEN));
@@ -274,8 +455,10 @@ static void sunxi_daudio_rxctrl_enable(struct sunxi_daudio_info *sunxi_daudio,
 
 		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_INTCTL,
 				(1<<RXDRQEN), (0<<RXDRQEN));
-		regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_CTL,
-				(1<<CTL_RXEN), (0<<CTL_RXEN));
+		if (!sunxi_daudio->pdata->clk_active)
+			regmap_update_bits(sunxi_daudio->regmap,
+					SUNXI_DAUDIO_CTL,
+					(1 << CTL_RXEN), (0 << CTL_RXEN));
 	}
 }
 
@@ -757,7 +940,7 @@ static int sunxi_daudio_set_sysclk(struct snd_soc_dai *dai,
 
 	if (clk_set_rate(sunxi_daudio->pllclk, freq)) {
 		dev_err(sunxi_daudio->dev, "set pllclk rate failed\n");
-    printk("set sysclk error");
+		pr_err("set sysclk error");
 		return -EBUSY;
 	}
 	return 0;
@@ -855,6 +1038,23 @@ static int sunxi_daudio_dai_startup(struct snd_pcm_substream *substream,
 	else
 		snd_soc_dai_set_dma_data(dai, substream,
 					&sunxi_daudio->capture_dma_param);
+	/*
+	 * For pinctrl_pm_select_state
+	 * (1) Reason:
+	 * soc_pcm_open: it will call the snd_soc_runtime_activate
+	 *          after callback the dai_driver->startup function,
+	 *          and make the cpu_dai->active++;
+	 * soc_pcm_close: it will call the snd_soc_runtime_deactivate,
+	 *          and the cpu_dai->active will reduce self until 0.
+	 *          Finally, when the cpu_dai->active is 0, it will call
+	 *          pinctrl_pm_select_sleep_state to disable the pins.
+	 * (2) Result:
+	 *     So we set the cpu_dai->active to 1, before calling
+	 * the snd_soc_runtime_active function, and finally,
+	 * it will not disable the pins.
+	 */
+	if (sunxi_daudio->pdata->clk_active)
+		dai->active = 1;
 
 	return 0;
 }
@@ -905,7 +1105,8 @@ static int sunxi_daudio_prepare(struct snd_pcm_substream *substream,
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		for (i = 0 ; i < SUNXI_DAUDIO_FTX_TIMES ; i++) {
-			regmap_update_bits(sunxi_daudio->regmap, SUNXI_DAUDIO_FIFOCTL,
+			regmap_update_bits(sunxi_daudio->regmap,
+				SUNXI_DAUDIO_FIFOCTL,
 				(1<<FIFO_CTL_FTX), (1<<FIFO_CTL_FTX));
 			mdelay(1);
 		}
@@ -915,9 +1116,9 @@ static int sunxi_daudio_prepare(struct snd_pcm_substream *substream,
 				(1<<FIFO_CTL_FRX), (1<<FIFO_CTL_FRX));
 		regmap_write(sunxi_daudio->regmap, SUNXI_DAUDIO_RXCNT, 0);
 
-		for (i = 0; i < 9; i++) {
-			regmap_read(sunxi_daudio->regmap, SUNXI_DAUDIO_RXFIFO, &reg_val);
-		}
+		for (i = 0; i < 9; i++)
+			regmap_read(sunxi_daudio->regmap, SUNXI_DAUDIO_RXFIFO,
+					&reg_val);
 	}
 	return 0;
 }
@@ -1204,7 +1405,7 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 		ret = -EBUSY;
 		goto err_devm_kfree;
 	}
-
+	sunxi_daudio->membase = sunxi_daudio_membase;
 	sunxi_daudio->regmap = devm_regmap_init_mmio(&pdev->dev,
 					sunxi_daudio_membase,
 					&sunxi_daudio_regmap_config);
@@ -1216,7 +1417,7 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 #ifdef CONFIG_SND_SOC_AC108
 	sunxi_daudio->codec_digaddr = of_iomap(np, 1);
 	if (sunxi_daudio->codec_digaddr == NULL)
-		pr_err("daudio:can not map codec digitial register \n");
+		pr_err("daudio:can not map codec digitial register\n");
 #endif
 	sunxi_daudio->pllclk = of_clk_get(np, 0);
 	if (IS_ERR_OR_NULL(sunxi_daudio->pllclk)) {
@@ -1385,6 +1586,13 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 		else
 			sunxi_daudio->pdata->mclk_div = temp_val;
 
+		/* for the clk awlays on or not. */
+		ret = of_property_read_u32(np, "clk_active", &temp_val);
+		if (ret < 0)
+			sunxi_daudio->pdata->clk_active = 0;
+		else
+			sunxi_daudio->pdata->clk_active = temp_val;
+
 		break;
 	case	SUNXI_DAUDIO_TDMHDMI_TYPE:
 #ifdef SUNXI_HDMI_AUDIO_ENABLE
@@ -1434,6 +1642,12 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto err_unregister_component;
 	}
+	if (device_count++ == 0) {
+		ret = class_register(&daudio_class);
+		if (ret)
+		pr_warn("daudio: Failed to create debugfs directory\n");
+	}
+	sunxi_daudio_global[sunxi_daudio->pdata->tdm_num] = sunxi_daudio;
 
 	sunxi_daudio_global_enable(sunxi_daudio, 1);
 
@@ -1459,6 +1673,9 @@ err_node_put:
 static int __exit sunxi_daudio_dev_remove(struct platform_device *pdev)
 {
 	struct sunxi_daudio_info *sunxi_daudio = dev_get_drvdata(&pdev->dev);
+
+	if (--device_count == 0)
+		class_unregister(&daudio_class);
 
 	snd_soc_unregister_component(&pdev->dev);
 	clk_put(sunxi_daudio->moduleclk);

@@ -11,6 +11,7 @@ static void LCD_bl_close(u32 sel);
 static void LCD_panel_init(u32 sel);
 static void LCD_panel_exit(u32 sel);
 
+
 static void LCD_cfg_panel_info(panel_extend_para *info)
 {
 	u32 i = 0, j = 0;
@@ -37,27 +38,6 @@ static void LCD_cfg_panel_info(panel_extend_para *info)
 		{255, 255},
 	};
 
-	u8 lcd_bright_curve_tbl[][2] = {
-		/* {input value, corrected value} */
-		{0,   0 },    /* 0 */
-		{1,   0 },    /* 0 */
-		{30,  0 },    /* 0 */
-		{45,  50 },   /* 1 */
-		{60,  50 },   /* 2 */
-		{75,  50 },   /* 5 */
-		{90,  50 },   /* 9 */
-		{105, 50 },   /* 15 */
-		{120, 50 },   /* 23 */
-		{135, 50 },   /* 33 */
-		{150, 54 },
-		{165, 67 },
-		{180, 84 },
-		{195, 108 },
-		{210, 137 },
-		{225, 171 },
-		{240, 210 },
-		{255, 255 },
-	};
 
 	u32 lcd_cmap_tbl[2][3][4] = {
 	{
@@ -72,7 +52,6 @@ static void LCD_cfg_panel_info(panel_extend_para *info)
 		},
 	};
 
-	memset(info, 0, sizeof(panel_extend_para));
 
 	items = sizeof(lcd_gamma_tbl)/2;
 	for (i = 0; i < items - 1; i++) {
@@ -88,19 +67,6 @@ static void LCD_cfg_panel_info(panel_extend_para *info)
 	info->lcd_gamma_tbl[255] = (lcd_gamma_tbl[items-1][1]<<16)
 		+ (lcd_gamma_tbl[items-1][1]<<8) + lcd_gamma_tbl[items-1][1];
 
-	items = sizeof(lcd_bright_curve_tbl)/2;
-	for (i = 0; i < items - 1; i++) {
-		u32 num = lcd_bright_curve_tbl[i+1][0]
-					- lcd_bright_curve_tbl[i][0];
-
-		for (j = 0; j < num; j++) {
-			u32 value = 0;
-
-			value = lcd_bright_curve_tbl[i][1] + ((lcd_bright_curve_tbl[i+1][1] - lcd_bright_curve_tbl[i][1]) * j)/num;
-			info->lcd_bright_curve_tbl[lcd_bright_curve_tbl[i][0] + j] = value;
-		}
-	}
-	info->lcd_bright_curve_tbl[255] = lcd_bright_curve_tbl[items-1][1];
 
 	memcpy(info->lcd_cmap_tbl, lcd_cmap_tbl, sizeof(lcd_cmap_tbl));
 
@@ -136,12 +102,14 @@ static __s32 LCD_close_flow(u32 sel)
 
 static void LCD_power_on(u32 sel)
 {
+	sunxi_lcd_pin_cfg(sel, 1);
+	panel_power_en(0);
 	/* config lcd_power pin to open lcd power0 */
 	sunxi_lcd_power_enable(sel, 1);
+	sunxi_lcd_delay_ms(5);
 	/* config lcd_power pin to open lcd power1 */
 	sunxi_lcd_power_enable(sel, 0);
-	sunxi_lcd_pin_cfg(sel, 1);
-	sunxi_lcd_delay_ms(5);
+	sunxi_lcd_delay_ms(8);
 	panel_power_en(1);
 	sunxi_lcd_delay_ms(10);
 	panel_reset(1);

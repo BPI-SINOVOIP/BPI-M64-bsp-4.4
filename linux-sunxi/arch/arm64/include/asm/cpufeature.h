@@ -9,6 +9,7 @@
 #ifndef __ASM_CPUFEATURE_H
 #define __ASM_CPUFEATURE_H
 
+
 #include <asm/hwcap.h>
 #include <asm/sysreg.h>
 
@@ -37,6 +38,11 @@
 #define ARM64_WORKAROUND_CAVIUM_27456		11
 #define ARM64_HAS_VIRT_HOST_EXTN		12
 #define ARM64_NCAPS				13
+
+#ifndef GENMASK
+#define GENMASK(h, l) \
+        (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#endif
 
 #ifndef __ASSEMBLY__
 

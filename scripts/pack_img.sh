@@ -35,6 +35,31 @@ echo "BPI: BOARD=$BOARD"
 #    - Need to add your chip configs into ${PACK_TOPDIR}/target/allwinner/generic/debug/card_debug_pin
 #    - Call pack with 'debug' parameters
 
+#add for debug by zqb
+enable_pause=0
+
+function get_char()
+{
+	SAVEDSTTY=`stty -g`
+	stty -echo
+	stty cbreak
+	dd if=/dev/tty bs=1 count=1 2> /dev/null
+	stty -raw
+	stty echo
+	stty $SAVEDSTTY
+}
+
+function pause()
+{
+	if [ "x$1" != "x" ] ;then
+		echo $1
+	fi
+	if [ $enable_pause -eq 1 ] ; then
+		echo "Press any key to continue!"
+		char=`get_char`
+	fi
+}
+
 function pack_error()
 {
 	echo -e "\033[47;31mERROR: $*\033[0m"
@@ -105,8 +130,14 @@ elif [ "x${PACK_CHIP}" = "xsun8iw11p1" ]; then
 elif [ "x${PACK_CHIP}" = "xsun8iw10p1" ]; then
 	PACK_BOARD_PLATFORM=cello
 	ARCH=arm
+elif [ "x${PACK_CHIP}" = "xsun8iw15p1" ]; then
+	PACK_BOARD_PLATFORM=mandolin
+	ARCH=arm
+#elif [ "x${PACK_CHIP}" = "xsun3iw1p1" ]; then
+#	PACK_BOARD_PLATFORM=sitar
+#	ARCH=arm
 elif [ "x${PACK_CHIP}" = "xsun3iw1p1" ]; then
-	PACK_BOARD_PLATFORM=sitar
+	PACK_BOARD_PLATFORM=${PACK_BOARD%%-*}
 	ARCH=arm
 elif [ "x${PACK_CHIP}" = "xsun50iw1p1" ]; then
 	PACK_BOARD_PLATFORM=tulip
@@ -117,11 +148,6 @@ elif [ "x${PACK_CHIP}" = "xsun50iw3p1" ]; then
 else
 	echo "board_platform($PACK_CHIP) not support"
 fi
-
-#BPI
-#if [ -f ${PACK_TOPDIR}/env.sh ] ; then
-#	source ${PACK_TOPDIR}/env.sh
-#fi
 
 tools_file_list=(
 generic/tools/split_xxxx.fex
@@ -142,11 +168,6 @@ generic/tools/aultools.fex
 ${PACK_BOARD_PLATFORM}-common/tools/aultools.fex
 )
 
-#BPI
-#
-#${PACK_BOARD}/configs/*.fex
-#${PACK_BOARD}/configs/*.cfg
-#
 configs_file_list=(
 generic/toc/toc1.fex
 generic/toc/toc0.fex
@@ -186,6 +207,20 @@ ${PACK_BOARD_PLATFORM}-common/bin/boot0_sdcard_${PACK_CHIP}-${OTA_TEST_NAME}.bin
 ${PACK_BOARD_PLATFORM}-common/bin/boot0_spinor_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/boot0_spinor-${OTA_TEST_NAME}.fex
 ${PACK_BOARD_PLATFORM}-common/bin/u-boot-${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/u-boot-${OTA_TEST_NAME}.fex
 ${PACK_BOARD_PLATFORM}-common/bin/u-boot-spinor-${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/u-boot-spinor-${OTA_TEST_NAME}.fex
+
+${PACK_BOARD}/bin/boot0_nand_${PACK_CHIP}.bin:image/boot0_nand.fex
+${PACK_BOARD}/bin/boot0_sdcard_${PACK_CHIP}.bin:image/boot0_sdcard.fex
+${PACK_BOARD}/bin/boot0_spinor_${PACK_CHIP}.bin:image/boot0_spinor.fex
+${PACK_BOARD}/bin/fes1_${PACK_CHIP}.bin:image/fes1.fex
+${PACK_BOARD}/bin/u-boot-${PACK_CHIP}.bin:image/u-boot.fex
+${PACK_BOARD}/bin/bl31.bin:image/monitor.fex
+${PACK_BOARD}/bin/scp.bin:image/scp.fex
+${PACK_BOARD}/bin/u-boot-spinor-${PACK_CHIP}.bin:image/u-boot-spinor.fex
+${PACK_BOARD}/bin/boot0_nand_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/boot0_nand-${OTA_TEST_NAME}.fex
+${PACK_BOARD}/bin/boot0_sdcard_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/boot0_sdcard-${OTA_TEST_NAME}.fex
+${PACK_BOARD}/bin/boot0_spinor_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/boot0_spinor-${OTA_TEST_NAME}.fex
+${PACK_BOARD}/bin/u-boot-${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/u-boot-${OTA_TEST_NAME}.fex
+${PACK_BOARD}/bin/u-boot-spinor-${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/u-boot-spinor-${OTA_TEST_NAME}.fex
 )
 
 boot_file_secure=(
@@ -193,6 +228,11 @@ ${PACK_BOARD_PLATFORM}-common/bin/semelis_${PACK_CHIP}.bin:image/semelis.bin
 ${PACK_BOARD_PLATFORM}-common/bin/optee_${PACK_CHIP}.bin:image/optee.bin
 ${PACK_BOARD_PLATFORM}-common/bin/sboot_${PACK_CHIP}.bin:image/sboot.bin
 ${PACK_BOARD_PLATFORM}-common/bin/sboot_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/sboot-${OTA_TEST_NAME}.bin
+
+${PACK_BOARD}/bin/semelis_${PACK_CHIP}.bin:image/semelis.bin
+${PACK_BOARD}/bin/optee_${PACK_CHIP}.bin:image/optee.bin
+${PACK_BOARD}/bin/sboot_${PACK_CHIP}.bin:image/sboot.bin
+${PACK_BOARD}/bin/sboot_${PACK_CHIP}-${OTA_TEST_NAME}.bin:image/sboot-${OTA_TEST_NAME}.bin
 )
 
 a64_boot_file_secure=(
@@ -403,10 +443,13 @@ function do_prepare()
 	#TODO:diff kernel version support
 	if [ -z "${PACK_KERN}" ] ; then
 		printf "No kernel param, parse it from ${PACK_BOARD_PLATFORM}\n"
-		if [ "x${PACK_BOARD_PLATFORM}" = "xtulip" -o "x${PACK_BOARD_PLATFORM}" = "xkoto" ]; then
+		if [ "x${PACK_BOARD_PLATFORM}" = "xtulip" ]; then
 			PACK_KERN="linux-4.4"
 			ENV_SUFFIX=4.4
-		elif [ "x${PACK_BOARD_PLATFORM}" = "xazalea" -o "x${PACK_BOARD_PLATFORM}" = "xsitar" -o "x${PACK_BOARD_PLATFORM}" = "xcello" ]; then
+		elif [ "x${PACK_BOARD_PLATFORM}" = "xkoto" -o "x${PACK_BOARD_PLATFORM}" = "xmandolin" ]; then
+			PACK_KERN="linux-4.9"
+			ENV_SUFFIX=4.9
+		elif [ "x${PACK_BOARD_PLATFORM}" = "xazalea" -o "x${PACK_BOARD_PLATFORM}" = "xsitar" -o "x${PACK_BOARD_PLATFORM}" = "xcello" -o "x${PACK_BOARD_PLATFORM}" = "xviolin" ]; then
 			PACK_KERN="linux-3.10"
 			ENV_SUFFIX=3.10
 		else
@@ -486,6 +529,11 @@ function do_prepare()
 		cp -vf ${ROOT_DIR}/image/sys_partition_private.fex ${ROOT_DIR}/image/sys_partition.fex
 	fi
 
+	grep "CONFIG_USE_DM_VERITY=y" ${PACK_TOPDIR}/.config > /dev/null
+	if [ $? -eq 0 ]; then
+		cp -vf ${ROOT_DIR}/image/sys_partition_verity.fex ${ROOT_DIR}/image/sys_partition.fex
+	fi
+
 	printf "copying boot resource\n"
 	for file in ${boot_resource_list[@]} ; do
 		cp -rf ${PACK_TOPDIR}/target/allwinner/`echo $file | awk -F: '{print $1}'` \
@@ -521,6 +569,12 @@ function do_prepare()
 			done
 		fi
 	fi
+
+	# If platform config use
+	if [ -f ${PACK_TOPDIR}/target/allwinner/${PACK_BOARD_PLATFORM}-common/tools/plat_config.sh ] ; then
+		${PACK_TOPDIR}/target/allwinner/${PACK_BOARD_PLATFORM}-common/tools/plat_config.sh
+	fi
+
 
 	if [ "x${PACK_SECURE}" = "xsecure"  -o "x${PACK_SIG}" = "xsecure" ] ; then
 		printf "add burn_secure_mode in target in sys config\n"
@@ -583,9 +637,6 @@ function do_prepare()
 
 	echo "imagename = $IMG_NAME" >> ${ROOT_DIR}/image/image.cfg
 	echo "" >> ${ROOT_DIR}/image/image.cfg
-	if [ "x${PACK_PLATFORM}" = "xdragonboard" ] ; then
-		sed -i '/\[nand0_para\]/a\nand0_dragonboard = 1' ${ROOT_DIR}/image/sys_config${SUFFIX}.fex
-	fi
 
 	# boot time optimization:
 	# 1.remove uboot uart log;
@@ -594,9 +645,9 @@ function do_prepare()
 	# 4.set rootfstype.
 	grep "CONFIG_BOOT_TIME_OPTIMIZATION=y" ${PACK_TOPDIR}/.config > /dev/null
 	if [ $? -eq 0 ]; then
-		sed -i "/debug_mode/d" ${ROOT_DIR}/image/sys_config${SUFFIX}.fex && sed -i '/^\[platform\]$/a\debug_mode\ \ =\ 0' ${ROOT_DIR}/image/sys_config${SUFFIX}.fex
+		#sed -i "/debug_mode/d" ${ROOT_DIR}/image/sys_config${SUFFIX}.fex && sed -i '/^\[platform\]$/a\debug_mode\ \ =\ 0' ${ROOT_DIR}/image/sys_config${SUFFIX}.fex
 		sed -i "/^verify=/d" ${ROOT_DIR}/image/env.cfg && sed -i '/^init=/a\verify=no' ${ROOT_DIR}/image/env.cfg
-		sed -i "/^loglevel=/d" ${ROOT_DIR}/image/env.cfg && sed -i '/^init=/a\loglevel=0' ${ROOT_DIR}/image/env.cfg
+		#sed -i "/^loglevel=/d" ${ROOT_DIR}/image/env.cfg && sed -i '/^init=/a\loglevel=0' ${ROOT_DIR}/image/env.cfg
 
 		grep "CONFIG_TARGET_ROOTFS_SQUASHFS=y" ${PACK_TOPDIR}/.config > /dev/null
 		if [ $? -eq 0 ]; then
@@ -617,7 +668,6 @@ function do_prepare()
 	grep "CONFIG_SYSTEM_INIT_BUSYBOX=y" ${PACK_TOPDIR}/.config > /dev/null
 	if [ $? -eq 0 ]; then
 		sed -i "/^init=/d" ${ROOT_DIR}/image/env.cfg && sed -i '/^mmc_root=/a\init=\/pseudo_init' ${ROOT_DIR}/image/env.cfg
-		sed -i "/^rdinit=/d" ${ROOT_DIR}/image/env.cfg && sed -i '/^mmc_root=/a\rdinit=\/pseudo_init' ${ROOT_DIR}/image/env.cfg
 	fi
 
 	if [ -e ${ROOT_DIR}/image/sys_partition_nor.fex ];then
@@ -634,6 +684,10 @@ function do_ini_to_dts()
 		return
 	fi
 	if [ "x${PACK_KERN}" == "xlinux-4.4" -a "x${ARCH}" == "xarm64" ]; then
+		local DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-${PACK_BOARD}${SUFFIX}.dtb.d.dtc.tmp
+		local DTC_SRC_PATH=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/
+		local DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-${PACK_BOARD}${SUFFIX}.dtb.dts.tmp
+	elif [ "x${PACK_KERN}" == "xlinux-4.9" -a "x${ARCH}" == "xarm64" ]; then
 		local DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-${PACK_BOARD}${SUFFIX}.dtb.d.dtc.tmp
 		local DTC_SRC_PATH=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/
 		local DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-${PACK_BOARD}${SUFFIX}.dtb.dts.tmp
@@ -657,11 +711,17 @@ function do_ini_to_dts()
 	fi
 	if [ ! -f $DTC_DEP_FILE ]; then
 		printf "Script_to_dts: Can not find [%s-%s.dts]. Will use common dts file instead.\n" ${PACK_CHIP} ${PACK_BOARD}
-		if [ "x${PACK_BOARD}" = "xsitar-perf1" -o "x${PACK_BOARD}" = "xsitar-perf2" -o "x${PACK_BOARD}" = "xsitar-perf3" -o "x${PACK_BOARD}" = "xsitar-db" -o "x${PACK_BOARD}" = "xsitar-pd4" ] ; then
+		if [ "x${PACK_BOARD_PLATFORM}" = "xsitar" ] ; then
 			DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/.${PACK_CHIP}-r6-soc${SUFFIX}.dtb.d.dtc.tmp
 			DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/.${PACK_CHIP}-r6-soc${SUFFIX}.dtb.dts.tmp
+		elif [ "x${PACK_BOARD_PLATFORM}" = "xviolin" ] ; then
+				DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/.${PACK_CHIP}-violin-F1C200s${SUFFIX}.dtb.d.dtc.tmp
+				DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/.${PACK_CHIP}-violin-F1C200s${SUFFIX}.dtb.dts.tmp
 		else
 			if [ "x${PACK_KERN}" == "xlinux-4.4" -a "x${ARCH}" == "xarm64" ]; then
+				DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-soc${SUFFIX}.dtb.d.dtc.tmp
+				DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-soc${SUFFIX}.dtb.dts.tmp
+			elif [ "x${PACK_KERN}" == "xlinux-4.9" -a "x${ARCH}" == "xarm64" ]; then
 				DTC_DEP_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-soc${SUFFIX}.dtb.d.dtc.tmp
 				DTC_SRC_FILE=${PACK_TOPDIR}/lichee/$PACK_KERN/arch/$ARCH/boot/dts/sunxi/.${PACK_CHIP}-soc${SUFFIX}.dtb.dts.tmp
 			else
@@ -710,15 +770,6 @@ function do_common()
 
 	busybox unix2dos sys_partition.fex
 	script  sys_partition.fex > /dev/null
-
-
-	if [ "x${PACK_PLATFORM}" = "xdragonboard" ] ; then
-		busybox dos2unix test_config.fex
-		cp test_config.fex boot-resource/
-		busybox unix2dos test_config.fex
-		script test_config.fex > /dev/null
-		cp test_config.bin boot-resource/
-	fi
 
 	# Those files for SpiNor. We will try to find sys_partition_nor.fex
 	if [ -f sys_partition_nor.fex ];  then
@@ -782,6 +833,7 @@ function do_common()
 	fsbuild	     boot-resource.ini  split_xxxx.fex > /dev/null
 
 	if [ -f boot_package.cfg  -a x${SUFFIX} == x'' ]; then
+			pause "before boot package"
 			echo "pack boot package"
 			busybox unix2dos boot_package.cfg
 			dragonsecboot -pack boot_package.cfg
@@ -827,7 +879,9 @@ function do_finish()
 			exit 1
 		fi
 		#only uboot2011&linux-3.4 bsp used full img
+		echo ".....11....."
 		if [ "x${PACK_KERN}" = "xlinux-3.4" ] ; then
+			echo "....2222....."
 			BOOT1_FILE=u-boot-spinor.fex
 			LOGIC_START=496 #496+16=512K
 			merge_full_img --out full_img.fex \
@@ -842,15 +896,20 @@ function do_finish()
 			fi
 			rm -f sys_partition_for_dragon.fex
 		else
+			echo "..............2222211111......."
 			cp sys_partition_nor.fex sys_partition_for_dragon.fex
 		fi
 		cp sys_partition_nor.fex sys_partition.fex
 
 	else
+		echo ".....33333....."
 
 		if [ "x${PACK_KERN}" = "xlinux-3.4" -a ! -f full_img.fex ] ; then
+			echo ".....333>>>>>>....."
+			echo ".....333>>>>>>>....."
 			echo "full_img.fex is empty" > full_img.fex
 		fi
+		echo ".....44444....."
 		update_mbr sys_partition.bin 4
 		if [ $? -ne 0 ]; then
 			pack_error "update_mbr failed"
@@ -859,9 +918,12 @@ function do_finish()
 		cp sys_partition.fex sys_partition_for_dragon.fex
 	fi
 
+	echo "....5555....."
 	if [ -f sys_partition_for_dragon.fex ]; then
+		echo "....5551111111....."
 		do_dragon image.cfg sys_partition_for_dragon.fex
 	else
+		echo ".....6666....."
 		do_dragon image.cfg
 	fi
 
@@ -871,6 +933,7 @@ function do_finish()
 
 function do_dragon()
 {
+	pause "before dragon"
 	dragon $@
         if [ $? -eq 0 ]; then
 	    if [ -e ${IMG_NAME} ]; then
@@ -983,26 +1046,6 @@ function do_signature()
 	echo "secure signature ok!"
 }
 
-function do_pack_dragonboard()
-{
-	printf "packing for dragonboard\n"
-
-	rm -rf vmlinux.fex
-	rm -rf boot.fex
-	rm -rf rootfs.fex
-	rm -rf kernel.fex
-	rm -rf rootfs_squashfs.fex
-
-	ln -s ${ROOT_DIR}/boot.img        boot.fex
-	ln -s ${ROOT_DIR}/rootfs.img     rootfs.fex
-
-	if [ "x${PACK_SIG}" = "xsecure" ] ; then
-		do_signature
-	else
-		echo "normal"
-	fi
-}
-
 function do_pack_tina()
 {
 	printf "packing for tina linux\n"
@@ -1026,8 +1069,9 @@ function do_pack_tina()
 	if [ -f ${ROOT_DIR}/usr.img ]; then
 		ln -s ${ROOT_DIR}/usr.img    usr.fex
 	fi
-	if [ -f ${ROOT_DIR}/boot_initramfs.img ]; then
-		ln -s ${ROOT_DIR}/boot_initramfs.img recovery.fex
+
+	if [ -f ${ROOT_DIR}/boot_initramfs_recovery.img ]; then
+		ln -s ${ROOT_DIR}/boot_initramfs_recovery.img recovery.fex
 	else
 		touch recovery.fex
 		echo "recovery part not used!" > recovery.fex
@@ -1035,6 +1079,16 @@ function do_pack_tina()
 	# Those files is ready for SPINor.
 	#ln -s ${ROOT_DIR}/uImage          kernel.fex
 	#ln -s ${ROOT_DIR}/rootfs.squashfs rootfs_squashfs.fex
+
+	# add for dm-verity block
+	grep "CONFIG_USE_DM_VERITY=y" ${PACK_TOPDIR}/.config > /dev/null
+	if [ $? -eq 0 ]; then
+		${PACK_TOPDIR}/scripts/dm-verity-block.sh ${ROOT_DIR}/rootfs.img ${ROOT_DIR}/verity/verity_block
+
+		if [ -f ${ROOT_DIR}/verity/verity_block ]; then
+			ln -s ${ROOT_DIR}/verity/verity_block verity_block.fex
+		fi
+	fi
 
 	if [ "x${PACK_SIG}" = "xsecure" ] ; then
 		echo "secure"
@@ -1060,4 +1114,3 @@ done
 
 do_pack_${PACK_PLATFORM}
 do_finish
-

@@ -444,7 +444,7 @@ static int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
 	}
 
 	//rval = (1U << 31) | (src << 24) | (n << 16) | (m - 1);
-	rval = (src << 24) | (n << 16) | (m - 1);
+	rval = (src << 24) | (n << 8) | (m - 1);
 	writel(rval, mmchost->mclkbase);
 
 	return 0;
@@ -456,7 +456,7 @@ static unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
 	unsigned rval = readl(mmchost->mclkbase);
 
 	m = rval & 0xf;
-	n = (rval>>16) & 0x3;
+	n = (rval>>8) & 0x3;
 	src = (rval>>24) & 0x3;
 
 	if (src == 0)

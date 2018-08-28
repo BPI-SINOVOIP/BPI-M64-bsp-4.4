@@ -43,6 +43,9 @@ dragonboard_test = 0
 [power_sply]
 dcdc1_vol                  = 1003300
 dcdc2_vol                  = 1001100
+dcdc3_vol                  = 1001100
+dcdc4_vol                  = 1100
+dcdc5_vol                  = 1001500
 dcdc6_vol                  = 1001100
 aldo1_vol                  = 1002800
 aldo2_vol                  = 1003300
@@ -56,6 +59,7 @@ eldo2_vol                  = 1800
 eldo3_vol                  = 1001500
 fldo2_vol                  = 1001100
 gpio0_vol                  = 1003300
+gpio1_vol                  = 2800
 dc1sw_vol                  = 1002500
 
 [card_boot]
@@ -167,7 +171,7 @@ dram_tpr9       = 0x0
 dram_tpr10      = 0x8808
 dram_tpr11      = 0x0
 dram_tpr12      = 0x55550000
-dram_tpr13      = 0x04002900
+dram_tpr13      = 0x04000100
 
 ;----------------------------------------------------------------------------------
 ;os life cycle para configuration
@@ -226,7 +230,7 @@ twi0_scl         = port:PH0<2><default><default><default>
 twi0_sda         = port:PH1<2><default><default><default>
 
 [twi1]
-twi1_used        = 0
+twi1_used        = 1
 twi1_scl         = port:PH2<2><default><default><default>
 twi1_sda         = port:PH3<2><default><default><default>
 
@@ -839,17 +843,17 @@ smc_sck             =
 smc_sda             =
 
 ;--------------------------------
-;[usbc0]：控制器0的配置。
-;usb_used：USB使能标志。置1，表示系统中USB模块可用,置0,则表示系统USB禁用。
-;usb_port_type：USB端口的使用情况。 0：device only;1：host only;2：OTG
-;usb_detect_type：USB端口的检查方式。0：不做检测;1：vbus/id检查;2：id/dpdm检查
-;usb_id_gpio：USB ID pin脚配置。具体请参考gpio配置说明。
-;usb_det_vbus_gpio：USB DET_VBUS pin脚配置。具体请参考gpio配置说明。
-;usb_drv_vbus_gpio：USB DRY_VBUS pin脚配置。具体请参考gpio配置说明。
-;usb_det_vbus_gpio: "axp_ctrl",表示axp 提供
+;[usbc0]: usbc0 configuration.
+;usb_used: usb controller enable. 0-disable, 1-enable.
+;usb_port_type: usb mode. 0-device, 1-host, 2-otg.
+;usb_detect_type: usb hotplug detect mode. 0-none, 1-vbus/id detect, 2-id/dpdm detect.
+;usb_detect_mode: usb otg switch has two config. 0-thread scan, 1-id gpio interrupt.
+;usb_id_gpio: usb id detect IO.
+;usb_det_vbus_gpio: USB DET_VBUS has two config. (1)gpio pin; (2)"axp_ctrl", use axp intf.
+;usb_drv_vbus_gpio: USB DRY_VBUS has two config. (1)gpio pin; (2)"axp_ctrl", use axp intf.
 ;--------------------------------
 ;--------------------------------
-;---       USB0控制标志
+;---       USB0 CONFIG
 ;--------------------------------
 [usbc0]
 usbc0_used          = 1
@@ -868,25 +872,25 @@ usb_serial_number   = "20080411"
 rndis_wceis         = 1
 
 ;--------------------------------
-;---       USB1控制标志
+;---       USB1 CONFIG
 ;--------------------------------
 [usbc1]
-usbc1_used          = 1
-usb_drv_vbus_gpio   =
-usb_host_init_state = 1
-usb_regulator_io    = "nocare"
-usb_wakeup_suspend  = 0
+usbc1_used                     = 1
+usb_drv_vbus_gpio              =
+usb_host_init_state            = 1
+usb_regulator_io               = "nocare"
+usb_wakeup_suspend             = 0
 ;---  HSIC config
-usb_hsic_used          = 0
-usb_hsic_regulator_io  = "vcc-hsic-12"
+usb_hsic_used                  = 0
+usb_hsic_regulator_io          = "vcc-hsic-12"
 ;---  Marvell 4G HSIC
-usb_hsic_ctrl          = 0
-usb_hsic_rdy_gpio      =
+usb_hsic_ctrl                  = 0
+usb_hsic_rdy_gpio              =
 ;---  SMSC usb3503 HSIC HUB
-usb_hsic_usb3503_flag       = 0
-usb_hsic_hub_connect_gpio   =
-usb_hsic_int_n_gpio         =
-usb_hsic_reset_n_gpio       =
+usb_hsic_usb3503_flag          = 0
+usb_hsic_hub_connect_gpio      =
+usb_hsic_int_n_gpio            =
+usb_hsic_reset_n_gpio          =
 
 ;--------------------------------
 ;---     序列号标志
@@ -915,7 +919,7 @@ gsensor_int2        = port:PH06<6><1><default><default>
 ;--------------------------------------------------------------------------------
 [gsensor_list]
 compatible                = "allwinner,sun50i-gsensor-list-para"
-gsensor_list__used          = 1
+gsensor_list_used          = 0
 lsm9ds0_acc_mag           = 0
 bma250                    = 1
 mma8452                   = 0
@@ -937,6 +941,8 @@ sc7a30                    = 0
 ;wlan_used:         0-not use, 1- use
 ;wlan_busnum:       sdio/usb index
 ;clocks:            external low power clock input (32.768KHz)
+;wlan_power_enable  gpio to enable wlan power supply
+;wlan_power_num     the number of wlan power supply
 ;wlan_power:        input supply voltage
 ;wlan_io_regulator: wlan/sdio I/O voltage
 ;wlan_regon:        power up/down internal regulators used by wifi section
@@ -946,7 +952,11 @@ sc7a30                    = 0
 wlan_used           = 1
 wlan_busnum         = 1
 ;clocks              =
-wlan_power          = "vcc-wifi"
+wlan_power_enable   = 
+wlan_power_num      = 1
+wlan_power1         = "vcc-wifi"
+wlan_power2         = 
+wlan_power3         = 
 wlan_io_regulator   = "vcc-wifi-io"
 wlan_regon          = port:PL02<1><default><default><0>
 wlan_hostwake       = port:PL03<6><default><default><0>
@@ -962,7 +972,10 @@ wlan_hostwake       = port:PL03<6><default><default><0>
 [bt]
 bt_used             = 1
 ;clocks              =
-bt_power            = "vcc-wifi"
+bt_power_num        = 1
+bt_power1           = "vcc-wifi"
+bt_power2           = 
+bt_power3           = 
 bt_io_regulator     = "vcc-wifi-io"
 bt_rst_n            = port:PL04<1><default><default><0>
 
@@ -986,25 +999,25 @@ bt_hostwake         = port:PL05<6><default><default><0>
 3g_used                        = 0
 3g_usbc_num                    = 2
 3g_uart_num                    = 0
-bb_vbat                                = port:PL03<1><default><default><0>
-bb_host_wake        = port:PM00<1><default><default><0>
+bb_vbat                        = port:PL03<1><default><default><0>
+bb_host_wake                   = port:PM00<1><default><default><0>
 bb_on                          = port:PM01<1><default><default><0>
 bb_pwr_on                      = port:PM03<1><default><default><0>
-bb_wake                                = port:PM04<1><default><default><0>
+bb_wake                        = port:PM04<1><default><default><0>
 bb_rf_dis                      = port:PM05<1><default><default><0>
 bb_rst                         = port:PM06<1><default><default><0>
-3g_int              =
+3g_int                         =
 
 ;--------------------------------------------------------------------------------
 ;gyroscope
 ;--------------------------------------------------------------------------------
 [gyroscopesensor]
-compatible          ="allwinner,sun50i-gyr_sensors-para"
+compatible                ="allwinner,sun50i-gyr_sensors-para"
 gyroscopesensor_used      = 0
-gy_twi_id           = 2
-gy_twi_addr         = 0x6a
-gy_int1             = port:PA10<6><1><default><default>
-gy_int2             =
+gy_twi_id                 = 2
+gy_twi_addr               = 0x6a
+gy_int1                   = port:PA10<6><1><default><default>
+gy_int2                   =
 
 ;--------------------------------------------------------------------------------
 ; Gyro automatic detection configuration
@@ -1023,8 +1036,8 @@ bmg160_gyr           = 1
 ;light sensor
 ;--------------------------------------------------------------------------------
 [lightsensor]
-compatible          ="allwinner,sun50i-lsensors-para"
-lightsensor_used     =0
+compatible          = "allwinner,sun50i-lsensors-para"
+lightsensor_used    = 0
 ls_twi_id           = 2
 ls_twi_addr         = 0x23
 ls_int              = port:PA12<6><1><default><default>
@@ -1035,8 +1048,8 @@ ls_int              = port:PA12<6><1><default><default>
 ;Module name postposition 1 said detection, 0 means no detection.
 ;--------------------------------------------------------------------------------
 [ls_list]
-compatible           ="allwinner,sun50i-lsensors-list-para"
-ls_list_used          =0
+compatible           = "allwinner,sun50i-lsensors-list-para"
+ls_list_used         = 0
 ltr_501als           = 1
 jsa1212              = 0
 jsa1127              = 1
@@ -1046,8 +1059,8 @@ stk3x1x              = 0
 ;compass
 ;--------------------------------------------------------------------------------
 [compasssensor]
-compatible          ="allwinner,sun50i-compass-para"
-compasssensor_used   = 0
+compatible          = "allwinner,sun50i-compass-para"
+compasssensor_used  = 0
 compass_twi_id      = 2
 compass_twi_addr    = 0x0d
 compass_int         = port:PA11<6><1><default><default>
@@ -1059,11 +1072,11 @@ compass_int         = port:PA11<6><1><default><default>
 ;Module name postposition 1 said detection, 0 means no detection.
 ;--------------------------------------------------------------------------------
 [compass_list]
-compatible              ="allwinner,sun50i-compass-list-para"
-compass_list_used        = 0
+compatible              = "allwinner,sun50i-compass-list-para"
+compass_list_used       = 0
 lsm9ds0                 = 1
 lsm303d                 = 0
-;akm8963                 = 1
+;akm8963                = 1
 
 ;--------------------------------------------------------------------------------
 ;		NOTE :Make sure spdif_used = 0x1,spdifmach_used = 0x1,
@@ -1072,15 +1085,15 @@ lsm303d                 = 0
 [spdif]
 spdif_used          = 0
 [sndspdif]
-sndspdif_used   = 0
+sndspdif_used       = 0
 ;----------------------------------------------------------------------------------
 ;		NOTE :Make sure daudio2_used = 0x1,sndhdmi_used = 0x1,
 ;         if register the sound card hdmi.
 ;---------------------------------------------------------------------------------
 [daudio2]
-daudio2_used = 1
+daudio2_used        = 1
 [sndhdmi]
-sndhdmi_used = 1
+sndhdmi_used        = 1
 ;--------------------------------------------------------------------------------
 ;allwinner,pcm_lrck_period	:16/32/64/128/256
 ;allwinner,pcm_lrckr_period :no use
@@ -1103,6 +1116,7 @@ sndhdmi_used = 1
 ;				  4:SND_SOC_DAIFMT_IB_IF(invert BCLK + FRM)
 ;allwinner,frametype :0: long frame = 2 clock width;  1: short frame
 ;allwinner,tdm_config :0:pcm 1:i2s
+;allwinner,clk_active :0:auto 1:always_on
 ;allwinner,daudio0_used :0:not use 1:use
 
 ;--------------------------------------------------------------------------------
@@ -1113,9 +1127,9 @@ sndhdmi_used = 1
 snddaudio0_used = 0
 ;-----------------------------------------------------------------------------
 [daudio0]
-pcm_lrck_period =   0x20
+pcm_lrck_period =   0x60
 pcm_lrckr_period =   0x01
-slot_width_select =   0x20
+slot_width_select =   0x18
 pcm_lsb_first =   0x0
 tx_data_mode =   0x0
 rx_data_mode =   0x0
@@ -1124,6 +1138,7 @@ audio_format =   0x01
 signal_inversion =   0x01
 frametype =   0x0
 tdm_config =   0x01
+clk_active = 0x0
 daudio0_used = 0
 
 ;-------------------------------------------------------------------------------
@@ -1136,7 +1151,7 @@ snddaudio1_used = 0
 [daudio1]
 pcm_lrck_period =   0x20
 pcm_lrckr_period =   0x01
-slot_width_select =   0x20
+slot_width_select =   0x10
 pcm_lsb_first =   0x0
 tx_data_mode =   0x0
 rx_data_mode =   0x0
@@ -1145,6 +1160,7 @@ audio_format =   0x01
 signal_inversion =   0x01
 frametype =   0x0
 tdm_config =   0x01
+clk_active = 0x1
 daudio1_used = 0
 ;----------------------------------------------------------------------------------------------------------
 ;--------------------------------------------------------------------------------------
@@ -1166,12 +1182,12 @@ daudio1_used = 0
 ;         codec_used = 0x1,if register the sound card audiocodec.
 ;---------------------------------------------------------------------------------
 [sndcodec]
-sndcodec_used = 0x1
-aif2fmt = 0x3
-aif3fmt = 0x3
-aif2master = 0x1
-linein_detect = 
-hp_detect_case = 0x1
+sndcodec_used    = 0x1
+aif2fmt          = 0x3
+aif3fmt          = 0x3
+aif2master       = 0x1
+linein_detect    = 
+hp_detect_case   = 0x1
 ;------------------------------------------------------------------------------
 [i2s]
 i2s_used = 0x1
@@ -1578,38 +1594,28 @@ Vdevice_1           = port:PB02<4><1><2><default>
 
 ;----------------------------------------------------------------------------------
 ;GPU parameters
-;regulator_id     : the regulator id GPU used.
-;dvfs_status      : dvfs status, if this is enabled, DVFS will work.
+;dvfs_status      : dvfs status, if this is enabled, GPU DVFS will work. Actually, GPU
+;                   DVFS functionality depends on some kernel features such as devfreq.
 ;temp_ctrl_status : temperature control status, if this is enabled, the gpu frequency
 ;                   will drop down if the temperature of gpu is too high.
 ;scene_ctrl_status: scene control status, if this is enabled, android layer can ask
 ;                   gpu driver to change frequency in certain scene.
-;max_level        : maximum level, which is used when thermal system does not restrict
-;                    GPU power consumption.
+;max_level        : maximum level.
 ;begin_level      : the corresponding frequency and voltage will be used during GPU
 ;                    initialization.
 ;lv<x>_freq       : frequency in MHz of certain level.
-;lv<x>_volt       : voltage in mV of certain level.
+;lv<x>_volt       : voltage in mV of certain level, 0 means GPU power is not independent.
 ;----------------------------------------------------------------------------------
 [gpu]
 dvfs_status       = 0
 temp_ctrl_status  = 1
-scene_ctrl_status = 1
+scene_ctrl_status = 0
 
-max_level   = 3
-begin_level = 3
+max_level   = 0
+begin_level = 0
 
-lv0_freq = 144
-lv0_volt = 1100
-
-lv1_freq = 264
-lv1_volt = 1100
-
-lv2_freq = 384
-lv2_volt = 1100
-
-lv3_freq = 456
-lv3_volt = 1100
+lv0_freq = 456
+lv0_volt = 0
 
 ;----------------------------------------------------------------------------------
 [secure]

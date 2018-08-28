@@ -66,5 +66,8 @@ obj-$(CONFIG_TRACE) += trace.o
 obj-$(CONFIG_LIB_UUID) += uuid.o
 obj-y += vsprintf.o
 obj-$(CONFIG_LIB_RAND) += rand.o
+obj-$(CONFIG_SUNXI_FINS_FUNC) += aw_ff_trace.o
 
 subdir-ccflags-$(CONFIG_CC_OPTIMIZE_LIBS_FOR_SPEED) += -O2
+ccflags-$(CONFIG_SUNXI_FINS_FUNC_EXCLUDE_FILE) += -finstrument-functions-exclude-file-list=vsprintf.c
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_LIB_DIR) += -finstrument-functions

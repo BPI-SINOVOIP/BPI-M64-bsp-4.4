@@ -417,6 +417,7 @@ uintptr_t tcon_get_reg_base(u32 sel)
 
 s32 tcon_init(u32 sel)
 {
+	lcd_dev[sel]->tcon_gctl.bits.io_map_sel = 0;
 	lcd_dev[sel]->tcon0_ctl.bits.tcon0_en = 0;
 	lcd_dev[sel]->tcon1_ctl.bits.tcon1_en = 0;
 	lcd_dev[sel]->tcon_gctl.bits.tcon_en = 0;
@@ -432,6 +433,7 @@ s32 tcon_exit(u32 sel)
 	lcd_dev[sel]->tcon_gctl.bits.tcon_en = 0;
 	lcd_dev[sel]->tcon0_dclk.bits.tcon0_dclk_en = 0;
 
+	lcd_dev[sel]->tcon_gctl.bits.io_map_sel = 1;
 	return 0;
 }
 
@@ -570,11 +572,37 @@ s32 tcon0_close(u32 sel)
 	    sel + 1 < DEVICE_DSI_NUM)
 		tcon0_dsi_clk_enable(sel + 1, 0);
 #endif
+
+#ifdef CONFIG_EINK_PANEL_USED
+	/* eink panel no need to delay, for faster display */
+#else
 	disp_delay_ms(30);
+#endif
 
 	return 1;
 }
 
+s32 tcon0_simple_close(u32 sel)
+{
+
+	tcon_irq_disable(sel, LCD_IRQ_TCON0_CNTR);
+	tcon_irq_disable(sel, LCD_IRQ_TCON0_VBLK);
+	tcon_irq_disable(sel, LCD_IRQ_TCON0_TRIF);
+
+	lcd_dev[sel]->tcon0_ctl.bits.tcon0_en = 0;
+	lcd_dev[sel]->tcon0_dclk.bits.tcon0_dclk_en = 0x0;
+
+	return 1;
+}
+
+s32 tcon0_simple_open(u32 sel)
+{
+	tcon_irq_enable(sel, LCD_IRQ_TCON0_VBLK);
+	lcd_dev[sel]->tcon0_dclk.bits.tcon0_dclk_en = 0xf;
+	lcd_dev[sel]->tcon0_ctl.bits.tcon0_en = 1;
+
+	return 1;
+}
 static s32 tcon0_cfg_mode_auto(u32 sel, disp_panel_para *panel)
 {
 	s32 start_delay;
@@ -706,7 +734,11 @@ static s32 tcon0_cfg_mode_tri(u32 sel, disp_panel_para *panel)
 s32 tcon0_cfg(u32 sel, disp_panel_para *panel)
 {
 	if ((panel->lcd_if == LCD_IF_HV) || (panel->lcd_if == LCD_IF_EXT_DSI)) {
+#ifdef CONFIG_EINK_PANEL_USED
+		lcd_dev[sel]->tcon0_ctl.bits.tcon0_if = 2;
+#else
 		lcd_dev[sel]->tcon0_ctl.bits.tcon0_if = 0;
+#endif
 		lcd_dev[sel]->tcon0_hv_ctl.bits.hv_mode = panel->lcd_hv_if;
 		lcd_dev[sel]->tcon0_hv_ctl.bits.srgb_seq =
 		    panel->lcd_hv_srgb_seq;

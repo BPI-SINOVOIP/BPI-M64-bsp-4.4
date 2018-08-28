@@ -1664,12 +1664,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 	struct gpio_config config;
 	pr_err("%s ,line:%d\n", __func__, __LINE__);
 
-	/* ac108 detect */
-	ac108_read(CHIP_AUDIO_RST, &reg, i2c);
-	if (0x4a != reg)
-		return -EFAULT;
-	ac108_pub_cfg.ac108_nums++;
-
 	ac108 = devm_kzalloc(&i2c->dev, sizeof(struct ac108_priv), GFP_KERNEL);
 	if (ac108 == NULL) {
 		dev_err(&i2c->dev, "Unable to allocate ac108 private data\n");
@@ -1782,11 +1776,18 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 				} else {
 					gpio_direction_output(ac108_pub_cfg.power_gpio, 1);
 					gpio_set_value(ac108_pub_cfg.power_gpio, 1);
+					msleep(3);
 				}
 			}
 			regulator_en = 1;
 		}
 	}
+	/* ac108 detect */
+	ac108_read(CHIP_AUDIO_RST, &reg, i2c);
+	if (0x4a != reg)
+		return -EFAULT;
+	ac108_pub_cfg.ac108_nums++;
+
 	if (i2c_id->driver_data < AC108_NUM_MAX) {
 		i2c_clt[ac108_pub_cfg.ac108_nums - 1] = i2c;
 		pr_err("%s,line:%d\n", __func__, __LINE__);

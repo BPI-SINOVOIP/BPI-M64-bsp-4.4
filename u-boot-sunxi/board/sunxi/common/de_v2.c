@@ -214,7 +214,7 @@ int board_display_set_exit_mode(int lcd_off_only)
 	cmd = DISP_CMD_SET_EXIT_MODE;
 	if(lcd_off_only)
 	{
-		arg[0] = DISP_EXIT_MODE_CLEAN_PARTLY;
+		arg[1] = DISP_EXIT_MODE_CLEAN_PARTLY;
 		disp_ioctl(NULL, cmd, (void *)arg);
 	}
 	else

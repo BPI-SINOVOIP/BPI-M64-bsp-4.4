@@ -558,7 +558,7 @@ int sunxi_secure_object_up(const char *name,char *buf,int len)
 	ret = sunxi_secure_object_read(name, (char *)&secdata, sizeof(secdata), &data_len);
 	if (ret)
 	{
-		printf("secure storage read fail\n");
+		printf("secure storage read %s fail\n", name);
 		return -1;
 	}
 	if(buf)

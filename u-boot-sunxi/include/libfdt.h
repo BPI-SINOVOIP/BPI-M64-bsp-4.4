@@ -1197,6 +1197,9 @@ static inline int fdt_setprop_u32(void *fdt, int nodeoffset, const char *name,
 int sunxi_fdt_getprop_store(void *fdt, const char *path, const char *name,
 				  uint32_t val);
 
+int sunxi_fdt_getprop_store_string(void *fdt, const char *path,
+				   const char *name, char *str);
+
 int sunxi_fdt_reflush_all(void);
 /**
  * fdt_setprop_u64 - set a property to a 64-bit integer

@@ -18,5 +18,6 @@ disp-objs += lcd/panels.o lcd/lcd_source.o lcd/default_panel.o \
 		lcd/dx0960be40a1.o lcd/tft720x1280.o lcd/S6D7AA0X01.o \
 		lcd/default_eink.o lcd/cpu_gg1p4062utsw.o lcd/ls029b3sx02.o \
 		lcd/he0801a068.o lcd/inet_dsi_panel.o lcd/lq101r1sx03.o \
-		lcd/WilliamLcd.o lcd/tm_dsi_panel.o lcd/S070WV20_MIPI_RGB.o
+		lcd/WilliamLcd.o lcd/tm_dsi_panel.o lcd/S070WV20_MIPI_RGB.o \
+		lcd/ili9881c.o
 disp-objs += $(obj_low)

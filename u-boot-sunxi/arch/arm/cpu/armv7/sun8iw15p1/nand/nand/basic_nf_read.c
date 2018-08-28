@@ -36,7 +36,7 @@
 #include "common.h"
 #include "../nand_for_boot.h"
 #include "asm/arch/nand_boot0.h"
-
+#include "../nand_bsp/osal/nand_osal.h"
 
 #define  NFB_BASE_PhyInit        NFB_PhyInit
 #define  NFB_BASE_GetFlashInfo   NFB_GetFlashInfo
@@ -79,6 +79,7 @@ __s32 NF_open( void )
 	BOOT1_START_BLK = uboot_start_block;
 
 	NF_PAGE_SIZE = info.pagesize * NF_SECTOR_SIZE;
+
 	return NF_OK;
 
 error:
@@ -168,7 +169,7 @@ __s32 NF_read( __u32 sector_num, void *buffer, __u32 N )
 		__u32 *p;
 		__u32 *q;
 
-		page_buf = get_page_buf( );
+		page_buf = (__u8 *)MALLOC(NF_PAGE_SIZE);
 		para.mainbuf = page_buf;
 		for(i=0;i<page_cnt_per_blk;i++)
 		{
@@ -211,7 +212,7 @@ __s32 NF_read_status( __u32 blk_num )
 	__u8  oob_buf[MAX_PAGE_SIZE/NF_SECTOR_SIZE * OOB_BUF_SIZE_PER_SECTOR];
 	__u8 *page_buf;
 
-	page_buf = get_page_buf( );
+	page_buf = (__u8 *)MALLOC(NF_PAGE_SIZE);
 
 	para.chip = 0;
 	para.block = blk_num;

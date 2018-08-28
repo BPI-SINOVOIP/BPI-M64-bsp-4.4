@@ -34,14 +34,8 @@
 //#define put_wvalue(addr, v)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 #define  NAND_DRV_VERSION_0		0x03
 #define  NAND_DRV_VERSION_1		0x5017
-#define  NAND_DRV_DATE			0x20171208
-#define  NAND_DRV_TIME			0x16891449
-/*
- *1689--AW1689--A64
- *14--uboot2014
- *49--linux4.9
-*/
-
+#define  NAND_DRV_DATE			0x20180323
+#define  NAND_DRV_TIME			0x1921
 
 
 extern int sunxi_get_securemode(void);
@@ -76,14 +70,14 @@ int NAND_Print(const char * str, ...)
 		return 0;
 	else
 	{
-	    static char _buf[1024];
-	    va_list args;
+		static char _buf[1024];
+		va_list args;
 
-	    va_start(args, str);
-	    vsprintf(_buf, str, args);
-	    va_end(args);
+		va_start(args, str);
+		vsprintf(_buf, str, args);
+		va_end(args);
 
-	    tick_printf(_buf);
+		tick_printf(_buf);
 		return 0;
 	}
 
@@ -95,14 +89,14 @@ int NAND_Print_DBG(const char * str, ...)
 		return 0;
 	else
 	{
-	    static char _buf[1024];
-	    va_list args;
+		static char _buf[1024];
+		va_list args;
 
-	    va_start(args, str);
-	    vsprintf(_buf, str, args);
-	    va_end(args);
+		va_start(args, str);
+		vsprintf(_buf, str, args);
+		va_end(args);
 
-	    tick_printf(_buf);
+		tick_printf(_buf);
 		return 0;
 	}
 

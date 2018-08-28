@@ -21,6 +21,8 @@
 //#define DEBUG
 
 #define FPGA_PLATFORM
+#define CONFIG_SUNXI_CRASH
+
 #define LINUX_MACHINE_ID        4137
 
 #define UBOOT_VERSION			"3.0.0"
@@ -322,6 +324,7 @@
 #define BOARD_LATE_INIT		      /* init the fastboot partitions */
 #define CONFIG_SUNXI_KEY_BURN
 #define CONFIG_WIDEVINE_KEY_INSTALL
+#define CONFIG_KEYMASTER_KEY_INSTALL
 /*#define CONFIG_SUNXI_HDCP_HASH*/
 #define CONFIG_RSSK_INIT
 
@@ -421,6 +424,10 @@
 #define CONFIG_SUNXI_MODULE_TV
 #define CONFIG_SUNXI_MODULE_CLK
 #define CONFIG_SUNXI_MODULE_PWM
+/* bootGUI config */
+#define ENABLE_ADVERT_PICTURE
+#define CONFIG_BOOT_GUI
+#define UPDATE_DISPLAY_MODE
 #endif
 
 #define CONFIG_USE_AC200
@@ -499,5 +506,17 @@
 #define CONFIG_NETMASK          255.255.255.0
 #define CONFIG_GATEWAYIP        192.168.200.1
 #endif
+
+/* support optee25 */
+#define CONFIG_OPTEE25
+
+#define CONFIG_GPT_SUPPORT
+#ifdef CONFIG_GPT_SUPPORT
+#define CONFIG_SUNXI_GPT
+#define CONFIG_EFI_PARTITION
+#define CONFIG_CONVERT_CARD0_TO_GPT
+#endif
+
+#define CONFIG_DETECT_RTC_BOOT_MODE
 
 #endif /* __SUNXI_CONFIG_H */

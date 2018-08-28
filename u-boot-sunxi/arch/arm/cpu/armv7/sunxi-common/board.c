@@ -249,13 +249,17 @@ int sunxi_board_restart(int next_mode)
 		next_mode = PMU_PRE_SYS_MODE;
 	}
 	printf("set next mode %d\n", next_mode);
-	#ifdef CONFIG_ARCH_SUN8IW6P1
+#ifdef CONFIG_ARCH_SUN8IW6P1
 	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_USB_PRODUCT)
 		printf("skip setting poweron status in usb product mode\n");
 	else
 		axp_set_next_poweron_status(next_mode);
 #else
-    axp_set_next_poweron_status(next_mode);
+	#ifdef CONFIG_ARCH_SUN8IW15P1
+	axp_set_next_poweron_status(PMU_PRE_BOOT_MODE);
+	#else
+	axp_set_next_poweron_status(next_mode);
+	#endif
 #endif
 
 #ifdef CONFIG_SUNXI_DISPLAY
@@ -275,7 +279,8 @@ int sunxi_board_shutdown(void)
 	axp_set_next_poweron_status(0x0);
 
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
-	sunxi_secondary_cpu_poweroff();
+	if (get_boot_work_mode() == WORK_MODE_BOOT)
+		sunxi_secondary_cpu_poweroff();
 #endif
 
 #ifdef CONFIG_SUNXI_DISPLAY

@@ -204,6 +204,8 @@ s32 dp_init(u32 sel, u32 lane_cnt, u64 bit_rate)
 		goto OUT;
 	}
 
+	edp_delay_ms(200);
+
 	edp_hal_bist_clock_sel(sel, BIST_MODE_CLK_SEL);
 
 	edp_dbg("Bist clock select %d!\n", BIST_MODE_CLK_SEL);
@@ -226,7 +228,7 @@ s32 dp_init(u32 sel, u32 lane_cnt, u64 bit_rate)
 	edp_dbg("dp dp_enhanced_frame_cap:%d\n",
 		sink_inf.dp_enhanced_frame_cap);
 	edp_dbg("dp dp_max_lane_count:%d\n", sink_inf.dp_max_lane_count);
-	edp_dbg("dp dp_max_link_rate:%d\n", sink_inf.dp_max_link_rate);
+	edp_dbg("dp dp_max_link_rate:%lld\n", sink_inf.dp_max_link_rate);
 	edp_dbg("EDP Sink Initial PASS!\n");
 OUT:
 	return ret;
@@ -338,8 +340,6 @@ train_next:
 				edp_wrn("EQ phase is FAIL!\n");
 				return RET_FAIL;
 			}
-			/* For Compliance with some display device*/
-			mdelay(10000);
 		}
 
 	return RET_OK;

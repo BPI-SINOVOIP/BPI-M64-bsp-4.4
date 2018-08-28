@@ -30,6 +30,8 @@
 
 int sunxi_sprite_download_mbr(void *buffer, uint buffer_size);
 
+int download_standard_gpt(void *sunxi_mbr_buf, size_t buf_size, int storage_type);
+
 int sunxi_sprite_download_uboot(void *buffer, int production_media, int mode);
 
 int sunxi_sprite_download_boot0(void *buffer, int production_media);

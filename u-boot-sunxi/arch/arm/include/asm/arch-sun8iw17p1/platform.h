@@ -53,6 +53,7 @@
 #define SUNXI_DCU_BASE                      (0x03010000L)
 #define SUNXI_GIC_BASE                      (0x03020000L)
 #define SUNXI_IOMMU_BASE                    (0x0303D000L)
+#define SUNXI_CCI400_BASE                   (0x030D0000L)
 
 /*storage*/
 #define SUNXI_DRAMCTL0_BASE                 (0x04002000L)
@@ -102,6 +103,11 @@
 #define SUNXI_RPIO_BASE                     (0x07022000L)
 #define SUNXI_RTWI_BASE                     (0x07081400L)
 #define SUNXI_RRSB_BASE                     (0x07083000L)
+#define SUNXI_SUART0_BASE                   (0x07080000L)
+#define SUNXI_SUART1_BASE                   (0x07080400L)
+#define SUNXI_SUART2_BASE                   (0x07080800L)
+#define SUNXI_SUART3_BASE                   (0x07080C00L)
+#define SUNXI_SUART4_BASE                   (0x07081000L)
 
 #define SUNXI_RLRADC_BRG_REG				(SUNXI_RPRCM_BASE+0x016c)
 #define SUNXI_RLRADC_RST_BIT				(16)

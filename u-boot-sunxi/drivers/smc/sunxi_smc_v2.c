@@ -90,6 +90,25 @@ int arm_svc_set_cpu_off(int cpu)
 	return sunxi_smc_call(PSCI_CPU_OFF, cpu, 0, 0, 0);
 }
 
+/*for multi cluster*/
+int sunxi_smc_set_cpu_entry(u32 entry, int cpu)
+{
+	struct arm_smccc_res res;
+	arm_smccc_smc(OPTEE_SMC_PLATFORM_CMD,
+		TEE_SET_CPU_ENTRY, entry, cpu, 0, 0, 0, 0, &res);
+	return res.a0;
+}
+
+/*for multi cluster*/
+int sunxi_smc_set_cpu_off(void)
+{
+	struct arm_smccc_res res;
+	arm_smccc_smc(OPTEE_SMC_PLATFORM_CMD,
+		TEE_SET_CPU_OFF, 0, 0, 0, 0, 0, 0, &res);
+	return res.a0;
+}
+
+
 int arm_svc_version(u32 *major, u32 *minor)
 {
 	u32 *pResult = NULL;

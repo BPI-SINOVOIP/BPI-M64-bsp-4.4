@@ -662,7 +662,7 @@ typedef struct
 	unsigned int             lcd_dsi_eotp;
 	unsigned int             lcd_dsi_vc;
 	disp_lcd_te              lcd_dsi_te;
-	enum disp_lcd_dsi_port  lcd_dsi_port_num;
+	enum disp_lcd_dsi_port   lcd_dsi_port_num;
 	enum disp_lcd_tcon_mode  lcd_tcon_mode;
 	unsigned int             lcd_slave_stop_pos;
 	unsigned int             lcd_sync_pixel_num;
@@ -825,6 +825,7 @@ struct disp_device {
 	enum disp_output_type type;
 	struct disp_manager *manager;
 	struct disp_video_timings timings;
+	struct work_struct close_eink_panel_work;
 	void* priv_data;
 
 	/* function fileds  */
@@ -866,6 +867,7 @@ struct disp_device {
 	s32 (*dump)(struct disp_device *dispdev, char *buf);
 
 	/* HDMI /TV */
+	s32 (*get_work_mode)(struct disp_device *dispdev);
 	s32 (*set_mode)(struct disp_device *dispdev, u32 mode);
 	s32 (*get_mode)(struct disp_device *dispdev);
 	s32 (*set_static_config)(struct disp_device *dispdev,
@@ -882,6 +884,7 @@ struct disp_device {
 	 */
 	bool (*check_config_dirty)(struct disp_device *dispdev,
 				   struct disp_device_config *config);
+	s32 (*get_support_mode)(struct disp_device *dispdev, u32 init_mode);
 	s32 (*check_support_mode)(struct disp_device* dispdev, u32 mode);
 	s32 (*set_func)(struct disp_device*  dispdev, struct disp_device_func * func);
 	s32 (*set_tv_func)(struct disp_device*  dispdev, struct disp_tv_func * func);
@@ -1145,6 +1148,147 @@ struct disp_capture {
 
 //extern s32 disp_delay_ms(u32 ms);
 //extern s32 disp_delay_us(u32 us);
+struct ee_img {
+	unsigned long addr;
+	unsigned int pitch;
+	unsigned int w;     /*image width*/
+	unsigned int h;     /*image height*/
+};
 
+struct rect_size {
+	u32 width;
+	u32 height;
+	u32 align;
+};
+
+struct area_info {
+	unsigned int x_top;
+	unsigned int y_top;
+	unsigned int x_bottom;
+	unsigned int y_bottom;
+};
+
+struct eink_timing_param {
+	unsigned int lbl;
+	unsigned int lel;
+	unsigned int lsl;
+	unsigned int fbl;
+	unsigned int fel;
+	unsigned int fsl;
+	unsigned int width;  /*image width*/
+	unsigned int height;  /*image height*/
+};
+
+enum eink_flash_mode {
+	LOCAL,
+	GLOBAL,
+	INIT
+};
+
+enum buf_use_state {
+	FREE,
+	USED
+};
+
+enum eink_update_mode {
+	/*GLOBAL*/
+	EINK_INIT_MODE = 0x01,
+	EINK_DU_MODE = 0x02,
+	EINK_GC16_MODE = 0x04,
+	EINK_A2_MODE = 0x10,
+	EINK_GC16_LOCAL_MODE = 0x84,
+
+	/*LOCAL*/
+	EINK_DU_RECT_MODE = 0x402,
+	EINK_GC16_RECT_MODE = 0x404,
+	EINK_A2_RECT_MODE = 0x410,
+	EINK_GC16_LOCAL_RECT_MODE = 0x484,
+};
+
+struct eink_8bpp_image {
+	enum eink_update_mode 	update_mode;
+	enum eink_flash_mode 	flash_mode;
+	enum buf_use_state 		state;
+	void					*vaddr;
+	void					*paddr;
+	bool 					window_calc_enable;
+	struct rect_size 			size;
+	struct area_info			update_area;
+};
+
+struct eink_init_param {
+	bool 					used;
+	u8         				eink_moudule_type;
+	u8					eink_version_type;
+	u8 					eink_ctrl_data_type;
+	u8					eink_bits;   /*0->3bits,1->4bits,2->5bits*/
+	u8					eink_mode;   /*0->8data,1->16data*/
+	struct eink_timing_param 		timing;
+	char				wavefile_path[32];
+};
+
+enum  eink_bit_num{
+	EINK_BIT_1 = 0x01,
+	EINK_BIT_2 = 0x02,
+	EINK_BIT_3 = 0x03,
+	EINK_BIT_4 = 0x04,
+	EINK_BIT_5 = 0x05
+};
+
+/*#define EINK_FLUSH_TIME_TEST*/
+
+struct disp_eink_manager {
+	unsigned int disp;
+	unsigned int test;
+	int 	tcon_flag;
+	int 	eink_panel_temperature;
+	volatile unsigned int flush_continue_flag;
+	struct tasklet_struct sync_tasklet;
+	struct tasklet_struct decode_tasklet;
+	/*wait_queue_head_t decode_taske_queue;*/
+	struct work_struct decode_work;
+	struct eink_private *private_data;
+	struct disp_manager *mgr;
+	/*struct eink_buffer_manager* buffer_mgr;*/
+	struct pipeline_manager *pipeline_mgr;
+	struct format_manager *convert_mgr;
+	struct task_struct *detect_fresh_task;
+	struct task_struct *debug_task;
+	struct mutex standby_lock;
+
+	int (*eink_update)(struct disp_eink_manager *manager,
+			struct eink_8bpp_image *cimage);
+	int (*enable)(struct disp_eink_manager *);
+	int (*disable)(struct disp_eink_manager *);
+	int (*op_skip)(struct disp_eink_manager *manager, u32 skip);
+	int (*suspend)(struct disp_eink_manager *);
+	int (*resume)(struct disp_eink_manager *);
+	void (*clearwd)(struct disp_eink_manager *, int);
+	/*for debug*/
+	int(*decode)(struct disp_eink_manager *, int);
+	int (*set_temperature)(struct disp_eink_manager *manager, unsigned int temp);
+	unsigned int (*get_temperature)(struct disp_eink_manager *manager);
+};
+
+struct image_format {
+	enum disp_pixel_format format;
+	unsigned int width;
+	unsigned int height;
+	unsigned long addr1;
+	unsigned long addr2;
+	unsigned long addr3;
+};
+
+struct format_manager {
+	unsigned int disp;
+	unsigned int irq_num;
+	volatile unsigned int write_back_finish;
+	/*	wait_queue_head_t write_back_queue;*/
+	struct clk *clk;
+	int (*enable)(unsigned int id);
+	int (*disable)(unsigned int id);
+	int (*start_convert)(unsigned int id, struct disp_layer_config *config,
+			unsigned int layer_num, struct image_format *dest);
+};
 #endif
 

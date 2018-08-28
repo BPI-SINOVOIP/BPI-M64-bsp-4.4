@@ -26,6 +26,8 @@
 #include <sys_config_old.h>
 #include <fs.h>
 #include "sprite_auto_update.h"
+#include <usb.h>
+
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -42,6 +44,8 @@ DECLARE_GLOBAL_DATA_PTR;
 static void *imghd = NULL;
 static void *imgitemhd = NULL;
 static char *imgname = NULL;
+static int usb_stor_curr_dev;
+
 
 extern int do_card0_probe(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern void __dump_mbr(sunxi_mbr_t *mbr_info);
@@ -52,33 +56,82 @@ extern void dump_dram_para(void* dram, uint size);
 extern int sunxi_set_secure_mode(void);
 extern int sunxi_sprite_download_boot0(void *buffer, int production_media);
 extern int sunxi_sprite_download_uboot(void *buffer, int production_media, int generate_checksum);
+static int auto_update_firmware_probe(char *name);
+
 
 int __attribute__((weak)) nand_get_mbr(char* buffer, uint len)
  {
 	return -1;
  }
 
+int sunxi_udisk_check(void)
+{
+	int ret;
+#ifdef CONFIG_USB_STORAGE
+	usb_stor_curr_dev = -1; /* current device */
+#endif
+
+	usb_stop();
+	printf("sunxi_udisk_check...\n");
+	ret = usb_init();
+	if (ret == 0) {
+#ifdef CONFIG_USB_STORAGE
+		/* try to recognize storage devices immediately */
+		usb_stor_curr_dev = usb_stor_scan(1);
+#endif
+	}
+	return usb_stor_curr_dev;
+}
+
+int detect_udisk(void)
+{
+	int ret;
+	ret = sunxi_udisk_check();
+	if (ret) {
+		printf("No Udisk insert\n");
+	} else {
+		sprite_led_init();
+		printf("Udisk found,update image...\n");
+		ret = auto_update_firmware_probe(IMG_NAME);
+		if (ret == 0)
+			uboot_spare_head.boot_data.work_mode = WORK_MODE_UDISK_UPDATE;
+	}
+	return 0;
+}
+
 int auto_update_check(void)
 {
 	int keyvalue;
-	int ret;
-	int key;
+	int workmode;
+	int usb_key, usb_onoff, card_key;
 
-	keyvalue = uboot_spare_head.boot_ext[0].data[2];
-	printf("key %d\n", keyvalue);
+	workmode = uboot_spare_head.boot_data.work_mode;
 
-	ret = script_parser_fetch("auto_update_key", "key_val", &key, 1);
-	if (ret)
+	if ((workmode != WORK_MODE_USB_PRODUCT) && (workmode != WORK_MODE_CARD_PRODUCT))
 	{
-		printf("cant find auto update key value\n");
-	}
-	else
-	{
-		if(keyvalue == key)
-		{
-			printf("auto update key found,update image...\n");
-			uboot_spare_head.boot_data.work_mode = WORK_MODE_CARD_UPDATE;
+		keyvalue = uboot_spare_head.boot_ext[0].data[2];
+		debug("key %d\n", keyvalue);
+
+		script_parser_fetch("auto_update", "usb_update_key", &usb_key, 1);
+		if (keyvalue == usb_key) {
+			printf("auto usb_update found,update image...\n");
+			uboot_spare_head.boot_data.work_mode = WORK_MODE_UDISK_UPDATE;
+			return 0;
 		}
+
+		script_parser_fetch("auto_update", "usb_update_onoff", &usb_onoff, 1);
+		if (usb_onoff == 1)
+		{
+			return detect_udisk();
+		}
+
+		script_parser_fetch("auto_update", "card_update_key", &card_key, 1);
+		if (keyvalue == card_key) {
+			printf("auto card_update found,update image...\n");
+			uboot_spare_head.boot_data.work_mode = WORK_MODE_CARD_UPDATE;
+			return 0;
+		}
+
 	}
 
 	return 0;
@@ -113,10 +166,16 @@ int fat_fs_read(const char *filename, void *buf, int offset, int len)
 
 	load_addr = (ulong)buf;
 
-	if (fs_set_blk_dev("mmc","0:0" , FS_TYPE_FAT))
-	{
-		printf("fs set mmc blk dev fail!\n");
-		return -1;
+	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE || usb_stor_curr_dev == 0) {
+		if (fs_set_blk_dev("usb", "0:1" , FS_TYPE_FAT)) {
+			printf("fs set usb blk dev fail!\n");
+			return -1;
+		}
+	} else {
+		if (fs_set_blk_dev("mmc", "0:0" , FS_TYPE_FAT)) {
+			printf("fs set mmc blk dev fail!\n");
+			return -1;
+		}
 	}
 
 	time = get_timer(0);
@@ -784,19 +843,27 @@ int auto_update_deal_uboot(int production_media)
 	return 0;
 }
 
-int sunxi_card_update_main(void)
+int sunxi_auto_update_main(void)
 {
 	int production_media;
 	uchar  img_mbr[1024 * 1024];
 	sunxi_download_info  dl_map;
 	int mbr_num = SUNXI_MBR_COPY_NUM;
 
-	if (do_card0_probe(NULL,0,0,NULL))
-	{
-		return -1;
+	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE || usb_stor_curr_dev == 0) {
+		if (usb_stor_scan(1)) {
+			if (sunxi_udisk_check()) {
+				printf("No Udisk insert\n");
+				return -1;
+			}
+		} else
+			printf("sunxi usb update begin\n");
+	} else if (uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_UPDATE) {
+		if (do_card0_probe(NULL, 0, 0, NULL)) {
+			return -1;
+		} else
+			printf("sunxi card update begin\n");
 	}
-
-	tick_printf("sunxi update begin\n");
 
 	production_media = get_boot_storage_type();
 

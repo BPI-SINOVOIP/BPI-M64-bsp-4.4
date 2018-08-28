@@ -761,8 +761,6 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 	DE_INF("lcd %d pin config, state %s, %d\n", lcd->disp,
 	       (bon) ? "on" : "off", bon);
 
-/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
-#if 1
 	/* io-pad */
 	if (bon == 1) {
 		for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
@@ -792,7 +790,6 @@ static s32 disp_lcd_pin_cfg(struct disp_device *lcd, u32 bon)
 						       lcd_pin_power[i]);
 		}
 	}
-#endif
 
 	return DIS_SUCCESS;
 }
@@ -1676,9 +1673,6 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 		DE_WRN("mgr is NULL!\n");
 		return DIS_FAIL;
 	}
-
-	pr_info("%s\n", __func__);
-	
 	if (mgr->sw_enable)
 		mgr->sw_enable(mgr);
 
@@ -1687,8 +1681,6 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 		return DIS_FAIL;
 #endif
 
-/* bpi, vcc-pd and vcc-dsi-3v3 always on, no power control here */
-#if 1
 	/* init fix power */
 	for (i = 0; i < LCD_POWER_NUM; i++) {
 		if (lcdp->lcd_cfg.lcd_fix_power_used[i] == 1)
@@ -1738,7 +1730,6 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 		lcdp->lcd_cfg.lcd_bl_gpio_hdl =
 		    disp_sys_gpio_request(&lcdp->lcd_cfg.lcd_bl_en, 1);
 	}
-#endif
 
 	spin_lock_irqsave(&lcd_data_lock, flags);
 	lcdp->enabled = 1;

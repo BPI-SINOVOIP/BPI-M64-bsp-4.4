@@ -28,9 +28,17 @@
 
 int pmu_init(u8 power_mode);
 
+#ifdef CONFIG_AXP_USE_RSB
 s32 pmu_bus_init(void);
 s32 pmu_bus_read(u32 rtaddr, u32 daddr, u8 *data);
 s32 pmu_bus_write(u32 rtaddr, u32 daddr, u8 data);
+#endif
+
+#ifdef CONFIG_AXP_USE_I2C
+void i2c_init_cpus(int speed, int slaveaddr);
+int axp_i2c_read(unsigned char chip, unsigned char addr, unsigned char *buffer);
+int axp_i2c_write(unsigned char chip, unsigned char addr, unsigned char data);
+#endif
 
 int set_ddr_voltage(int set_vol);
 int set_pll_voltage(int set_vol);

@@ -35,7 +35,7 @@
 #define PMU_PRE_FACTORY_MODE       (0x0d)
 #define PMU_PRE_SYS_MODE           (0x0e)
 #define PMU_PRE_CHARGE_MODE        (0x0f)
-
+#define PMU_PRE_BOOT_MODE	   (0x02)
 #define PMU_SHORT_KEY_PRESSED      (1<<1)
 #define PMU_LONG_KEY_PRESSED       (1<<0)
 
@@ -94,6 +94,7 @@ typedef enum _VBUS_TYPE
 #define PMU_SUPPLY_GPIO0		(0x00090000)
 #define PMU_SUPPLY_GPIO1		(0x00090001)
 
+extern void sunxi_axp_dummy_init(void);
 extern int axp_probe(void);
 extern int axp_probe_id(int pmu_id);
 extern int axp_reinit(void);

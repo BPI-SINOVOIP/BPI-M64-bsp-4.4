@@ -211,7 +211,7 @@ static int sunxi_probe_power_state(void)
 3: allow boot directly  by insert dcin,boot condition:
     do not check battery ratio
 */
-	script_parser_fetch("target", "power_start", &power_start, 1);
+	script_parser_fetch(PMU_SCRIPT_NAME, "power_start", &power_start, 1);
 	script_parser_fetch(PMU_SCRIPT_NAME, "pmu_bat_unused",
 		(int *)&pmu_bat_unused, 1);
 
@@ -351,6 +351,8 @@ int sunxi_bmp_decode_from_compress(unsigned char *dst_buf, unsigned char *src_bu
 int sunxi_secendary_cpu_task(void)
 {
 	int next_mode;
+	int ret = -1;
+	int advert_enable = 0;
 
 	enable_caches();
 	pr_notice("task entry\n");
@@ -379,15 +381,42 @@ int sunxi_secendary_cpu_task(void)
 	sunxi_gic_cpu_interface_init(get_core_pos());
 #ifndef CONFIG_BOOTLOGO_DISABLE
 	initr_sunxi_display();
-	while(BMP_DECODE_IDLE == get_bmp_decode_flag());
+#if defined(ENABLE_ADVERT_PICTURE)
+	ret = script_parser_fetch("target", "advert_enable",
+				  (int *)&advert_enable, sizeof(int) / 4);
+#endif
+	if (ret || !advert_enable) {
+		while (BMP_DECODE_IDLE == get_bmp_decode_flag())
+			;
 
-
-	if (BMP_DECODE_SUCCESS == get_bmp_decode_flag()) {
-		sunxi_bmp_dipslay_screen(bmp_info);
-		pr_notice("boot logo display ok\n");
+		if (BMP_DECODE_SUCCESS == get_bmp_decode_flag()) {
+			sunxi_bmp_dipslay_screen(bmp_info);
+			pr_notice("boot logo display ok\n");
+		}
+		board_display_wait_lcd_open();
+		board_display_set_exit_mode(1);
+	} else {
+		while (BMP_DECODE_IDLE == get_bmp_decode_flag())
+			; /* ensure cpu2 off */
+		gd->logo_status_multiboot = DISPLAY_DRIVER_INIT_OK;
+		while (gd->logo_status_multiboot == DISPLAY_DRIVER_INIT_OK)
+			; /* wait cpu0 logo load */
+		/*
+		 * if load bootlogo from Reserve0 successfully, use it;
+		 * otherwise, will use one in boot_package/toc1_item.
+		 */
+#if defined(CONFIG_BOOT_GUI)
+		if (gd->logo_status_multiboot == DISPLAY_LOGO_LOAD_OK)
+			bmp_info.buffer = (char *)CONFIG_SYS_SDRAM_BASE;
+#else
+		sunxi_bmp_display_mem((unsigned char *)CONFIG_SYS_SDRAM_BASE,
+				      &bmp_info);
+#endif
+		ret = sunxi_bmp_dipslay_screen(bmp_info);
+		if (ret != 0)
+			pr_error("sunxi_bmp_dipslay_screen fail\n");
 	}
-	board_display_wait_lcd_open();
-	board_display_set_exit_mode(1);
+
 	/* wait bmp show on screen */
 	mdelay(50);
 #endif
@@ -434,16 +463,23 @@ int sunxi_third_cpu_task(void)
 		goto __third_cpu_end;
 	}
 
+#if defined(CONFIG_BOOT_GUI)
+	bmp_info.buffer = buf;
+	ret = 0;
+#else
 	ret = sunxi_bmp_display_mem(buf, &bmp_info);
 	if (ret) {
 		printf("bmp decode err\n");
 		set_bmp_decode_flag(BMP_DECODE_FAIL);
 		goto __third_cpu_end;
 	}
+#endif
 
 	set_bmp_decode_flag(BMP_DECODE_SUCCESS);
 
+#ifndef CONFIG_BOOT_GUI
 	sunxi_fdt_getprop_store(working_fdt, "disp", "fb_base", (u32) bmp_info.buffer- sizeof(bmp_header_t));
+#endif
 
 __third_cpu_end:
 	pr_msg("cpu %d enter wfi mode\n", get_core_pos());
@@ -458,14 +494,19 @@ __third_cpu_end:
 #ifdef CONFIG_ARM_A7
 int sunxi_secondary_cpu_poweroff(void)
 {
+	cpu1_quit_flag = CPU_QUIT;
 	pr_msg("check cpu power status\n");
-	if (sunxi_probe_wfi_mode(2))
-		sunxi_disable_cpu(2);
-	while(sunxi_probe_cpu_power_status(2));
+	while (sunxi_probe_cpu_power_status(2)) {
+		if (sunxi_probe_wfi_mode(2)) {
+			sunxi_disable_cpu(2);
+		}
+	}
 	pr_notice("cpu2 has poweroff\n");
-	if (sunxi_probe_wfi_mode(1))
-		sunxi_disable_cpu(1);
-	while(sunxi_probe_cpu_power_status(1));
+	while (sunxi_probe_cpu_power_status(1)) {
+		if (sunxi_probe_wfi_mode(1)) {
+			sunxi_disable_cpu(1);
+		}
+	}
 	pr_notice("cpu1 has poweroff\n");
 
 	return 0;
@@ -474,14 +515,37 @@ int sunxi_secondary_cpu_poweroff(void)
 
 int sunxi_set_cpu_off(void)
 {
-	sunxi_set_wfi_mode(get_core_pos());
+	if (sunxi_probe_secure_monitor() || sunxi_probe_secure_os()) {
+		pr_msg("set cpu off by secure os\n");
+#ifdef CONFIG_ARCH_SUN8IW17P1
+		sunxi_smc_set_cpu_off();
+		sunxi_set_wfi_mode(get_core_pos());
+#else
+		arm_svc_set_cpu_off(get_core_pos());
+#endif
+	} else {
+		pr_msg("set cpu off by nromal\n");
+		sunxi_set_wfi_mode(get_core_pos());
+	}
 	return 0;
 }
 
 int sunxi_set_cpu_on(int cpu, uint entry)
 {
-	sunxi_set_secondary_entry((void *)entry);
-	sunxi_enable_cpu(cpu);
+	if (sunxi_probe_secure_monitor() || sunxi_probe_secure_os()) {
+
+#ifdef CONFIG_ARCH_SUN8IW17P1
+		sunxi_smc_set_cpu_entry(entry, cpu);
+		sunxi_enable_cpu(cpu);
+#else
+		pr_msg("set cpu on by secure os\n");
+		arm_svc_set_cpu_on(cpu, entry);
+#endif
+	} else {
+		pr_msg("set cpu on by nromal\n");
+		sunxi_set_secondary_entry((void *)entry);
+		sunxi_enable_cpu(cpu);
+	}
 	return 0;
 }
 #else
@@ -509,5 +573,3 @@ int sunxi_set_cpu_on(int cpu,uint entry )
 	return arm_svc_set_cpu_on(cpu, entry);
 }
 #endif /*CONFIG_ARM_A7*/
-
-

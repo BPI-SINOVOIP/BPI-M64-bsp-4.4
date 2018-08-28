@@ -1,7 +1,7 @@
 #ifndef __MMC_DEF__
 #define __MMC_DEF__
 
-#define SUNXI_MMCDBG
+//#define SUNXI_MMCDBG
 
 #ifdef SUNXI_MMCDBG
 #define MMCINFO(fmt, args...)	pr_msg("[mmc]: "fmt,##args)//err or info

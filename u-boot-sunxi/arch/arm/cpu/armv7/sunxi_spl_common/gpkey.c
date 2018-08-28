@@ -73,6 +73,22 @@ int sunxi_key_read(void)
 		}
 	}
 #endif
+#ifdef CONFIG_ARCH_SUN8IW15P1
+	/* Fix me: use lradc on perf board,
+	 * so get the invalid val 0x17 by gpadc driver.
+	*/
+	if (key == 0x18) {
+		int i = 0, tmp = 0;
+		for (i = 0; i < 5; i++)
+			tmp += readl(GP_CH0_DATA)*63/4095;
+		tmp /= 5;
+		if (tmp == key) {
+			printf("get invalid gpadc(0x18) on perf\n");
+			key = 0;
+		}
+	}
+#endif
+
 	if (key > 0)
 		printf("key pressed value=0x%x\n", key);
 

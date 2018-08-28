@@ -90,12 +90,19 @@ int axp858_probe_key(void)
 
 int axp858_probe_pre_sys_mode(void)
 {
-	return -1;
+	u8  reg_value;
+	if (axp_i2c_read(AXP858_ADDR, PMU_DATA_BUFFER0, &reg_value)) {
+		return -1;
+	}
+	return reg_value;
 }
 
 int axp858_set_next_sys_mode(int data)
 {
-	return -1;
+	if (axp_i2c_write(AXP858_ADDR, PMU_DATA_BUFFER0, (u8)data)) {
+		return -1;
+	}
+	return 0;
 }
 
 int axp858_probe_this_poweron_cause(void)

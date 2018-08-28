@@ -52,3 +52,5 @@ endif
 ifneq (,$(findstring -mabi=aapcs-linux,$(PLATFORM_CPPFLAGS)))
 extra-y	+= eabi_compat.o
 endif
+
+subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_ARCH_ARM_LIB_DIR) += -finstrument-functions

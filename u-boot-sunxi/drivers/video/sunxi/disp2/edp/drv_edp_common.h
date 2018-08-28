@@ -12,7 +12,11 @@
 #ifndef _DRV_EDP_COMMON_H
 #define _DRV_EDP_COMMON_H
 
-/*#define __LINUX_PLAT__*/
+#define EDP_DEBUG_LEVEL 0
+#define EDP_BYPASS_CR_TRANNING 0
+#define EDP_BYPASS_EQ_TRANNING 0
+
+#define __UBOOT_PLAT__
 
 #if defined(__LINUX_PLAT__)
 #include <linux/module.h>
@@ -51,8 +55,6 @@
 #include <video/sunxi_display2.h>
 #include <linux/regulator/consumer.h>
 #include "../disp/disp_sys_intf.h"
-
-#define EDP_DEBUG_LEVEL 0
 
 #define edp_wrn(fmt, ...)                                                     \
 	pr_warn("[EDP] %s:%d " fmt "", __func__, __LINE__, ##__VA_ARGS__)
@@ -109,4 +111,6 @@ extern uintptr_t disp_getprop_regbase(char *main_name, char *sub_name,
 #endif /*endif EDP_DEBUG */
 #endif
 
+s32 edp_delay_us(u32 us);
+s32 edp_delay_ms(u32 ms);
 #endif /*End of file*/

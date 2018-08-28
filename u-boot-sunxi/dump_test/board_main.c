@@ -172,21 +172,6 @@ static int show_dram_config(void)
 }
 #endif
 
-
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
-static int init_func_i2c(void)
-{
-	puts("I2C:   ");
-#ifdef CONFIG_SYS_I2C
-	i2c_init_all();
-#else
-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
-#endif
-	puts("ready\n");
-	return 0;
-}
-#endif
-
 #if defined(CONFIG_HARD_SPI)
 static int init_func_spi(void)
 {
@@ -277,7 +262,7 @@ printf("%s %d\n", __FILE__, __LINE__);
 #if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF)) && \
 		defined(CONFIG_ARM)
 static int reserve_mmu(void)
-{		
+{
 	/* reserve TLB table */
 	gd->arch.tlb_size = PGTABLE_SIZE;
 	gd->relocaddr -= gd->arch.tlb_size;
@@ -465,11 +450,11 @@ extern s32 sunxi_rsb_init(u32 slave_id);
 static int init_func_pmubus(void)
 {
 	s32 ret = 0;
-	
+
 #if defined(CONFIG_AXP_USE_RSB)
 	//ret = sunxi_rsb_init(0);
 #elif defined (CONFIG_AXP_USE_I2C)
-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+	/*i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);*/
 #else
 
 #endif

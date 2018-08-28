@@ -16,7 +16,8 @@
 #include "de_edp.h"
 
 int eDP_capable;
-int dp_rev, dp_enhanced_frame_cap, dp_max_link_rate, dp_max_lane_count;
+int dp_rev, dp_enhanced_frame_cap, dp_max_lane_count;
+unsigned long long dp_max_link_rate;
 
 char dp_rx_info[256];
 
@@ -66,6 +67,93 @@ int dp_sink_init(u32 sel)
 			return ret;
 	}
 
+#if EDP_DEBUG_LEVEL == 2
+	edp_wrn("DPCD version:%d.%d\n", (dp_rx_info[0] >> 4) & 0x0f,
+		(dp_rx_info[0] >> 4));
+
+	if (dp_rx_info[1] == 0x06)
+		edp_wrn("sink max bit rate:1.62Gbps\n");
+	else if (dp_rx_info[1] == 0x0a)
+		edp_wrn("sink max bit rate:2.7Gbps\n");
+	else if (dp_rx_info[1] == 0x14)
+		edp_wrn("sink max bit rate:5.4Gbps\n");
+
+	edp_wrn("sink max lane count:%d\n", dp_rx_info[2] & 0xf);
+	if (dp_rx_info[2] & 0x80)
+		edp_wrn("enhanced mode:support\n");
+	else
+		edp_wrn("enhanced mode:not support\n");
+
+	if (dp_rx_info[3] & 0x1)
+		edp_wrn("down spread:up to 0.5\n");
+	else
+		edp_wrn("down spread:no\n");
+	if (dp_rx_info[3] & (1 << 6))
+		edp_wrn("aux handshake link training:not require\n");
+	else
+		edp_wrn("aux handshake link training:require\n");
+
+	edp_wrn("number of receiver ports:%d\n", dp_rx_info[4] + 1);
+
+	if (dp_rx_info[5] & 0x1)
+		edp_wrn("downstream port:present\n");
+	else
+		edp_wrn("downstream port:not present\n");
+
+	if (((dp_rx_info[5] >> 1) & 0x3) == 0)
+		edp_wrn("downstream port type:DisplayPort\n");
+	else if (((dp_rx_info[5] >> 1) & 0x3) == 1)
+		edp_wrn("downstream port type:VGA or DVI-I\n");
+	else if (((dp_rx_info[5] >> 1) & 0x3) == 2)
+		edp_wrn("downstream port type:DVI or HDMI\n");
+	else if (((dp_rx_info[5] >> 1) & 0x3) == 3)
+		edp_wrn("downstream port type:Others\n");
+	if (dp_rx_info[5] & 0x4)
+		edp_wrn("format conversion block:support\n");
+	else
+		edp_wrn("format conversion block:not support\n");
+
+	if (dp_rx_info[6] & 0x1)
+		edp_wrn("Main Link channel Coding:support ANSI 8B\\10B\n");
+	else
+		edp_wrn("Main Link channel Coding:not support ANSI 8B\\10B\n");
+
+	edp_wrn("Downstream port count:%d\n", dp_rx_info[7] & 0xf);
+	if (dp_rx_info[7] & 0x80)
+		edp_wrn("OUI:support\n");
+	else
+		edp_wrn("OUI:not support\n");
+
+	if (dp_rx_info[8] & (1 << 1))
+		edp_wrn("ReceiverPort0 Capability_0:Has a local EDID\n");
+	else
+		edp_wrn("ReceiverPort0 Capability_0:Not has a local EDID\n");
+	if (dp_rx_info[8] & (1 << 2))
+		edp_wrn("ReceiverPort0 Capability_0:sec isochronous stream\n");
+	else
+		edp_wrn("ReceiverPort0 Capability_0:main isochronous stream\n");
+
+	edp_wrn("ReceiverPort0 Capability_1:Buffer size per lane is %d bytes\n",
+		32 * (dp_rx_info[9] + 1));
+
+	if ((dp_rx_info[4] + 1) > 1) {
+		if (dp_rx_info[10] & (1 << 1))
+			edp_wrn(
+			    "ReceiverPort1 Capability0:Has a local EDID\n");
+		else
+			edp_wrn("ReceiverPort1 Capability0:local EDID exist\n");
+		if (dp_rx_info[10] & (1 << 2))
+			edp_wrn(
+			"ReceiverPort1 Capability0:sec isochronous stream\n");
+		else
+			edp_wrn(
+			"ReceiverPort1 Capability0:main isochronous stream\n");
+
+		edp_wrn("ReceiverPort1 Capability1:Buffer size per lane:%dB\n");
+			32 * (dp_rx_info[11] + 1));
+	}
+#endif
+
 	fp_tx_buf[0] = 0x01;
 	/*set sink to D0 mode(Normal Operation Mode)*/
 	/*--- DP_PWR keeps the default 3.3V*/
@@ -76,14 +164,10 @@ int dp_sink_init(u32 sel)
 		return ret;
 
 	dp_rev = dp_rx_info[0] & 0x0f;
-	dp_max_link_rate = dp_rx_info[1] * 270000000; /* 270M */
+	dp_max_link_rate = dp_rx_info[1] * 270000000ul; /* 270M */
 	dp_max_lane_count = dp_rx_info[2] & 0x0f;
 	sink_ssc_flag = dp_rx_info[3] & 0x1;
 
-	if ((dp_rx_info[2] & 0x80) == 0) {
-		if (dp_rev >= 1)
-			edp_wrn("DPRX Capability is invalid!\n");
-	}
 	/* eDP_CONFIGURATION_CAP */
 	/* Always reads 0x00 for external receivers */
 	if (dp_rx_info[0x0d] != 0) {
@@ -134,7 +218,11 @@ int dp_sink_init(u32 sel)
 
 	/*DPTX ENHANCED_FRAME_EN shall be set to 1 when DPRX*/
 	/*ENHANCED_FRAME_CAP is set*/
-	if (dp_rx_info[2] & 0x80) {
+	if ((dp_rev == 1) && (dp_rx_info[2] & 0x80)) {
+		dp_enhanced_frame_cap = 1;
+		fp_tx_buf[0] = 0x80 | glb_lane_cnt;
+		edp_dbg("Enhanced frame is enable!\n");
+	} else if (dp_rev == 2) {
 		dp_enhanced_frame_cap = 1;
 		fp_tx_buf[0] = 0x80 | glb_lane_cnt;
 		edp_dbg("Enhanced frame is enable!\n");
@@ -165,7 +253,7 @@ int dp_video_set(u32 sel, struct disp_video_timings *tmg, u32 fps,
 {
 	struct video_para para;
 	unsigned int dly, total_symbol_per_line;
-	unsigned int video_ht_symbol_per_lane, ht_ratio, ht_per_lane;
+	/*unsigned int video_ht_symbol_per_lane, ht_ratio, ht_per_lane;*/
 	int ret_val;
 
 	/*total_symbol_per_line = ((tmg->ht- tmg->ht/8) * 4 */
@@ -182,6 +270,7 @@ int dp_video_set(u32 sel, struct disp_video_timings *tmg, u32 fps,
 		total_symbol_per_line =
 		    ((tmg->hor_total_time) * (glb_bit_rate / 10)) / SRC_VIDEO;
 	}
+#if 0
 	/*TX Total Bit >= RX Total Bit*/
 	video_ht_symbol_per_lane =
 	    tmg->hor_total_time * (3 * COLOR_MODE) / (glb_lane_cnt * 10);
@@ -193,6 +282,7 @@ int dp_video_set(u32 sel, struct disp_video_timings *tmg, u32 fps,
 		edp_wrn("total_symbol_per_line is invalid!\n");
 		total_symbol_per_line = ht_per_lane;
 	}
+#endif
 
 	ret_val = para_convert(glb_lane_cnt, COLOR_MODE, total_symbol_per_line,
 			       tmg->hor_total_time, &para);
@@ -259,7 +349,7 @@ int dp_tps1_test(u32 sel, u32 swing_lv, u32 pre_lv, u8 is_swing_max,
 	int ret;
 
 	edp_hal_link_training_ctrl(sel, 1, 0, 1);
-	edp_hal_delay_ms(sel, 10);
+	mdelay(1);
 	phy_cfg(sel, swing_lv, pre_lv, 0);
 	to_cnt = TRAIN_CNT;
 
@@ -277,13 +367,15 @@ int dp_tps1_test(u32 sel, u32 swing_lv, u32 pre_lv, u8 is_swing_max,
 		if (ret != RET_OK)
 			return RET_FAIL;
 
-		edp_hal_delay_ms(sel, 30);
-		/*delay_us(training_aux_rd_interval_CR);  wait*/
-		/*for the training finish*/
+		/*wait for the training finish*/
+		udelay(training_aux_rd_interval_CR);
 
 		ret = aux_rd(sel, 0x0202, 2, fp_rx_buf);
 		if (ret == -1)
 			return RET_FAIL;
+#if EDP_BYPASS_CR_TRANNING == 1
+		return RET_OK;
+#endif
 
 		if (glb_lane_cnt == 1) {
 			if ((fp_rx_buf[0] & 0x01) == 0x01)
@@ -327,11 +419,12 @@ s32 dp_tps2_test(u32 sel, u32 swing_lv, u32 pre_lv, u8 is_swing_max,
 	u32 to_cnt;
 
 	edp_hal_link_training_ctrl(sel, 1, 0, 2);
-	edp_hal_delay_ms(sel, 10);
+	mdelay(1);
 	phy_cfg(sel, swing_lv, pre_lv, 0);
+	mdelay(1);
 
 	result = RET_FAIL;
-	to_cnt = TRAIN_CNT;
+	to_cnt = TRAIN_CNT + 1;
 
 	while (1) {
 		fp_tx_buf[0] = 0x22; /* set pattern 2 with scramble disable*/
@@ -345,15 +438,21 @@ s32 dp_tps2_test(u32 sel, u32 swing_lv, u32 pre_lv, u8 is_swing_max,
 		if (ret != RET_OK)
 			return RET_FAIL;
 
-		edp_hal_delay_ms(sel, 4);
-		/*edp_hal_delay_ms(training_aux_rd_interval_EQ);   wait*/
-		/*at least the period of time for the training finish*/
-		edp_hal_delay_ms(sel, 100);
+		/*wait for the training finish*/
+		if (training_aux_rd_interval_EQ > 1)
+			udelay(training_aux_rd_interval_EQ);
+		else
+			udelay(400);
+
 		ret = aux_rd(sel, 0x0202, 2,
 			     fp_rx_buf); /* Reading the link status bits */
 		if (ret != RET_OK)
 			return RET_FAIL;
 
+#if EDP_BYPASS_EQ_TRANNING == 1
+		result = 0;
+		goto tps2_end;
+#endif
 		/* DPCD Link Status Field ---
 		 * lANEX_CHANNEL_EQ_DOWN;LANEX_SYMBOL_LOCKED;
 		 * INTERLANE_ALIGN_DONE
@@ -412,7 +511,10 @@ tps2_end:
 	fp_tx_buf[5] = 0x00;  /* 107*/
 	fp_tx_buf[6] = 0x01;  /* 108*/
 	fp_tx_buf[7] = 0x00;  /* 109*/
-	fp_tx_buf[8] = 0x00;  /* 10a*/
+	if (eDP_capable)
+		fp_tx_buf[8] = 0x01;
+	else
+		fp_tx_buf[8] = 0x00;
 	fp_tx_buf[9] = 0x00;  /* 10b*/
 	fp_tx_buf[10] = 0x00; /* 10c*/
 	fp_tx_buf[11] = 0x00; /* 10d*/

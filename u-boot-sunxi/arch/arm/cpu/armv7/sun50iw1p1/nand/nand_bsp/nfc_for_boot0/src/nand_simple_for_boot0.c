@@ -562,24 +562,23 @@ __s32  PHY_ResetChip(__u32 nChip)
 
 	NFC_SelectChip(nChip);
 
-	_add_cmd_list(&cmd, 0xff, 0 , NFC_IGNORE, NFC_NO_DATA_FETCH, NFC_IGNORE, NFC_IGNORE, NFC_NO_WAIT_RB);
+	_add_cmd_list(&cmd, 0xff, 0, NFC_IGNORE, NFC_NO_DATA_FETCH,
+			NFC_IGNORE, NFC_IGNORE, NFC_NO_WAIT_RB);
 	ret = NFC_ResetChip(&cmd);
 
-      	/*wait rb0 ready*/
+	/*wait rb0 ready*/
 	NFC_SelectRb(0);
-	while((timeout--) && (NFC_CheckRbReady(0)));
+	while ((timeout--) && (NFC_CheckRbReady(0)));
 	if (timeout < 0)
 		return -ERR_TIMEOUT;
 
-      /*wait rb0 ready*/
+	/*wait rb0 ready*/
 	NFC_SelectRb(1);
-	while((timeout--) && (NFC_CheckRbReady(1)));
+	while ((timeout--) && (NFC_CheckRbReady(1)));
 	if (timeout < 0)
 		return -ERR_TIMEOUT;
 
 	NFC_DeSelectChip(nChip);
-
-
 
 	return ret;
 }

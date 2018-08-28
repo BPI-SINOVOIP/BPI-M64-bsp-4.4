@@ -32,6 +32,11 @@
 #define HDMI900_540         (3+0x110)
 #define HDMI1920_720        (4 + 0x110)
 
+#define HDMI_DT0             (0 + 0x120)
+#define HDMI_DT1             (1 + 0x120)
+#define HDMI_DT2             (2 + 0x120)
+#define HDMI_DT3             (3 + 0x120)
+
 #define HDMI_State_Idle 			 0x00
 #define HDMI_State_Wait_Hpd			 0x02
 #define HDMI_State_Rx_Sense			 0x03
@@ -65,6 +70,7 @@ typedef struct audio_timing
     s32   CH_STATUS1;
 }HDMI_AUDIO_INFO;
 
+extern s32 hdmi_get_work_mode(void);
 extern s32 hdmi_core_initial(bool sw_only);
 extern void hdmi_core_exit(void);
 extern void hdmi_core_set_base_addr(uintptr_t base_addr);
@@ -105,6 +111,6 @@ extern void hdmi_delay_ms(unsigned long ms);
 extern void hdmi_delay_us(unsigned long us);
 extern unsigned int hdmi_get_soc_version(void);
 extern unsigned int hdmi_clk_get_div(void);
-
+s32 hdmi_core_get_supported_vic(int init_vic);
 #endif
 

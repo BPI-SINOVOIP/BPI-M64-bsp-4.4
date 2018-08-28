@@ -3,6 +3,8 @@
 
 #include <config.h>
 
+//tone addr
+#define CONFIG_TONE_STORE_IN_DRAM_BASE   (CONFIG_SYS_TEXT_BASE + 2*1024*1024 + 512*1024)
 //dtb addr
 #define CONFIG_DTB_STORE_IN_DRAM_BASE   (CONFIG_SYS_TEXT_BASE + 2*1024*1024)
 //soccfg addr
@@ -19,3 +21,4 @@
 #endif
 
 #endif /*__SUNXI_CFG_H__*/
+

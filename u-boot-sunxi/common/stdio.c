@@ -96,7 +96,7 @@ struct list_head* stdio_get_list(void)
 
 struct stdio_dev* stdio_get_by_name(const char *name)
 {
-	struct list_head *pos;
+	struct list_head *pos = NULL;
 	struct stdio_dev *dev;
 
 	if(!name)
@@ -146,7 +146,7 @@ int stdio_register (struct stdio_dev * dev)
 int stdio_deregister(const char *devname)
 {
 	int l;
-	struct list_head *pos;
+	struct list_head *pos = NULL;
 	struct stdio_dev *dev;
 	char temp_names[3][16];
 
@@ -197,7 +197,9 @@ int stdio_init (void)
 	INIT_LIST_HEAD(&(devs.list));
 
 #ifdef CONFIG_SYS_I2C
+#ifndef CONFIG_ARCH_SUN8IW17P1
 	i2c_init_all();
+#endif
 #else
 #if defined(CONFIG_HARD_I2C)
 	i2c_init (CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
