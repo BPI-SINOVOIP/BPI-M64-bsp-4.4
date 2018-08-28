@@ -134,7 +134,7 @@
 #define CONFIG_SUNXI_ARISC_EXIST
 #define CONFIG_SUNXI_MULITCORE_BOOT
 //#define CONFIG_SUNXI_HDCP_IN_SECURESTORAGE
-#define CONFIG_GPT_SUPPORT
+/* #define CONFIG_GPT_SUPPORT               bpi, disable */
 #ifdef CONFIG_GPT_SUPPORT
 #define CONFIG_SUNXI_GPT
 #define CONFIG_EFI_PARTITION
@@ -142,7 +142,7 @@
 #endif
 
 /* default is 8M */
-#define CONFIG_SYS_BOOTM_LEN 20 * 1024 * 1024//0x1000000
+#define CONFIG_SYS_BOOTM_LEN 	20 * 1024 * 1024  /* bpi increate to 20M, 0x1000000 */
 
 #define CONFIG_OPTEE25
 #define CONFIG_WIDEVINE_KEY_INSTALL
@@ -166,6 +166,7 @@
 #define CONFIG_CMD_SUNXI_MEMTEST
 #endif
 
+#define CONFIG_CMD_ECHO          /* bpi, enable */
 #define CONFIG_CMD_FAT			/* with this we can access bootfs in nand */
 #define CONFIG_CMD_BOOTA		/* boot android image */
 #define CONFIG_CMD_RUN			/* run a command */
@@ -306,8 +307,9 @@
 /* get param from secure storage to cmdline */
 #define CONFIG_SUNXI_USER_KEY
 
-//#define CONFIG_BOARD_ID_GPIO
-//#define CONFIG_BOARD_ID_GPIO_MAX_NUM  2
+/* bpi, enable */
+#define CONFIG_BOARD_ID_GPIO
+#define CONFIG_BOARD_ID_GPIO_MAX_NUM  2
 
 #ifndef CONFIG_BOARD_ID_GPIO
 #define CONFIG_SUNXI_MOZART

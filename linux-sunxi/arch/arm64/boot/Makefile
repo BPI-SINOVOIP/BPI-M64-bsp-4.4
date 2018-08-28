@@ -37,6 +37,8 @@ $(obj)/Image-dtb: $(obj)/Image $(DTB_OBJS) FORCE
 
 $(obj)/Image.gz: $(obj)/Image FORCE
 	$(call if_changed,gzip)
+	# bpi, create uImage
+	mkimage -A arm64 -O linux -T kernel -C  gzip -a  0x40080000 -e  0x40080000 -n 'AARCH64 Banana Pi Linux-4.4.89' -d $(obj)/Image.gz $(obj)/uImage
 
 $(obj)/Image.lz4: $(obj)/Image FORCE
 	$(call if_changed,lz4)
