@@ -270,7 +270,7 @@ uart1_rts        = port:PG8<2><1><default><default>
 uart1_cts        = port:PG9<2><1><default><default>
 
 [uart2]
-uart2_used       = 0
+uart2_used       = 1
 uart2_port       = 2
 uart2_type       = 4
 uart2_tx         = port:PB0<2><1><default><default>
@@ -309,7 +309,7 @@ spi0_mosi       = port:PC0<4><default><default><default>
 spi0_miso       = port:PC1<4><default><default><default>
 
 [spi1]
-spi1_used       = 0
+spi1_used       = 1
 spi1_cs_number  = 1
 spi1_cs_bitmap  = 1
 spi1_cs0        = port:PD0<4><1><default><default>
@@ -352,10 +352,10 @@ rtp_exchange_x_y_flag = 0
 ;----------------------------------------------------------------------------------
 [ctp]
 compatible	    = "allwinner,sun50i-ctp-para"
-ctp_used            = 1
-ctp_name	    = "ft5x_ts"
+ctp_used            = 0
+ctp_name	    = "bpi_lcd7"
 ctp_twi_id          = 0
-ctp_twi_addr        = 0x38
+ctp_twi_addr        = 0x5d
 ctp_screen_max_x    = 800
 ctp_screen_max_y    = 480
 ctp_revert_x_flag   = 0
@@ -363,8 +363,8 @@ ctp_revert_y_flag   = 0
 ctp_exchange_x_y_flag = 0
 
 ctp_int_port        = port:PH04<6><default><default><default>
-ctp_wakeup          = port:PH08<1><default><default><1>
-ctp_power_ldo       = "vcc-ctp"
+ctp_wakeup          = port:PH08<1><default><default><default>
+ctp_power_ldo       = ""
 ctp_power_ldo_vol   = 3300
 ctp_power_io        =
 
@@ -375,14 +375,14 @@ ctp_power_io        =
 ;--------------------------------------------------------------------------------
 [ctp_list]
 compatible		  = "allwinner,sun50i-ctp-list"
-ctp_list_used		  = 1
+ctp_list_used         	  = 1
+ft5x16_ts                 = 1
 gslX680new		  = 0
 gt9xx_ts                  = 0
 gt9xxnew_ts		  = 0
 gt82x                     = 0
 zet622x                   = 0
 aw5306_ts                 = 0
-ft5x                      = 1
 
 ;----------------------------------------------------------------------------------
 ;touch key configuration
@@ -539,16 +539,18 @@ lcd_gamma_en        = 0
 lcd_bright_curve_en = 0
 lcd_cmap_en         = 0
 
-lcd_bl_en           = port:PD5<1><0><2><1>
-lcd_bl_en_power     = "none"
-lcd_power           = "vcc-lcd"
-lcd_power1          = "vcc-dsi-33"
-;lcd_power2	    = "vcc-pd"
-;lcd_fix_power       = "vcc-dsi-33"
+;rst
+lcd_gpio_0          = port:PD6<1><0><default><1>
+
+;power enable
+lcd_gpio_1          = port:PD7<1><0><default><1>
+lcd_bl_en           = port:PD5<1><0><default><1>
+
+lcd_power     = "vcc-dsi-33"
+;lcd_power1    = "vcc-lcd"
+;lcd_fix_power = "vcc-dsi-33"
 lcd_pin_power = "vcc-pd"
-lcd_gpio_0	= port:PD6<1><0><2><1>
-lcd_gpio_1	= port:PD7<1><0><2><1>
-;lcd_io_regulator1   = "vcc-pd"
+
 
 [hdmi]
 hdmi_used = 1
@@ -949,7 +951,7 @@ sc7a30                    = 0
 [wlan]
 wlan_used           = 1
 wlan_busnum         = 1
-;clocks              =
+clocks              = "losc_out"
 wlan_power_enable   = 
 wlan_power_num      = 1
 wlan_power1         = "vcc-wifi"
@@ -969,7 +971,7 @@ wlan_hostwake       = port:PL03<6><default><default><0>
 ;--------------------------------------------------------------------------------
 [bt]
 bt_used             = 1
-;clocks              =
+clocks              = "losc_out"
 bt_power_num        = 1
 bt_power1           = "vcc-wifi"
 bt_power2           = 

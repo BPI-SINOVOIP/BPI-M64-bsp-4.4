@@ -270,7 +270,7 @@ uart1_rts        = port:PG8<2><1><default><default>
 uart1_cts        = port:PG9<2><1><default><default>
 
 [uart2]
-uart2_used       = 0
+uart2_used       = 1
 uart2_port       = 2
 uart2_type       = 4
 uart2_tx         = port:PB0<2><1><default><default>
@@ -309,7 +309,7 @@ spi0_mosi       = port:PC0<4><default><default><default>
 spi0_miso       = port:PC1<4><default><default><default>
 
 [spi1]
-spi1_used       = 0
+spi1_used       = 1
 spi1_cs_number  = 1
 spi1_cs_bitmap  = 1
 spi1_cs0        = port:PD0<4><1><default><default>
@@ -951,7 +951,7 @@ sc7a30                    = 0
 [wlan]
 wlan_used           = 1
 wlan_busnum         = 1
-;clocks              =
+clocks              = "losc_out"
 wlan_power_enable   = 
 wlan_power_num      = 1
 wlan_power1         = "vcc-wifi"
@@ -971,7 +971,7 @@ wlan_hostwake       = port:PL03<6><default><default><0>
 ;--------------------------------------------------------------------------------
 [bt]
 bt_used             = 1
-;clocks              =
+clocks              = "losc_out"
 bt_power_num        = 1
 bt_power1           = "vcc-wifi"
 bt_power2           = 
