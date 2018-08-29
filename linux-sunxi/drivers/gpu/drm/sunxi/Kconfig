@@ -4,15 +4,16 @@ menuconfig DRM_SUNXI
     select DRM_KMS_HELPER
     help
       Choose this for Allwintertech  A64 R18 and others.
+
 config DRM_SUNXI_ROTATER
-    tristate "DRM SUNXI ROTATER"
-	bool "Support the sunxi rotate device"
+    bool "Support the sunxi rotate device"
+    depends on DRM_SUNXI
     help
       use sunxi drm rotater.
 
 config DRM_SUNXI_HDMI
-    tristate "DRM SUNXI HD
-	bool "Support the sunxi hdmi device"
+    bool "Support the sunxi hdmi device"
+    depends on DRM_SUNXI
     help
       support sunxi drm hdmi.
 

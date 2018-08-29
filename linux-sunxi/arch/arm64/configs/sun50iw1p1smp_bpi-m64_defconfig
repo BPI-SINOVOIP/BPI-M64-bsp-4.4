@@ -1726,6 +1726,11 @@ CONFIG_BCMDHD_NVRAM_PATH="/lib/firmware/ap6212/nvram.txt"
 CONFIG_BCMDHD_SDIO=y
 CONFIG_BCMDHD_OOB=y
 # CONFIG_BCMDHD_SDIO_IRQ is not set
+
+#
+# Qualcomm Atheros CLD WLAN module
+#
+# CONFIG_QCA_CLD_WLAN is not set
 # CONFIG_BRCMSMAC is not set
 # CONFIG_BRCMFMAC is not set
 # CONFIG_HOSTAP is not set
@@ -1735,11 +1740,7 @@ CONFIG_BCMDHD_OOB=y
 # CONFIG_WL_MEDIATEK is not set
 # CONFIG_RTL_CARDS is not set
 # CONFIG_RTL8XXXU is not set
-CONFIG_WL_TI=y
-# CONFIG_WL1251 is not set
-# CONFIG_WL12XX is not set
-# CONFIG_WL18XX is not set
-# CONFIG_WLCORE is not set
+# CONFIG_WL_TI is not set
 # CONFIG_ZD1211RW is not set
 # CONFIG_MWIFIEX is not set
 # CONFIG_CW1200 is not set
@@ -1747,6 +1748,7 @@ CONFIG_WL_TI=y
 # CONFIG_RTL8723CS is not set
 # CONFIG_RTL8723BS_VQ0 is not set
 CONFIG_RTL8723BU=m
+# CONFIG_XR_WLAN is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
@@ -1920,6 +1922,7 @@ CONFIG_TOUCHSCREEN_USB_EASYTOUCH=y
 # CONFIG_TOUCHSCREEN_GSLX680NEW is not set
 CONFIG_TOUCHSCREEN_FT5X16_TS=m
 CONFIG_TOUCHSCREEN_GT9XX=m
+# CONFIG_TOUCHSCREEN_FTS is not set
 CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_AD714X is not set
 # CONFIG_INPUT_BMA150 is not set
@@ -2833,8 +2836,6 @@ CONFIG_VIDEO_GOOGLE_VP9_DECODER_SUNXI=y
 #
 CONFIG_SUNXI_GPU_TYPE="None"
 # CONFIG_DRM is not set
-# CONFIG_DRM_SUNXI_ROTATER is not set
-# CONFIG_DRM_SUNXI_HDMI is not set
 
 #
 # Frame buffer Devices
