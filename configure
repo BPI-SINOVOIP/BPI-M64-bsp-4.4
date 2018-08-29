@@ -14,7 +14,8 @@ TARGET_PRODUCT="tulip-m64"
 
 CUR_DIR=$PWD
 CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-linaro/bin
-NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/toolchain-sunxi-musl/bin
+#NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/toolchain-sunxi-musl/bin
+NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-aarch64/bin
 
 list_boards() {
 	(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI* )
