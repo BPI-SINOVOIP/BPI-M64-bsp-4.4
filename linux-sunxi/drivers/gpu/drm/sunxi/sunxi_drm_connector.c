@@ -251,7 +251,8 @@ sunxi_drm_connector_detect(struct drm_connector *connector, bool force)
 void sunxi_chain_enable(struct drm_connector *connector,
 	enum chain_bit_mask id)
 {
-
+	pr_info("%s\n", __func__);	
+	
 	struct drm_encoder *encoder;
 	struct sunxi_drm_encoder *sunxi_enc;
 	struct sunxi_hardware_res *hw_res;
