@@ -8,7 +8,9 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/backlight.h>
 #include "disp_lcd.h"
+#include "../dev_disp.h"
 
 struct disp_lcd_private_data {
 	struct disp_lcd_flow open_flow;
@@ -43,6 +45,7 @@ struct disp_lcd_private_data {
 	struct clk *dsi_clk[CLK_DSI_NUM];
 	struct clk *edp_clk;
 	struct clk *clk_parent;
+	struct backlight_device *backlight;
 };
 static spinlock_t lcd_data_lock;
 
@@ -2121,6 +2124,44 @@ static s32 disp_lcd_get_fps(struct disp_device *lcd)
 	return lcdp->frame_per_sec;
 }
 
+static int sunxi_update_bl(struct backlight_device *bdev)
+{
+	struct disp_device *disp = bl_get_data(bdev);
+	int brightness = bdev->props.brightness;
+
+	if (bdev->props.power != FB_BLANK_UNBLANK ||
+			bdev->props.state & (BL_CORE_SUSPENDED | BL_CORE_FBBLANK))
+		brightness = 0;
+
+	int ret = disp_lcd_set_bright(disp, brightness);
+
+	if (bdev->props.power != FB_BLANK_UNBLANK)
+		disp_lcd_backlight_disable(disp);
+	else
+		disp_lcd_backlight_enable(disp);
+
+	return ret;
+}
+static int sunxi_get_brightness(struct backlight_device *bdev)
+{
+	struct disp_device *disp = bl_get_data(bdev);
+	return disp_lcd_get_bright(disp);
+}
+
+static int sunxi_check_fb(struct backlight_device *bdev,
+				   struct fb_info *info)
+{
+	return 1;
+}
+
+static struct backlight_ops sunxi_bl_ops = {
+	.options	= BL_CORE_SUSPENDRESUME,
+	.update_status	= sunxi_update_bl,
+	.get_brightness	= sunxi_get_brightness,
+	.check_fb	= sunxi_check_fb,
+};
+
+
 static s32 disp_lcd_init(struct disp_device *lcd)
 {
 	struct disp_lcd_private_data *lcdp = disp_lcd_get_priv(lcd);
@@ -2197,6 +2238,16 @@ static s32 disp_lcd_init(struct disp_device *lcd)
 						  lcdp->pwm_info.polarity);
 			lcdp->pwm_info.duty_ns = duty_ns;
 			lcdp->pwm_info.period_ns = period_ns;
+
+			lcdp->backlight = backlight_device_register(lcd->name, g_disp_drv.dev, lcd, &sunxi_bl_ops, NULL);
+			if (IS_ERR(lcdp->backlight)) {
+     			dev_err(g_disp_drv.dev, "unable to register backlight device: %ld\n",
+     			PTR_ERR(lcdp->backlight));
+     		} else {
+       			lcdp->backlight->props.max_brightness = 255;
+				lcdp->backlight->props.brightness = disp_lcd_get_bright(lcd);
+      			backlight_update_status(lcdp->backlight);
+       		}
 		}
 		lcd_clk_init(lcd);
 	}
@@ -2224,6 +2275,11 @@ static s32 disp_lcd_exit(struct disp_device *lcd)
 		DE_WRN("NULL hdl!\n");
 		return DIS_FAIL;
 	}
+
+	if (lcdp->backlight) {
+   		backlight_device_unregister(lcdp->backlight);
+		lcdp->backlight = NULL;
+   	}
 
 	lcd_clk_exit(lcd);
 
