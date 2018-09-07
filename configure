@@ -13,9 +13,8 @@ TARGET_PLATFORM="tulip"
 TARGET_PRODUCT="tulip-m64"
 
 CUR_DIR=$PWD
-CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-linaro/bin
-#NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/toolchain-sunxi-musl/bin
-NEW_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-aarch64/bin
+U_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-linaro/bin
+K_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-aarch64/bin
 
 list_boards() {
 	(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI* )
@@ -29,8 +28,8 @@ generate_board_mk() {
 	BOARD=$BOARD
 	SOC=$SOC
 	MACH=$MACH
-	COMPILE_TOOL=$CROSS_COMPILE
-	NEW_COMPILE_TOOL=$NEW_CROSS_COMPILE
+	U_COMPILE_TOOL=$U_CROSS_COMPILE
+	K_COMPILE_TOOL=$K_CROSS_COMPILE
 	UBOOT_CONFIG=$MACH
 	KERNEL_CONFIG=${MACH}smp_${board}_defconfig
 	TARGET_PLATFORM=${TARGET_PLATFORM}
@@ -48,7 +47,6 @@ generate_board_envsh() {
 	export BOARD=$BOARD
 	export SOC=$SOC
 	export MACH=$MACH
-	export CROSS_COMPILE=arm-linux-gnueabihf-
 	export UBOOT_CONFIG=${MACH}_config
 	export KERNEL_CONFIG=${MACH}smp_${board}_defconfig
 	export LICHEE_PLATFORM="linux"

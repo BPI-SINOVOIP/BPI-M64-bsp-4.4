@@ -5,19 +5,8 @@
 include chosen_board.mk
 
 SUDO=sudo
-#CROSS_COMPILE=$(COMPILE_TOOL)/arm-linux-gnueabi-
-#CROSS_COMPILE=arm-linux-gnueabi-
-CROSS_COMPILE=arm-linux-gnueabihf-
-NEW_CROSS_COMPILE=$(NEW_COMPILE_TOOL)/aarch64-linux-gnu-
-#NEW_CROSS_COMPILE=arm-linux-gnueabihf-
-U_CROSS_COMPILE=$(CROSS_COMPILE)
-#U_CROSS_COMPILE=$(NEW_CROSS_COMPILE)
-K_CROSS_COMPILE=$(NEW_CROSS_COMPILE)
-
-OUTPUT_DIR=$(CURDIR)/output
-
-U_CONFIG_H=$(U_O_PATH)/include/config.h
-K_DOT_CONFIG=$(K_O_PATH)/.config
+U_CROSS_COMPILE=$(U_COMPILE_TOOL)/arm-linux-gnueabi-
+K_CROSS_COMPILE=$(K_COMPILE_TOOL)/aarch64-linux-gnu-
 
 LICHEE_KDIR=$(CURDIR)/linux-sunxi
 LICHEE_MOD_DIR=$(LICHEE_KDIR)/output/lib/modules/4.4.89-BPI-M64-Kernel
@@ -31,15 +20,12 @@ bsp: u-boot kernel
 
 
 # u-boot
-
 u-boot: 
-#	./build_uboot.sh
-	./build-uboot.sh config $(MACH)
-	./build-uboot.sh
+	$(Q)$(MAKE) -C u-boot-sunxi $(MACH)_config CROSS_COMPILE=$(U_CROSS_COMPILE) -j$J
+	$(Q)$(MAKE) -C u-boot-sunxi all CROSS_COMPILE=$(U_CROSS_COMPILE) -j$J
 
 u-boot-clean:
-#	$(Q)$(MAKE) -C u-boot-sunxi CROSS_COMPILE=$(U_CROSS_COMPILE) -j$J distclean
-	rm -rf u-boot-sunxi/out
+	$(Q)$(MAKE) -C u-boot-sunxi CROSS_COMPILE=$(U_CROSS_COMPILE) -j$J distclean
 
 ## linux
 $(K_DOT_CONFIG): linux-sunxi
