@@ -1,6 +1,9 @@
 #include "disp_hdmi.h"
 
 #if defined(SUPPORT_HDMI)
+
+#define PWM_POWER_STR_LEN 32
+
 struct disp_device_private_data {
 	u32 enabled;
 	bool hpd;
@@ -19,6 +22,21 @@ struct disp_device_private_data {
 
 	struct clk *clk;
 	struct clk *clk_parent;
+
+	bool					pwm_bl_used;
+	struct {
+		uintptr_t               dev;
+		u32                     channel;
+		u32                     polarity;
+		u32                     period_ns;
+		u32                     duty_ns;
+		u32                     enabled;
+	}pwm_info;
+
+	disp_gpio_set_t       pwm_bl_en;
+	u32					  pwm_bl_hdl;
+	char                  pwm_bl_en_power[PWM_POWER_STR_LEN];
+	__u64				  pwm_dft_brightness;
 };
 
 static u32 hdmi_used = 0;
@@ -299,6 +317,107 @@ static s32 disp_hdmi_event_proc(void *parg)
 	return DISP_IRQ_RETURN;
 }
 
+static s32 disp_pwm_bl_enable(struct disp_device* hdmi)
+{
+	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
+	u32 duty_ns;
+	__u64 backlight_dimming = 256;
+	__u64 period_ns;
+
+	period_ns = hdmip->pwm_info.period_ns;
+	duty_ns = (hdmip->pwm_dft_brightness * backlight_dimming *  period_ns/256 + 128) / 256;
+	hdmip->pwm_info.duty_ns = duty_ns;
+
+	disp_sys_power_enable(hdmip->pwm_bl_en_power);
+	disp_sys_gpio_set_value(hdmip->pwm_bl_hdl, 1, "bl_enable");
+	disp_sys_pwm_config(hdmip->pwm_info.dev, duty_ns, period_ns);
+	disp_sys_pwm_enable(hdmip->pwm_info.dev);
+
+	return 0;
+}
+
+static s32 disp_pwm_bl_init(struct disp_device*  hdmi)
+{
+	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
+	disp_gpio_set_t  *gpio_info;
+	int  value = 1;
+	__u64 backlight_bright = 0;
+	__u64 period_ns, duty_ns;
+	u32 pwm_ch = 0;
+	u32 pwm_pol = 0;
+	u32 pwm_freq = 0;
+	int ret;
+
+	/* pwm bl used */
+	ret = disp_sys_script_get_item("backlight", "backlight_used", &value, 1);
+    if (ret == 1)
+    {
+        hdmip->pwm_bl_used = value;
+    }
+
+    if (hdmip->pwm_bl_used == 0)
+    {
+    	printf("pwm backlight not used\n");
+        return 0;
+    }
+
+	/* pwm ch */
+	ret = disp_sys_script_get_item("backlight", "pwm_ch", &value, 1);
+	if (ret == 1) {
+		pwm_ch = value;
+	} 
+
+	/* pwm pol */
+	ret = disp_sys_script_get_item("backlight", "pwm_pol", &value, 1);
+	if (ret == 1) {
+		pwm_pol = value;
+	}
+
+	/* pwm freq */
+	ret = disp_sys_script_get_item("backlight", "pwm_freq", &value, 1);
+	if (ret == 1) {
+		pwm_freq = value;
+	}
+
+	/* pwm default brightness */
+	ret = disp_sys_script_get_item("backlight", "dft_brightness", &value, 1);
+	if (ret == 1) {
+		backlight_bright = value;
+	}
+	
+	/* pwm bl enable gpio */
+	gpio_info = &(hdmip->pwm_bl_en);
+	ret = disp_sys_script_get_item("backlight", "bl_enable", (int *)gpio_info, 3);
+	if (ret == 3)
+	{
+		gpio_info->data = 0;
+		gpio_info->mul_sel = 1;
+		hdmip->pwm_bl_hdl = disp_sys_gpio_request(gpio_info, 1);
+	}
+
+	/* pwm bl regulator */
+	ret = disp_sys_script_get_item("backlight", "power_name", (int *)hdmip->pwm_bl_en_power, 2);
+	
+	/* pwm init */
+	hdmip->pwm_info.channel = pwm_ch;
+	hdmip->pwm_info.polarity = pwm_pol;
+	hdmip->pwm_dft_brightness = backlight_bright;
+	hdmip->pwm_info.dev = disp_sys_pwm_request(pwm_ch);
+
+	period_ns = 1000*1000*1000 / pwm_freq;
+	duty_ns = (backlight_bright * period_ns) / 256;
+	
+	printf("[PWM-%d]pwm_pol=%d, pwm_freq=%d, backlight_bright=%d, period_ns=%d, duty_ns=%d\n",
+		pwm_ch, pwm_pol, pwm_freq, (u32)backlight_bright, (u32)period_ns, (u32)duty_ns);
+	
+	disp_sys_pwm_set_polarity(hdmip->pwm_info.dev, hdmip->pwm_info.polarity);
+	disp_sys_pwm_config(hdmip->pwm_info.dev, duty_ns, period_ns);
+	hdmip->pwm_info.duty_ns = duty_ns;
+	hdmip->pwm_info.period_ns = period_ns;
+
+	return 0;
+}
+
 static s32 disp_hdmi_init(struct disp_device*  hdmi)
 {
 	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
@@ -309,6 +428,7 @@ static s32 disp_hdmi_init(struct disp_device*  hdmi)
 	}
 
 	hdmi_clk_init(hdmi);
+	disp_pwm_bl_init(hdmi);
 	return 0;
 }
 
@@ -332,6 +452,8 @@ s32 disp_hdmi_enable(struct disp_device* hdmi)
 	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
 	struct disp_manager *mgr = NULL;
 	int ret;
+
+	printf("disp_hdmi_enable\n");
 
 	if ((NULL == hdmi) || (NULL == hdmip)) {
 		DE_WRN("hdmi set func null  hdl!\n");
@@ -389,6 +511,9 @@ s32 disp_hdmi_enable(struct disp_device* hdmi)
 	spin_lock_irqsave(&hdmi_data_lock, flags);
 	hdmip->enabled = 1;
 	spin_unlock_irqrestore(&hdmi_data_lock, flags);
+
+	if (hdmip->pwm_bl_used)
+		disp_pwm_bl_enable(hdmi);
 
 exit:
 	mutex_unlock(&hdmi_mlock);

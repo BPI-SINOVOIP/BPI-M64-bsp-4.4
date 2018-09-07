@@ -551,6 +551,15 @@ lcd_power     = "vcc-dsi-33"
 ;lcd_fix_power = "vcc-dsi-33"
 lcd_pin_power = "vcc-pd"
 
+[backlight]
+backlight_used  = 0
+pwm_ch		= 16
+pwm_pol         = 1
+pwm_freq	= 50000
+dft_brightness  = 150
+lth_brightness  = 50
+power_name	= "vcc-pd"
+bl_enable 	= port:PD5<1><0><default><0>
 
 [hdmi]
 hdmi_used = 1

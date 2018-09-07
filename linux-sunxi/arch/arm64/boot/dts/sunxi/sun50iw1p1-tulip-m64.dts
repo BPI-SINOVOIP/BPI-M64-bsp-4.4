@@ -36,4 +36,11 @@
 		status = "okay";
 	};
 
+	backlight:backlight {
+		compatible = "pwm-backlight";
+		/* pwms = <&s_pwm 0 50000>; */
+		/* brightness-levels = <0 4 8 16 32 64 128 255>; */
+		/* default_brightness_level = <6>; */
+	};
+
 };
