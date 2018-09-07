@@ -27,11 +27,8 @@ u-boot:
 u-boot-clean:
 	$(Q)$(MAKE) -C u-boot-sunxi CROSS_COMPILE=$(U_CROSS_COMPILE) -j$J distclean
 
-## linux
-$(K_DOT_CONFIG): linux-sunxi
+kernel: 
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 $(KERNEL_CONFIG)
-
-kernel: $(K_DOT_CONFIG)
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output Image.gz dtbs
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules
 	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 TARGET_PLATFORM="" KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0
@@ -44,13 +41,15 @@ kernel-clean:
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J distclean
 	rm -rf linux-sunxi/output/
 
-kernel-config: $(K_DOT_CONFIG)
+kernel-config:
+	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 $(KERNEL_CONFIG)
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J menuconfig
 	cp linux-sunxi/.config linux-sunxi/arch/arm64/configs/$(KERNEL_CONFIG)
 
 ## clean all build
 clean: u-boot-clean kernel-clean
 	rm -f chosen_board.mk
+	rm -f env.sh
 
 ## pack download files
 pack: sunxi-pack
