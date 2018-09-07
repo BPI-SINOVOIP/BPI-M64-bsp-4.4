@@ -34,7 +34,7 @@ kernel:
 	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 TARGET_PLATFORM="" KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules_install
 #	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J headers_install
-#	$(Q)scripts/install_kernel_headers.sh
+	$(Q)scripts/install_kernel_headers.sh
 
 kernel-clean:
 	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 TARGET_PLATFORM="" KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0 clean

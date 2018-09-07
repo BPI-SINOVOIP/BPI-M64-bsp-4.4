@@ -29,7 +29,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 LINUX_ARCH=arm64
-CROSS_COMPILE=$TOPDIR/toolchain/external-toolchain/gcc-aarch64/bin/aarch64-linux-gnu-
+CROSS_COMPILE=$TOPDIR/allwinner-tools/gcc-aarch64/bin/aarch64-linux-gnu-
 
 cd $LINUX
 
@@ -55,7 +55,7 @@ find "$TARGET/scripts" -type f | while read i; do if file -b $i | egrep -q "^ELF
 (cd scripts && ${CROSS_COMPILE}gcc kallsyms.c -o "$TARGET/scripts/kallsyms")
 (cd scripts && ${CROSS_COMPILE}gcc pnmtologo.c -o "$TARGET/scripts/pnmtologo")
 (cd scripts && ${CROSS_COMPILE}gcc conmakehash.c -o "$TARGET/scripts/conmakehash")
-(cd scripts && ${CROSS_COMPILE}gcc bin2c.c -o "$TARGET/scripts/bin2c")
+(cd scripts && ${CROSS_COMPILE}gcc basic/bin2c.c -o "$TARGET/scripts/basic/bin2c")
 (cd scripts && ${CROSS_COMPILE}gcc recordmcount.c -o "$TARGET/scripts/recordmcount")
 (cd scripts && ${CROSS_COMPILE}gcc -I../tools/include sortextable.c -o "$TARGET/scripts/sortextable")
 (cd scripts && ${CROSS_COMPILE}gcc unifdef.c -o "$TARGET/scripts/unifdef")
@@ -64,7 +64,7 @@ find "$TARGET/scripts" -type f | while read i; do if file -b $i | egrep -q "^ELF
 (cd scripts/mod && ${CROSS_COMPILE}gcc mk_elfconfig.c -o "$TARGET/scripts/mod/mk_elfconfig")
 (cd scripts/genksyms && ${CROSS_COMPILE}gcc genksyms.c parse.tab.c lex.lex.c -o "$TARGET/scripts/genksyms/genksyms")
 
-find arch/$LINUX_ARCH/include   \
+find arch/*/include   \
                -print | cpio -pdL --preserve-modification-time "$TARGET";
 
 mkdir -p "$TARGET/arch/um"
@@ -73,5 +73,11 @@ mkdir -p "$TARGET/arch/$LINUX_ARCH/kernel"
 cp -a arch/$LINUX_ARCH/kernel/asm-offsets.s "$TARGET/arch/$LINUX_ARCH/kernel"
 rm -f "$TARGET/include/linux/version.h"
 cp -a .config "$TARGET/"
+
+# link source for module build
+rm $DEST/lib/modules/$VERSION/build
+rm $DEST/lib/modules/$VERSION/source
+ln -sf "/usr/src/linux-headers-$VERSION" "$DEST/lib/modules/$VERSION/build"
+ln -sf "/usr/src/linux-headers-$VERSION" "$DEST/lib/modules/$VERSION/source"
 
 echo "Done - installed Kernel headers to $DEST"

@@ -48,9 +48,14 @@ R="${SD}/BPI-ROOT"
 	#
 	mkdir -p $R/usr/lib/u-boot/bananapi/${board}
 	cp -a $U/*.gz $R/usr/lib/u-boot/bananapi/${board}/
+	## modules
 	rm -rf $R/lib/modules
 	mkdir -p $R/lib/modules
 	cp -a $T/linux-sunxi/output/lib/modules/${kernel} $R/lib/modules
+	## headers
+	rm -rf $R/usr/src
+	mkdir -p $R/usr/src
+	cp -a $T/linux-sunxi/output/usr/src/${headers} $R/usr/src/
 	#
 	## create files for bpi-tools & bpi-migrate
 	#
@@ -62,6 +67,7 @@ R="${SD}/BPI-ROOT"
 	(cd $R ; mv lib/modules/${kernel}/kernel/net $R/net)
 	(cd $R ; tar czvf $SD/${kernel}.tgz lib/modules)
 	(cd $R ; mv $R/net lib/modules/${kernel}/kernel/net)
+	(cd $R ; tar czvf $SD/${headers}.tgz usr/src/${headers})
 	# BPI-ROOT: BOOTLOADER
 	(cd $R ; tar czvf $SD/BOOTLOADER-${board}-linux4.4.tgz usr/lib/u-boot/bananapi)
 
@@ -118,6 +124,7 @@ case $BOARD in
   BPI-M64*)
     board="bpi-m64"
     kernel="4.4.89-BPI-M64-Kernel"
+    headers="linux-headers-4.4.89-BPI-M64-Kernel"
     TARGET_PLATFORM="tulip"
     TARGET_PRODUCT="tulip-m64"
     BOOT_PACK_P=$T/sunxi-pack/allwinner/${TARGET_PRODUCT}/configs/default/linux4.4
