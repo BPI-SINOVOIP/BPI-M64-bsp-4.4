@@ -29,7 +29,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 LINUX_ARCH=arm64
-CROSS_COMPILE=$TOPDIR/allwinner-tools/gcc-aarch64/bin/aarch64-linux-gnu-
+CROSS_COMPILE=$1
 
 cd $LINUX
 
@@ -45,10 +45,11 @@ make ARCH=$LINUX_ARCH CROSS_COMPILE=$CROSS_COMPILE headers_install INSTALL_HDR_P
 
 tar cfh - include | (cd "$TARGET"; umask 000; tar xsf -)
 tar cfh - scripts | (cd "$TARGET"; umask 000; tar xsf -)
-find . -path './scripts/*'   -prune -o -path './Documentation/*' -prune -o  \
-               -path './debian/*'    -prune -o -type f                      \
-               \( -name Makefile -o  -name 'Kconfig*' \) -print  |          \
-                  cpio -pd --preserve-modification-time "$TARGET";
+find . -path './scripts/*'   -prune -o \
+       -path './Documentation/*' -prune -o  \
+       -path './output/*'    -prune -o -type f  \
+       \( -name Makefile -o  -name 'Kconfig*' \) -print  | \
+       cpio -pd --preserve-modification-time "$TARGET";
 
 # Clean compile host executables and replace some with target arch.
 find "$TARGET/scripts" -type f | while read i; do if file -b $i | egrep -q "^ELF.*executable"; then rm "$i"; fi; done
