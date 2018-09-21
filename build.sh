@@ -4,7 +4,6 @@
 
 T=
 MACH="sun50iw1p1"
-BPIMACH="sun50iw1p1 sun8iw7p1 sun8iw11p1"
 BPIMACH="tulip-m64 tulip-noma"
 BOARD="BPI-M64-720P"
 board=
@@ -104,23 +103,6 @@ fi
 
 T="$TOPDIR"
 case $BOARD in
-  BPI-M2P*)
-    board="bpi-m2p"
-#    kernel="3.4.113-BPI-M2P-Kernel"
-    kernel="4.4.55-BPI-M2P-Kernel"
-    BOOT_PACK_P=$T/sunxi-pack/chips/${MACH}/configs/default/linux4.4
-    ;;
-  BPI-M2Z*)
-    board="bpi-m2z"
-#    kernel="3.4.113-BPI-M2Z-Kernel"
-    kernel="4.4.55-BPI-M2P-Kernel"
-    BOOT_PACK_P=$T/sunxi-pack/chips/${MACH}/configs/${BOARD}/linux4.4
-    ;;
-  BPI-M2U*)
-    board="bpi-m2u"
-    kernel="4.4.55-BPI-M2P-Kernel"
-    BOOT_PACK_P=$T/sunxi-pack/chips/${MACH}/configs/${BOARD}/linux4.4
-    ;;
   BPI-M64*)
     board="bpi-m64"
     kernel="4.4.89-BPI-M64-Kernel"
@@ -138,7 +120,6 @@ case $BOARD in
     ;;
   *)
     board=$(echo $BOARD | tr '[A-Z]' '[a-z]')
-#    kernel="3.4.113-${BOARD}-Kernel"
     kernel="4.4.55-${BOARD}-Kernel"
     BOOT_PACK_P=$T/sunxi-pack/chips/${MACH}/configs/${BOARD}/linux4.4
     ;;

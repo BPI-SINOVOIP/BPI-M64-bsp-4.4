@@ -76,17 +76,6 @@ fi
 BOARD=$1
 
 case $BOARD in
-  BPI-M2P*)
-    board="bpi"
-    ;;
-  BPI-M2Z*)
-#    board="bpi-m2z"
-    board="bpi"
-    ;;
-  BPI-M2U*)
-    MACH=sun8iw11p1
-    board="bpi"
-    ;;
   BPI-M64*)
     MACH=sun50iw1p1
     board="bpi-m64"
