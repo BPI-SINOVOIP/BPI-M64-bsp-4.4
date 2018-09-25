@@ -10,11 +10,8 @@ if [ ! -d ${TARGET} ]; then
 fi
 
 echo "--------------------------------------------------------------------------------"
-echo "  1. HDMI 480P"
-echo "  2. HDMI 720P"
-echo "  3. HDMI 1080P"
-echo "  4. LCD5 Panel"
-echo "  5. LCD7 Panel"
+echo "  1. HDMI 720P"
+echo "  2. LCD7 Panel"
 echo "--------------------------------------------------------------------------------"
 
 read -p "Please choose a type to install(1-5): " type
@@ -26,11 +23,8 @@ if [ -z "${type}" ]; then
 fi
 
 case ${type} in
-        1) VARIANT="480p";;
-        2) VARIANT="720p";;
-        3) VARIANT="1080p";;
-	4) VARIANT="lcd5";;
-	5) VARIANT="lcd7";;
+        1) VARIANT="720P";;
+	2) VARIANT="LCD7";;
 esac
 
 read -p "Please type the SD device(/dev/sdX): " DEVICE
@@ -55,7 +49,7 @@ esac
 
 echo
 
-BOOTLOADER=${TARGET}/100MB/u-boot-with-dtb-bpi-m64-${VARIANT}-8k.img.gz
+BOOTLOADER=${TARGET}/100MB/BPI-M64-${VARIANT}-linux4.4-8k.img.gz
 
 ## download bootloader
 if [ ! -f ${BOOTLOADER} ]; then
@@ -64,7 +58,7 @@ if [ ! -f ${BOOTLOADER} ]; then
 fi
 
 echo "sudo gunzip -c ${BOOTLOADER} | dd of=${DEVICE} bs=1024 seek=8"
-sudo gunzip -c ${BOOTLOADER} | dd of=${DEVICE} bs=1024 seek=8
+sudo gunzip -c ${BOOTLOADER} | sudo dd of=${DEVICE} bs=1024 seek=8
 sync
 echo
 echo "bootloader download finished"
