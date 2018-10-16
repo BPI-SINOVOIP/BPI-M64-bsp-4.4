@@ -861,8 +861,11 @@ static s32 disp_lcd_pwm_enable(struct disp_device *lcd)
 		return DIS_FAIL;
 	}
 
-	if (disp_lcd_is_used(lcd) && lcdp->pwm_info.dev)
+	if (disp_lcd_is_used(lcd) && lcdp->pwm_info.dev) {
+		disp_sys_pwm_set_polarity(lcdp->pwm_info.dev, lcdp->pwm_info.polarity);
 		return disp_sys_pwm_enable(lcdp->pwm_info.dev);
+	}
+
 	DE_WRN("pwm device hdl is NULL\n");
 
 	return DIS_FAIL;
@@ -905,6 +908,10 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 	lcdp->bl_need_enabled = 1;
 	lcdp->bl_enabled = true;
 	spin_unlock_irqrestore(&lcd_data_lock, flags);
+
+	if (lcdp->backlight) {
+		lcdp->backlight->props.power = FB_BLANK_UNBLANK;
+	}
 
 	if (disp_lcd_is_used(lcd)) {
 		unsigned bl;
@@ -949,6 +956,10 @@ static s32 disp_lcd_backlight_disable(struct disp_device *lcd)
 
 	lcdp->bl_enabled = false;
 	spin_unlock_irqrestore(&lcd_data_lock, flags);
+
+	if (lcdp->backlight) {
+		lcdp->backlight->props.power = FB_BLANK_POWERDOWN;
+	}
 
 	if (disp_lcd_is_used(lcd)) {
 		if (lcdp->lcd_cfg.lcd_bl_en_used) {
@@ -2128,12 +2139,13 @@ static int sunxi_update_bl(struct backlight_device *bdev)
 {
 	struct disp_device *disp = bl_get_data(bdev);
 	int brightness = bdev->props.brightness;
+	int ret;
 
 	if (bdev->props.power != FB_BLANK_UNBLANK ||
 			bdev->props.state & (BL_CORE_SUSPENDED | BL_CORE_FBBLANK))
 		brightness = 0;
 
-	int ret = disp_lcd_set_bright(disp, brightness);
+	ret = disp_lcd_set_bright(disp, brightness);
 
 	if (bdev->props.power != FB_BLANK_UNBLANK)
 		disp_lcd_backlight_disable(disp);
