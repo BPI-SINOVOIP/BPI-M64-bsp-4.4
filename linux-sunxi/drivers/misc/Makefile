@@ -60,4 +60,5 @@ obj-$(CONFIG_UID_SYS_STATS) += uid_sys_stats.o
 obj-$(CONFIG_MEMORY_STATE_TIME) += memory_state_time.o
 obj-$(CONFIG_SUNXI_RFKILL)      += sunxi-rf/
 obj-y                           += sunxi-clk-prepare/
-obj-$(CONFIG_SUNXI_RFKILL)        += sunxi-rf/
+obj-$(CONFIG_SUNXI_RFKILL)      += sunxi-rf/
+obj-$(CONFIG_KCRASH) 		+= kcrash/

@@ -194,7 +194,7 @@ void sunxi_ss_open(void)
 	u32  reg_val;
 
 	/* enable SS working clock */
-	reg_val = readl(CCM_SS_SCLK_CTRL); /* SS CLOCK
+	reg_val = readl(CCM_SS_SCLK_CTRL);
 	reg_val &= ~(0xf<<24);
 	reg_val |= 0x1<<24;
 	reg_val &= ~(0x3<<16);
@@ -231,7 +231,6 @@ void sunxi_ss_open(void)
 void sunxi_ss_close(void)
 {
 }
-/* src_addr		/* 32B 对齐 */
 /*
 ************************************************************************************************************
 *
@@ -273,8 +272,8 @@ int  sunxi_sha_calc(u8 *dst_addr, u32 dst_len,
 
 	writel(reg_val, SS_CTL);
 	/* set src addr */
-	writel(va2pa((u32)src_addr)	, SS_DATA_SRC_LOW_ADR);
-	writel(0		        , SS_DATA_SRC_HIGH_ADR);
+	writel((u32)src_addr, SS_DATA_SRC_LOW_ADR);
+	writel(0, SS_DATA_SRC_HIGH_ADR);
 	/* set dest addr */
 	writel((u32)p_sign, SS_DATA_DST_LOW_ADR);
 	writel(0	      , SS_DATA_DST_HIGH_ADR);
@@ -416,15 +415,3 @@ s32 sunxi_rsa_calc(u8 * n_addr,   u32 n_len,
 	return 0;
 }
 
-u32 va2pa(u32 va)
-{
-    u32 pa;
-    asm volatile("mcr p15, 0, %0, c7, c8, 0\n" : : "r"(va) : "memory", "cc");
-
-
-	asm volatile("isb \n\t"
-		" mrc p15, 0, %0, c7, c4, 0\n\t"
-		: "=r" (pa) : : "memory", "cc");
-
-    return (pa & 0xfffff000) | (va & 0xfff);
-}

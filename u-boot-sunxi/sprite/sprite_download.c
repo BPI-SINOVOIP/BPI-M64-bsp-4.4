@@ -177,7 +177,7 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 
 		ret = -1;
 	}
-	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type)
+	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type || STORAGE_SD1 == storage_type)
 	{
 		printf("begin to write standard mbr\n");
 		if(card_download_standard_mbr(buffer))
@@ -189,7 +189,10 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 		printf("successed to write standard mbr\n");
 	}
 #endif
-
+	if (sunxi_sprite_verify_mbr_from_flash(buffer_size / 512, mbr_num) < 0) {
+		printf("sunxi_sprite_verify_mbr_from_flash fail\n");
+		ret = -1;
+	}
 	if(sunxi_sprite_exit(0))
 	{
 		printf("sunxi sprite exit fail when downlaod mbr\n");
@@ -221,13 +224,17 @@ int sunxi_sprite_download_uboot(void *buffer, int production_media, int generate
 	if(gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL)
 	{
 		struct spare_boot_head_t    *uboot  = (struct spare_boot_head_t *)buffer;
-		printf("uboot magic %s\n", uboot->boot_head.magic);
+		printf("uboot magic %.*s\n", MAGIC_SIZE, uboot->boot_head.magic);
 		if(strncmp((const char *)uboot->boot_head.magic, UBOOT_MAGIC, MAGIC_SIZE))
 		{
 			printf("sunxi sprite: uboot magic is error\n");
 			return -1;
 		}
 		length = uboot->boot_head.length;
+		if (sunxi_sprite_verify_checksum(buffer, uboot->boot_head.length, uboot->boot_head.check_sum)) {
+			printf("sunxi sprite: uboot checksum is error\n");
+			return -1;
+		}
 
 	}
 	else
@@ -243,7 +250,7 @@ int sunxi_sprite_download_uboot(void *buffer, int production_media, int generate
 		}
 		if(toc1->magic != TOC_MAIN_INFO_MAGIC)
 		{
-			printf("sunxi sprite: toc magic is error\n");
+			printf("sunxi sprite: toc1 magic is error\n");
 			return -1;
 		}
 		length = toc1->valid_len;
@@ -251,6 +258,10 @@ int sunxi_sprite_download_uboot(void *buffer, int production_media, int generate
 		{
 			toc1->add_sum = sunxi_sprite_generate_checksum(buffer,
 		                toc1->valid_len,toc1->add_sum);
+		}
+		if (sunxi_sprite_verify_checksum(buffer, toc1->valid_len, toc1->add_sum)) {
+			printf("sunxi sprite: toc1 checksum is error\n");
+			return -1;
 		}
 	}
 
@@ -340,7 +351,15 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 		}
 		else
 		{
-			if (production_media == STORAGE_EMMC) {
+			printf("production_media:%d!\n", production_media);
+			if (production_media == STORAGE_SD1)
+			{
+				if (mmc_write_info(1,(void *)boot0->prvt_head.storage_data, STORAGE_BUFFER_SIZE)) {
+					printf("add sdmmc1 private info fail!\n");
+					return -1;
+				}
+			}
+			else if (production_media == STORAGE_EMMC) {
 				if (mmc_write_info(2,(void *)boot0->prvt_head.storage_data, STORAGE_BUFFER_SIZE)) {
 					printf("add sdmmc2 private info fail!\n");
 					return -1;
@@ -440,6 +459,12 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 			} else if (production_media == STORAGE_EMMC3) {
 				if (mmc_write_info(3,(void *)(toc0_config->storage_data+160),384-160)){
 					printf("add sdmmc3 gpio info fail!\n");
+					return -1;
+				}
+			}
+			else if (production_media == STORAGE_SD1){
+				if (mmc_write_info(1,(void *)(toc0_config->storage_data+160),384-160)){
+					printf("add sdmmc1 gpio info fail!\n");
 					return -1;
 				}
 			}
@@ -639,6 +664,101 @@ int sunxi_download_boot0_atfter_ota(void *buffer, int production_media)
 }
 
 #ifdef CONFIG_SUNXI_GPT
+/* add for dump img, convert result not same as the orginal mbr */
+int gpt_convert_to_sunxi_mbr(void *sunxi_mbr_buf, char *gpt_buf,int storage_type)
+{
+	u32           data_len = 0;
+	char         *pbuf = gpt_buf;
+	gpt_entry    *pgpt_entry = NULL;
+	char*         gpt_entry_start=NULL;
+	int PartCount = 0;
+	int pos = 0;
+	int i, j;
+	int crc32_total;
+	int mbr_size;
+	u64 start_sector;
+
+	mbr_size = 16384; /* hardcode, TODO: fixit */
+	mbr_size = mbr_size * (1024/512);
+
+	sunxi_mbr_t  *sunxi_mbr = (sunxi_mbr_t *)sunxi_mbr_buf;
+	memset(sunxi_mbr, 0, sizeof(sunxi_mbr_t));
+
+	sunxi_mbr->version = 0x00000200;
+	memcpy(sunxi_mbr->magic, SUNXI_MBR_MAGIC, 8);
+	sunxi_mbr->copy = 1;
+
+	data_len = 0;
+	data_len += 512; /* 0 to gpt->head */
+	data_len += 512; /* gpt->head to gpt_entry */
+	gpt_entry_start = (pbuf + data_len);
+	while(1)
+	{
+		pgpt_entry = (gpt_entry *)(gpt_entry_start + (pos)*GPT_ENTRY_SIZE);
+		if(pgpt_entry->starting_lba)
+			PartCount++;
+		else
+			break;
+		pos++;
+	}
+	sunxi_mbr->PartCount = PartCount;
+	printf("PartCount = %d\n",PartCount);
+
+	for(i = sunxi_mbr->PartCount - 1; i >= 0; i--)
+	{
+		/* udisk is the first part */
+		pos = (i == sunxi_mbr->PartCount-1) ? 0: i+1;
+		pgpt_entry = (gpt_entry *)(gpt_entry_start + (pos)*GPT_ENTRY_SIZE);
+
+		sunxi_mbr->array[i].lenhi = ((pgpt_entry->ending_lba - pgpt_entry->starting_lba + 1) >> 32) & 0xffffffff ;
+		sunxi_mbr->array[i].lenlo = ((pgpt_entry->ending_lba - pgpt_entry->starting_lba + 1) >>  0) & 0xffffffff ;
+		if(i == sunxi_mbr->PartCount-1)  /* udisk */
+		{
+			sunxi_mbr->array[i].lenhi = 0;
+			sunxi_mbr->array[i].lenlo = 0;
+		};
+
+		if(pgpt_entry->attributes.fields.type_guid_specific == 0x6000)
+			sunxi_mbr->array[i].ro = 1;
+		else if(pgpt_entry->attributes.fields.type_guid_specific == 0x8000)
+			sunxi_mbr->array[i].ro = 0;
+
+		strcpy((char *)sunxi_mbr->array[i].classname, "DISK");
+		memset(sunxi_mbr->array[i].name, 0, 16);
+
+		for(j = 0; j < 16; j++)
+		{
+			if(pgpt_entry->partition_name[j])
+				sunxi_mbr->array[i].name[j] = pgpt_entry->partition_name[j];
+			else
+				break;
+		}
+	}
+
+	for(i=0; i<sunxi_mbr->PartCount; i++)
+	{
+		if(i == 0)
+		{
+			sunxi_mbr->array[i].addrhi = 0;
+			sunxi_mbr->array[i].addrlo = mbr_size;
+		} else {
+			start_sector = sunxi_mbr->array[i-1].addrlo;
+			start_sector |= (u64)sunxi_mbr->array[i-1].addrhi << 32;
+			start_sector += sunxi_mbr->array[i-1].lenlo;
+
+			sunxi_mbr->array[i].addrlo = (u32)(start_sector & 0xffffffff);
+			sunxi_mbr->array[i].addrhi = (u32)((start_sector >>32) & 0xffffffff);
+		}
+		printf("i=%d, addrhi=0x%d addrlo=0x%x, lenhi=0x%x, lenlo=0x%x, name=%s\n",i,sunxi_mbr->array[i].addrhi, \
+				sunxi_mbr->array[i].addrlo, sunxi_mbr->array[i].lenhi,sunxi_mbr->array[i].lenlo,sunxi_mbr->array[i].name);
+	}
+
+	crc32_total = crc32(0, (const unsigned char *)(sunxi_mbr_buf + 4), SUNXI_MBR_SIZE - 4);
+	sunxi_mbr->crc32 = crc32_total;
+
+	return 0;
+}
+
 
 int sunxi_mbr_convert_to_gpt(void *sunxi_mbr_buf, char *gpt_buf,int storage_type)
 {
@@ -834,7 +954,7 @@ int download_standard_gpt(void *sunxi_mbr_buf, size_t buf_size, int storage_type
 		return -1;
 	}
 	/*sprite for eMMC*/
-	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type)
+	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type || STORAGE_SD1 == storage_type)
 	{
 		if(down_primary_gpt_for_sdmmc(gpt_buf, gpt_buf_len))
 		{

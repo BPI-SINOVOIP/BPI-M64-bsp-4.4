@@ -513,7 +513,6 @@ static int spi_nor_fast_read_dual_output(uint start, uint sector_cnt, void *buf)
 
 		spic_config_dual_mode(0, 1, 0, txnum);
 
-	//		flush_cache(tmp_buf,rxnum);  // guoyingyang debug
 	    if (spic_rw(txnum, (void *)sdata, rxnum, tmp_buf))
 	    {
 	        ret = -1;
@@ -901,8 +900,13 @@ int spinor_read(uint start, uint nblock, void *buffer)
 int spinor_write(uint start, uint nblock, void *buffer)
 {
 	int tmp_block_index;
+	int offset;
+	int nsector = 0;
+	uint start_sector;
 
 	printf("spinor write: start 0x%x, sector 0x%x\n", start, nblock);
+	offset = start % SPINOR_BLOCK_SECTORS;
+	nsector = SPINOR_BLOCK_SECTORS - offset;
 
 	if(spinor_cache_block < 0)
 	{
@@ -914,14 +918,78 @@ int spinor_write(uint start, uint nblock, void *buffer)
 			return 0;
 		}
 		__spinor_erase_block(spinor_cache_block);
-		memcpy(spinor_write_cache + (start % SPINOR_BLOCK_SECTORS) * 512, buffer, nblock * 512);
+		if(nblock <= nsector)
+		{
+			memcpy(spinor_write_cache + offset * 512, buffer, nblock * 512);
+		}
+		else
+		{
+			//deal with first sector,make it align with 64k
+			memcpy(spinor_write_cache + offset * 512, buffer, nsector * 512);
+			spinor_flush_cache();
+
+			for(start_sector = start + nsector;start_sector < start + nblock;start_sector += SPINOR_BLOCK_SECTORS)
+			{
+				if(start + nblock - start_sector <= SPINOR_BLOCK_SECTORS)
+				{
+					if(__spinor_sector_read(start_sector, SPINOR_BLOCK_SECTORS, spinor_write_cache))
+					{
+						printf("spinor read cache block fail\n");
+
+						return 0;
+					}
+					spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+					__spinor_erase_block(spinor_cache_block);
+					memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),(start + nblock - start_sector) * 512);
+				}
+				else
+				{
+					spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+					__spinor_erase_block(spinor_cache_block);
+					memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),SPINOR_BLOCK_SECTORS * 512);
+					spinor_flush_cache();
+				}
+			}
+		}
 	}
 	else
 	{
 		tmp_block_index = start/SPINOR_BLOCK_SECTORS;
 		if(spinor_cache_block == tmp_block_index)
 		{
-			memcpy(spinor_write_cache + (start % SPINOR_BLOCK_SECTORS) * 512, buffer, nblock * 512);
+			if(nblock <= nsector)
+			{
+				memcpy(spinor_write_cache + offset * 512, buffer, nblock * 512);
+			}
+			else
+			{
+				//deal with first sector,make it align with 64k
+				memcpy(spinor_write_cache + offset * 512, buffer, nsector * 512);
+				spinor_flush_cache();
+
+				for(start_sector = start + nsector;start_sector < start + nblock;start_sector += SPINOR_BLOCK_SECTORS)
+				{
+					if(start + nblock - start_sector <= SPINOR_BLOCK_SECTORS)
+					{
+						if(__spinor_sector_read(start_sector, SPINOR_BLOCK_SECTORS, spinor_write_cache))
+						{
+							printf("spinor read cache block fail\n");
+
+							return 0;
+						}
+						spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+						__spinor_erase_block(spinor_cache_block);
+						memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),(start + nblock - start_sector) * 512);
+					}
+					else
+					{
+						spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+						__spinor_erase_block(spinor_cache_block);
+						memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),SPINOR_BLOCK_SECTORS * 512);
+						spinor_flush_cache();
+					}
+				}
+			}
 		}
 		else
 		{
@@ -939,7 +1007,39 @@ int spinor_write(uint start, uint nblock, void *buffer)
 				return 0;
 			}
 			__spinor_erase_block(spinor_cache_block);
-			memcpy(spinor_write_cache + (start % SPINOR_BLOCK_SECTORS) * 512, buffer, nblock * 512);
+			if(nblock <= nsector)
+			{
+				memcpy(spinor_write_cache + offset * 512, buffer, nblock * 512);
+			}
+			else
+			{
+				//deal with first sector,make it align with 64k
+				memcpy(spinor_write_cache + offset * 512, buffer, nsector * 512);
+				spinor_flush_cache();
+
+				for(start_sector = start + nsector;start_sector < start + nblock;start_sector += SPINOR_BLOCK_SECTORS)
+				{
+					if(start + nblock - start_sector <= SPINOR_BLOCK_SECTORS)
+					{
+						if(__spinor_sector_read(start_sector, SPINOR_BLOCK_SECTORS, spinor_write_cache))
+						{
+							printf("spinor read cache block fail\n");
+
+							return 0;
+						}
+						spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+						__spinor_erase_block(spinor_cache_block);
+						memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),(start + nblock - start_sector) * 512 );
+					}
+					else
+					{
+						spinor_cache_block = start_sector/SPINOR_BLOCK_SECTORS;
+						__spinor_erase_block(spinor_cache_block);
+						memcpy(spinor_write_cache,(void *)((uint)buffer + (start_sector - start) * 512),SPINOR_BLOCK_SECTORS * 512);
+						spinor_flush_cache();
+					}
+				}
+			}
 		}
 	}
 
@@ -1203,7 +1303,7 @@ int update_boot0_dram_para(char *buffer)
 	uint *addr = (uint *)DRAM_PARA_STORE_ADDR;
 
 	//校验特征字符是否正确
-	printf("%s\n", boot0->boot_head.magic);
+	printf("%.*s\n", MAGIC_SIZE, boot0->boot_head.magic);
 	if(strncmp((const char *)boot0->boot_head.magic, BOOT0_MAGIC, MAGIC_SIZE))
 	{
 		printf("sunxi sprite: boot0 magic is error\n");

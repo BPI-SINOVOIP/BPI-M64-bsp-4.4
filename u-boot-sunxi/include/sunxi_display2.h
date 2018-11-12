@@ -236,11 +236,13 @@ enum disp_tv_mode
 	DISP_VGA_MOD_1366_768P_60        = 0x55,
 	DISP_VGA_MOD_1440_900P_60        = 0x56,
 	DISP_VGA_MOD_1920_1080P_60       = 0x57,
-	DISP_VGA_MOD_1280_720P_60        = 0x58,
-	DISP_VGA_MOD_1920_1200P_60       = 0x5a,
-	DISP_VGA_MOD_MAX_NUM             = 0x5b,
+	DISP_VGA_MOD_1920_1200P_60 = 0x58,
+	DISP_TV_MOD_3840_1080P_30 = 0x59,
+	DISP_VGA_MOD_1280_720P_60        = 0x5a,
+	DISP_VGA_MOD_1600_900P_60        = 0x5b,
+	DISP_VGA_MOD_MAX_NUM             = 0x5c,
 
-	DISP_TV_MODE_NUM                 = 0x5c,
+	DISP_TV_MODE_NUM
 };
 
 //FIXME:still need?

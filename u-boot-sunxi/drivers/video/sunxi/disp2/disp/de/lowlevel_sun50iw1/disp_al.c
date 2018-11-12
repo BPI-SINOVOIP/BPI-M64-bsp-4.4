@@ -302,12 +302,14 @@ int disp_al_lcd_query_irq(u32 screen_id, __lcd_irq_id_t irq_id, disp_panel_para 
 	int ret = 0;
 
 #if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
-	if (LCD_IF_DSI == panel->lcd_if) {
-		__dsi_irq_id_t dsi_irq = (LCD_IRQ_TCON0_VBLK == irq_id)?DSI_IRQ_VIDEO_VBLK:DSI_IRQ_VIDEO_LINE;
+	if (panel && LCD_IF_DSI == panel->lcd_if &&
+	    LCD_DSI_IF_COMMAND_MODE != panel->lcd_dsi_if) {
+		__dsi_irq_id_t dsi_irq = (LCD_IRQ_TCON0_VBLK == irq_id)
+					     ? DSI_IRQ_VIDEO_VBLK
+					     : DSI_IRQ_VIDEO_LINE;
 
 		return dsi_irq_query(screen_id, dsi_irq);
-	}
-	else
+	} else
 #endif
 		return tcon_irq_query(screen_id, irq_id);
 
@@ -697,4 +699,3 @@ int disp_al_get_display_size(unsigned int screen_id, unsigned int *width, unsign
 
 	return 0;
 }
-

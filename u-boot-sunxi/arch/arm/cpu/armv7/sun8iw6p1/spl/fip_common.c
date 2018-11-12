@@ -105,14 +105,21 @@ int load_fip(int *use_monitor)
 		else if(strncmp(toc1_item->name, ITEM_SOCCFG_NAME, sizeof(ITEM_SOCCFG_NAME)) == 0)
 		{
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SOCCFG_STORE_IN_DRAM_BASE);
-		}
-		else
-		{
+		} else if (strncmp(toc1_item->name,
+				  ITEM_SCP_NAME, sizeof(ITEM_SCP_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset/512,
+				(CONFIG_SYS_SRAMA2_SIZE+511)/512,
+				(void *)SCP_SRAM_BASE);
+			toc1_flash_read((toc1_item->data_offset
+					+ SCP_CODE_DRAM_OFFSET)/512,
+					(SCP_DRAM_SIZE+511)/512,
+					(void *)SCP_DRAM_BASE);
+		} else {
 			printf("unknow boot package file \n");
 			return -1;
 		}
 
 	}
-	
+
 	return 0;
 }

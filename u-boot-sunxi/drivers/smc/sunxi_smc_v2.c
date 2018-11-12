@@ -160,7 +160,7 @@ int arm_svc_arisc_wait_ready(void)
 
 int arm_svc_arisc_fake_poweroff(void)
 {
-	return 0;
+	return sunxi_smc_call(ARM_SVC_ARISC_FAKE_POWER_OFF_REQ_ARCH32, 0, 0, 0, 0);
 }
 
 u32 arm_svc_arisc_read_pmu(ulong addr)

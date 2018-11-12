@@ -247,6 +247,9 @@ static int mmc_read_ssr(struct mmc_card *card)
 	}
 
 	for (i = 0; i < 16; i++)
+		card->raw_ssr[i] = be32_to_cpu(ssr[i]);
+
+	for (i = 0; i < 16; i++)
 		ssr[i] = be32_to_cpu(ssr[i]);
 
 	/*
@@ -656,6 +659,14 @@ MMC_DEV_ATTR(cid, "%08x%08x%08x%08x\n", card->raw_cid[0], card->raw_cid[1],
 MMC_DEV_ATTR(csd, "%08x%08x%08x%08x\n", card->raw_csd[0], card->raw_csd[1],
 	card->raw_csd[2], card->raw_csd[3]);
 MMC_DEV_ATTR(scr, "%08x%08x\n", card->raw_scr[0], card->raw_scr[1]);
+MMC_DEV_ATTR(ssr,
+	"%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x\n",
+		card->raw_ssr[0], card->raw_ssr[1], card->raw_ssr[2],
+		card->raw_ssr[3], card->raw_ssr[4], card->raw_ssr[5],
+		card->raw_ssr[6], card->raw_ssr[7], card->raw_ssr[8],
+		card->raw_ssr[9], card->raw_ssr[10], card->raw_ssr[11],
+		card->raw_ssr[12], card->raw_ssr[13], card->raw_ssr[14],
+		card->raw_ssr[15]);
 MMC_DEV_ATTR(date, "%02d/%04d\n", card->cid.month, card->cid.year);
 MMC_DEV_ATTR(erase_size, "%u\n", card->erase_size << 9);
 MMC_DEV_ATTR(preferred_erase_size, "%u\n", card->pref_erase << 9);
@@ -667,10 +678,12 @@ MMC_DEV_ATTR(oemid, "0x%04x\n", card->cid.oemid);
 MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
 
 
+
 static struct attribute *sd_std_attrs[] = {
 	&dev_attr_cid.attr,
 	&dev_attr_csd.attr,
 	&dev_attr_scr.attr,
+	&dev_attr_ssr.attr,
 	&dev_attr_date.attr,
 	&dev_attr_erase_size.attr,
 	&dev_attr_preferred_erase_size.attr,

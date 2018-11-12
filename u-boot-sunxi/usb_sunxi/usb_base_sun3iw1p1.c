@@ -980,7 +980,7 @@ void sunxi_usb_main_loop(int delaytime)
 
     while(1)
     {
-	__msdelay(5);
+		__msdelay(5);
         ret = sunxi_udev_active->state_loop(&sunxi_ubuf);
         if(ret)
         {

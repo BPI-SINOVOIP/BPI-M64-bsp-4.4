@@ -34,6 +34,8 @@ endif
 
 obj-$(CONFIG_ARCH_SUN50IW1P1) += de/lowlevel_sun50iw1/
 
+obj-$(CONFIG_ARCH_SUN8IW8P1) += de/lowlevel_sun8iw8/
+
 obj-$(CONFIG_ARCH_SUN8IW10P1) += de/lowlevel_sun8iw10/
 
 obj-$(CONFIG_ARCH_SUN8IW11P1) += de/lowlevel_v2x/

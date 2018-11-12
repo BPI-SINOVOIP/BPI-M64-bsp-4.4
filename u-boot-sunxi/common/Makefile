@@ -285,7 +285,11 @@ obj-$(CONFIG_SUNXI_CMD_DMA) += cmd_sunxi_dma.o
 obj-$(CONFIG_CMD_SUNXI_PMU) += cmd_sunxi_pmu.o
 obj-$(CONFIG_CMD_SUNXI_SYSCFG) += cmd_sunxi_sysconfig.o
 obj-$(CONFIG_CMD_ANDROID_MISC) += cmd_android_misc.o
+ifdef CONFIG_CMD_RECOVERY
+	obj-y += cmd_onekey_recovery.o
+endif
 obj-y += cmd_svudata.o
+obj-$(CONFIG_PWM_LED) += cmd_pwm_led.o
 obj-$(CONFIG_SUNXI_MOZART) += cmd_boot0_extend.o
 CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
 

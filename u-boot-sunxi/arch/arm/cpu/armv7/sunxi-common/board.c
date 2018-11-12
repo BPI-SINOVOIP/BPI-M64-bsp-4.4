@@ -45,6 +45,8 @@
 #include <arisc.h>
 #include <private_toc.h>
 #include <cputask.h>
+#include <i2c.h>
+#include <sunxi_i2c.h>
 
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nannd flash, mmc2.
@@ -56,7 +58,9 @@ DECLARE_GLOBAL_DATA_PTR;
 /* do some early init */
 void s_init(void)
 {
+#ifndef CONFIG_SUNXI_UBOOT_KEEP_BOOT0_WATCHDOG
 	watchdog_disable();
+#endif
 }
 
 void reset_cpu(ulong addr)
@@ -106,6 +110,26 @@ static int soc_script_init(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_RELOCATE_PARAMETER
+int parameter_init(void)
+{
+	char *para = NULL;
+	struct spare_parameter_head_t *parameter = NULL;
+
+	para = (char *)(gd->parameter_reloc_buf);
+	if (para) {
+		parameter = (struct spare_parameter_head_t *)para;
+		if (!strncmp((const char *)(parameter->para_head.magic),
+			     PARAMETER_MAGIC, MAGIC_SIZE)) {
+			gd->parameter_mod_buf = para;
+			return 0;
+		}
+	}
+	gd->parameter_mod_buf = NULL;
+	return 0;
+}
+#endif
 
 #ifdef USE_BOARD_CONFIG
 static int bd_script_init(void)
@@ -275,6 +299,10 @@ int sunxi_board_restart(int next_mode)
 
 int sunxi_board_shutdown(void)
 {
+#ifdef CONFIG_CPUS_I2C
+		i2c_set_bus_num(SUNXI_R_I2C0);
+		i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+#endif
 	printf("set next system normal\n");
 	axp_set_next_poweron_status(0x0);
 

@@ -51,11 +51,14 @@ obj-$(CONFIG_ARCH_SUN8IW8P1) += sun8iw8p1/sunxi_host0_2_v4p1.o sun8iw8p1/sunxi_h
 obj-$(CONFIG_ARCH_SUN8IW11P1) += sun8iw11p1/sunxi_host0_2_v4p1.o sun8iw11p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN8IW12P1) += sun8iw12p1/sunxi_host0_2_v4p1.o sun8iw12p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN8IW15P1) += sun8iw15p1/sunxi_host0_2_v4p1.o sun8iw15p1/sunxi_host_mmc.o
+obj-$(CONFIG_ARCH_SUN8IW16P1) += sun8iw16p1/sunxi_host0_2_v4p1.o sun8iw16p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN8IW17P1) += sun8iw17p1/sunxi_host0_2_v4p1.o sun8iw17p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN50IW1P1) += sun50iw1p1/sunxi_host0_2_v4p1.o sun50iw1p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN50IW2P1) += sun50iw2p1/sunxi_host0_2_v4p1.o sun50iw2p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN50IW3P1) += sun50iw3p1/sunxi_host0_2_v4p1.o sun50iw3p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN50IW6P1) += sun50iw6p1/sunxi_host0_2_v4p1.o sun50iw6p1/sunxi_host_mmc.o
 obj-$(CONFIG_ARCH_SUN3IW1P1)  += sun3iw1p1/sunxi_host0_2_v4p1.o sun3iw1p1/sunxi_host_mmc.o
+obj-$(CONFIG_ARCH_SUN50IW6P1) += sun50iw6p1/sunxi_host0_2_v4p1.o sun50iw6p1/sunxi_host_mmc.o
+obj-$(CONFIG_ARCH_SUN50IW8P1) += sun50iw8p1/sunxi_host0_2_v4p1.o sun50iw8p1/sunxi_host_mmc.o
 
 subdir-ccflags-$(CONFIG_SUNXI_FINS_FUNC_DRIVER_MMC_DIR) += -finstrument-functions

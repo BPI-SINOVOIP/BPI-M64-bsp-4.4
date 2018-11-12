@@ -451,11 +451,6 @@ int axp_probe_power_supply_condition(void)
 	}
 
 	ratio = sunxi_axp_dev[CHARGER_PMU]->probe_battery_ratio();
-	if(ratio < 1)
-	{
-		sunxi_axp_dev[CHARGER_PMU]->set_coulombmeter_onoff(0);
-		sunxi_axp_dev[CHARGER_PMU]->set_coulombmeter_onoff(1);
-	}
 	pr_msg("bat_vol=%d, ratio=%d\n", bat_vol, ratio);
 	if(ratio < 1)
 	{

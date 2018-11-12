@@ -37,9 +37,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SPI_RX_IO_DATA                  (SPIC0_BASE + 0x300)
 
 #define  NAND_DRV_VERSION_0             0x03
-#define  NAND_DRV_VERSION_1             0x6006
-#define  NAND_DRV_DATE                  0x20180504
-#define  NAND_DRV_TIME                  0x1300
+#define  NAND_DRV_VERSION_1             0x6016
+#define  NAND_DRV_DATE                  0x20181022
+#define  NAND_DRV_TIME                  0x1503
 
 #define NAND_CLK_BASE_ADDR              (0x01c20000)
 #define NAND_PIO_BASE_ADDR              (0x0300B000)
@@ -47,6 +47,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 extern int sunxi_get_securemode(void);
 extern __u32 get_storage_type_from_init(void);
+extern void sunxi_dma_set_irq_en(int irq_en_val);
 
 __u32 get_wvalue(__u32 addr)
 {
@@ -509,7 +510,7 @@ __s32 _get_spic_clk_v1(__u32 spinand_index, __u32 *pdclk)
 	else
 		sclk0 = (mclk  / (2*(cdr2+1)));
 
-	*pdclk = sclk0/2;
+	*pdclk = sclk0;
 	printf("_get_spic_clk_v1: sclk0=0x%x\n", sclk0);
 
 	return 0;
@@ -529,7 +530,7 @@ __s32 _change_spic_clk_v1(__u32 spinand_index, __u32 dclk_src_sel, __u32 dclk)
 //	printf("_change_spic_clk: 0x01c20054=0x%x\n", get_wvalue(0x01c20054));
 //	printf("_change_spic_clk: 0x01c20028=0x%x\n", get_wvalue(0x01c20028));
 
-	sclk0 = dclk*2;
+	sclk0 = dclk;
 
 	div = mclk / (sclk0 << 1);
 
@@ -557,8 +558,8 @@ __s32 _change_spic_clk_v1(__u32 spinand_index, __u32 dclk_src_sel, __u32 dclk)
 
 	put_wvalue(SPIC0_BASE+0x24, (cdr_sel << 12) | (cdr1 << 8) | cdr2);
 
-//	printf("_change_spic_clk: 0x01c05024=0x%x\n", get_wvalue(0x01c05024));
-//	printf("_change_spic_clk_v1: mclk=0x%x\n", mclk);
+	printf("_change_spic_clk: 0x01c05024=0x%x\n", get_wvalue(0x01c05024));
+	printf("_change_spic_clk_v1: mclk=0x%x\n", mclk);
 
 	return 0;
 }

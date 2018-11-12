@@ -115,7 +115,7 @@ static int tv_pin_config(u32 bon)
 			if(!bon) {
 				gpio_info->mul_sel = 7;
 			}
-			hdl = disp_sys_gpio_request(gpio_info, 1);
+			hdl = disp_sys_gpio_request_simple(gpio_info, 1);
 			disp_sys_gpio_release(hdl, 2);
 		}
 	}
@@ -174,8 +174,8 @@ static s32 gm7121_tv_get_mode(void)
 
 static s32 gm7121_tv_set_mode(disp_tv_mode tv_mode)
 {
-		printf("gm7121_tv_set_mode, mode=%d\n", (unsigned int)tv_mode);
-    g_tv_mode = tv_mode;
+	printf("gm7121_tv_set_mode, mode=%u\n", (unsigned int)tv_mode);
+	g_tv_mode = tv_mode;
 
     return 0;
 }

@@ -203,3 +203,21 @@ __s32 boot_set_gpio(void  *user_gpio_list, __u32 group_count_max, __s32 set_gpio
 
     return 0;
 }
+
+//this function used to change gpio Interrupt clock select
+//@n:2/3
+//@value:0/1
+void int_deb_set_gpio(int n, int value)
+{
+	__u32 register_value = PIO_REG_INT_DEB_VALUE(n);
+	if(value == 1)
+	{
+		register_value |= 0x1;
+		GPIO_REG_WRITE(PIO_REG_INT_DEB(n), register_value);
+	}
+	if(value == 0)
+	{
+		register_value &= (~(0x1));
+		GPIO_REG_WRITE(PIO_REG_INT_DEB(n), register_value);
+	}
+}

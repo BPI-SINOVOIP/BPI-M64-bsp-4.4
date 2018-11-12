@@ -86,6 +86,7 @@ static struct drm_framebuffer *sunxi_user_fb_create(struct drm_device *dev,
 	/* becareful for a buf but the yuv  in it,
 	 * and you must set the y is 0,u is 1,v is 2,etc.
 	 */
+	memset((void *)obj, 0, sizeof(obj));
 	for (i = 0, nr_gem = 0; i < MAX_FB_BUFFER; i++) {
 		obj[i] = drm_gem_object_lookup(dev, file_priv,
 			mode_cmd->handles[i]);

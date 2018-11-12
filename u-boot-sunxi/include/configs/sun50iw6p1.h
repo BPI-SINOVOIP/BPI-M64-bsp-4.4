@@ -92,6 +92,8 @@
 
 //fdt addr for kernel
 #define CONFIG_SUNXI_FDT_ADDR                (CONFIG_SYS_SDRAM_BASE+0x04000000)
+/* parameter for boot */
+#define CONFIG_SUNXI_PARAMETER_ADDR (CONFIG_SYS_SDRAM_BASE + 0x03F00000)
 //serial number
 #define CONFIG_SUNXI_SERIAL
 // the sram base address, and the stack address in stage1
@@ -141,10 +143,15 @@
 #define DRAM_PARA_STORE_ADDR             (CONFIG_SYS_SDRAM_BASE + 0x00800000)
 //#define SYS_CONFIG_MEMBASE               (CONFIG_SYS_SDRAM_BASE + 0x00010000)
 #define CONFIG_RELOCATE_SYSCONIFG
+#define CONFIG_RELOCATE_PARAMETER
 
 #define CONFIG_SUNXI_LOGBUFFER
 #define SUNXI_DISPLAY_FRAME_BUFFER_ADDR  (CONFIG_SYS_SDRAM_BASE + 0x06400000)
 #define SUNXI_DISPLAY_FRAME_BUFFER_SIZE  0x01000000
+
+#define CONFIG_SUNXI_ESM_HDCP
+#define SUNXI_ESM_IMG_SIZE_ADDR                                 (0x42b00000)
+#define SUNXI_ESM_IMG_BUFF_ADDR                                 (0x42b00000 + 16)
 
 #define SUNXI_LOGO_COMPRESSED_LOGO_SIZE_ADDR        		(0x43000000)
 #define SUNXI_LOGO_COMPRESSED_LOGO_BUFF     				(0x43000000 + 16)
@@ -250,7 +257,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -381,6 +388,7 @@
 
 #define CONFIG_CMD_FAT			/* with this we can access bootfs in nand */
 #define CONFIG_CMD_IRQ
+#define CONFIG_CMD_RECOVERY
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_FASTBOOT
@@ -486,6 +494,17 @@
 #endif
 
 #endif
+
+/*box_standby support*/
+#define CONFIG_BOX_STANDBY
+
+/* CONFIG_ARCH_HOMELET && OPEN IR CTRL FUNC*/
+/*#define CONFIG_ARCH_HOMELET */
+/*#define CONFIG_BOOT_PARAMETER */
+/*#define CONFIG_SUNXI_IR */
+/*#define CONFIG_SUNXI_IR_NEC_DECODE */
+/*#define CONFIG_IR_BOOT_RECOVERY */
+/*#define IR_BASE                      (0x07040000) */
 
 //#define CONFIG_SYS_DCACHE_OFF
 

@@ -321,9 +321,16 @@ void irq_free_handler(int irq)
 void do_irq (struct pt_regs *pt_regs)
 {
 	u32 idnum;
-	//volatile u32 secmode;
 
+#ifdef CONFIG_ARCH_SUN8IW6P1
+	/* fix gic bug when enable secure*/
+	if (sunxi_probe_secure_os())
+		idnum = readl(GIC_AIAR_REG);
+	else
+		idnum = readl(GIC_INT_ACK_REG);
+#else
 	idnum = readl(GIC_INT_ACK_REG);
+#endif
 
 	if ((idnum == 1022) || (idnum == 1023))
 	{
@@ -340,11 +347,17 @@ void do_irq (struct pt_regs *pt_regs)
 		gic_ppi_handler(idnum);
 	else
 		gic_spi_handler(idnum);
-
+#ifdef CONFIG_ARCH_SUN8IW6P1
+	/* fix gic bug when enable secure*/
+	if (sunxi_probe_secure_os())
+		writel(idnum, GIC_AEOI_REG);
+	else
+		writel(idnum, GIC_END_INT_REG);
+#else
 	writel(idnum, GIC_END_INT_REG);
+#endif
 	writel(idnum, GIC_DEACT_INT_REG);
 
-	//writel(idnum, GIC_DEACT_INT_REG);
 	gic_clear_pending(idnum);
 
 	return;

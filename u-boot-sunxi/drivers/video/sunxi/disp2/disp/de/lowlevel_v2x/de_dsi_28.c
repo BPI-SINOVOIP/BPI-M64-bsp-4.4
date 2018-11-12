@@ -811,7 +811,8 @@ static __s32 dsi_dphy_cfg(__u32 sel, disp_panel_para *panel)
 	dsi_delay_ms(1);
 	dsi_dev[sel]->dsi_ctl1.bits.phy_en = 1;
 	dsi_delay_ms(1);
-	dsi_dev[sel]->dsi_phy_ctl1.bits.phy_stop_set = 1;
+	dsi_dev[sel]->dsi_phy_ctl1.dwval =
+	    ((dsi_dev[sel]->dsi_phy_ctl1.dwval) & (~0xff)) | 0x1;
 	dsi_dev[sel]->dsi_ctl1.bits.phy_lane_num = lane - 1;
 
 	return 0;

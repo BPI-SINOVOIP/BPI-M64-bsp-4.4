@@ -42,7 +42,7 @@
 #define __SUNXI_MMC_H__
 
 #define DRIVER_NAME "sunxi-mmc"
-#define DRIVER_RIVISION "v1.22 2018-2-12 14:47"
+#define DRIVER_RIVISION "v1.25 2018-7-13 11:03"
 #define DRIVER_VERSION "SD/MMC/SDIO Host Controller Driver(" DRIVER_RIVISION ")"
 
 #if defined CONFIG_FPGA_V4_PLATFORM || defined CONFIG_FPGA_V7_PLATFORM
@@ -80,6 +80,8 @@
 #define SDXC_REG_IDIE	(0x8C)	/* SMC IDMAC Interrupt Enable Register */
 #define SDXC_REG_CHDA	(0x90)
 #define SDXC_REG_CBDA	(0x94)
+
+#define SDXC_REG_FIFO	(0x200)
 
 #define mmc_readl(host, reg) \
 	readl((host)->reg_base + SDXC_##reg)
@@ -406,6 +408,8 @@ struct sunxi_mmc_host {
 	bool perf_enable;
 	struct device_attribute host_perf;
 	struct sunxi_mmc_host_perf perf;
+
+	struct device_attribute host_mwr;
 
 	void *version_priv_dat;
 };

@@ -105,6 +105,54 @@ static inline void arch_timer_set_cntkctl(u32 cntkctl)
 	asm volatile("msr	cntkctl_el1, %0" : : "r" (cntkctl));
 }
 
+static __always_inline
+u64 arch_timer_reg_read_cval(int access)
+{
+	u64 cval;
+
+	if (access == ARCH_TIMER_PHYS_ACCESS)
+		asm volatile("mrs %0, cntp_cval_el0" : "=r" (cval));
+	else if (access == ARCH_TIMER_VIRT_ACCESS)
+		asm volatile("mrs %0, cntv_cval_el0" : "=r" (cval));
+	else
+		cval = 0;
+
+	return cval;
+}
+
+#if defined(CONFIG_ARCH_SUN50IW1P1) \
+	|| defined(CONFIG_ARCH_SUN50IW2P1)
+#define ARCH_PCNT_TRY_MAX_TIME (12)
+#define ARCH_PCNT_MAX_DELTA    (8)
+static inline u64 arch_counter_get_cntpct(void)
+{
+	u64 pct0;
+	u64 pct1;
+	u64 delta;
+	u32 retry = 0;
+
+	/* sun50i vcnt maybe imprecise,
+	 * we should try to fix this.
+	 */
+	while (retry < ARCH_PCNT_TRY_MAX_TIME) {
+		isb();
+		asm volatile("mrs %0, cntvct_el0" : "=r" (pct0));
+		isb();
+		asm volatile("mrs %0, cntvct_el0" : "=r" (pct1));
+		delta = pct1 - pct0;
+		if ((pct1 >= pct0) && (delta < ARCH_PCNT_MAX_DELTA)) {
+			/* read valid vcnt */
+			return pct1;
+		}
+		/* vcnt value error, try again */
+		retry++;
+	}
+	/* Do not warry for this, just return the last time vcnt.
+	 * arm64 have enabled CONFIG_CLOCKSOURCE_VALIDATE_LAST_CYCLE.
+	 */
+	return pct1;
+}
+#else
 static inline u64 arch_counter_get_cntpct(void)
 {
 	/*
@@ -113,7 +161,41 @@ static inline u64 arch_counter_get_cntpct(void)
 	BUG();
 	return 0;
 }
+#endif
 
+#if defined(CONFIG_ARCH_SUN50IW1P1) \
+	|| defined(CONFIG_ARCH_SUN50IW2P1)
+#define ARCH_VCNT_TRY_MAX_TIME (12)
+#define ARCH_VCNT_MAX_DELTA    (8)
+static inline u64 arch_counter_get_cntvct(void)
+{
+	u64 vct0;
+	u64 vct1;
+	u64 delta;
+	u32 retry = 0;
+
+	/* sun50i vcnt maybe imprecise,
+	 * we should try to fix this.
+	 */
+	while (retry < ARCH_VCNT_TRY_MAX_TIME) {
+		isb();
+		asm volatile("mrs %0, cntvct_el0" : "=r" (vct0));
+		isb();
+		asm volatile("mrs %0, cntvct_el0" : "=r" (vct1));
+		delta = vct1 - vct0;
+		if ((vct1 >= vct0) && (delta < ARCH_VCNT_MAX_DELTA)) {
+			/* read valid vcnt */
+			return vct1;
+		}
+		/* vcnt value error, try again */
+		retry++;
+	}
+	/* Do not warry for this, just return the last time vcnt.
+	 * arm64 have enabled CONFIG_CLOCKSOURCE_VALIDATE_LAST_CYCLE.
+	 */
+	return vct1;
+}
+#else
 static inline u64 arch_counter_get_cntvct(void)
 {
 	u64 cval;
@@ -123,6 +205,7 @@ static inline u64 arch_counter_get_cntvct(void)
 
 	return cval;
 }
+#endif
 
 static inline int arch_timer_arch_init(void)
 {

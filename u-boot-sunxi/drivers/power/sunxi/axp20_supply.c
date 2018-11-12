@@ -196,28 +196,14 @@ static int axp20_set_dcdc2(int set_vol, int onoff)
 static int axp20_set_dcdc3(int set_vol, int onoff)
 {
 	s32 vol_value;
-	//s32 ret;
 	u8  reg_addr;
 	u8  reg_value;
 
 
 	if(set_vol == -1)
 	{
-		#if 0
-		if(!dcdc3_user_set)
-		{
-			ret = script_parser_fetch("target", "dcdc3_vol", &vol_value, 1);
-			if(ret)
-			{
-				printf("boot power:unable to find dcdc3 set\n");
-				return -1;
-			}
-			dcdc3_user_set = vol_value;
-		}
-		vol_value = dcdc3_user_set;
-		#endif
-		printf("boot power:invalid dcdc3  vol\n");
-		return -1;
+		vol_value = 3300;
+		printf("boot power:set dcdc3 3300\n");
 	}
 	else
 	{
@@ -559,26 +545,12 @@ static int axp20_set_ldo3(int set_vol, int onoff)
  */
 static int axp20_set_ldo4(int set_vol, int onoff)
 {
-    s32 vol_value;
-	//s32 ret;
+	s32 vol_value;
 	u8  reg_addr;
 	u8  reg_value;
 
 	if(-1 == set_vol)
 	{
-		#if 0
-		if(!ldo4_user_set)
-		{
-			ret = script_parser_fetch("target", "ldo4_vol", &vol_value, 1);
-				if(ret)
-				{
-					printf("boot power:unable to find ldo4 set\n");
-						return -1;
-				}
-			ldo4_user_set = vol_value;
-		}
-		vol_value = ldo4_user_set;
-		#endif
 		printf("boot power:invalid ldo4 vol\n");
 		return -1;
 	}
@@ -586,65 +558,64 @@ static int axp20_set_ldo4(int set_vol, int onoff)
 	{
 		vol_value = set_vol;
 	}
-    if(!vol_value)
-    {
-        reg_addr = BOOT_POWER20_OUTPUT_CTL;
-            if(!axp_i2c_read(AXP20_ADDR, reg_addr, &reg_value))
-            {
-                reg_value &= ~(1<<3);
-                    if(axp_i2c_write(AXP20_ADDR, reg_addr, reg_value))
-                    {
-                        printf("boot power:unable to set ldo2\n");
-                            return -1;
-                    }
-            }
-    }
-    else
-    {
-        reg_addr  = BOOT_POWER20_LDO24OUT_VOL;
-            if(!axp_i2c_read(AXP20_ADDR, reg_addr, &reg_value))
-            {
-                reg_value &= 0xf0;
-                    /*************************************************************************************
-                      0    1300     2000    2500     2700   2800    3000   3300  max
+
+	reg_addr  = BOOT_POWER20_LDO24OUT_VOL;
+	if(!axp_i2c_read(AXP20_ADDR, reg_addr, &reg_value))
+	{
+		reg_value &= 0xf0;
+		/*************************************************************************************
+		0    1300     2000    2500     2700   2800    3000   3300  max
 
 
-                     *************************************************************************************/
-                    if(vol_value < 1300)
-                    {
-                        reg_value |= 0x00;
-                    }
-                    else if(vol_value <= 2000)
-                    {
-                        reg_value |= (vol_value - 1200)/100;
-                    }
-                    else if(vol_value < 2700)
-                    {
-                        reg_value |= 0x09;
-                    }
-                    else if(vol_value <= 2800)
-                    {
-                        reg_value |= ((vol_value - 2700)/100) + 0x0a;
-                    }
-                    else
-                    {
-                        if(vol_value < 3000)
-                        {
-                            vol_value = 3000;
-                        }
-                        else if(vol_value > 3300)
-                        {
-                            vol_value = 3300;
-                        }
-                        reg_value |= ((vol_value - 3000)/100) + 0x0c;
-                    }
-                if(axp_i2c_write(AXP20_ADDR, reg_addr, reg_value))
-                {
-                    printf("boot power:unable to set ldo4\n");
-                        return -1;
-                }
-            }
-    }
+		*************************************************************************************/
+		if(vol_value < 1300)
+		{
+			reg_value |= 0x00;
+		}
+		else if(vol_value <= 2000)
+		{
+			reg_value |= (vol_value - 1200)/100;
+		}
+		else if(vol_value < 2700)
+		{
+			reg_value |= 0x09;
+		}
+		else if(vol_value <= 2800)
+		{
+			reg_value |= ((vol_value - 2700)/100) + 0x0a;
+		}
+		else
+		{
+			if(vol_value < 3000)
+			{
+				vol_value = 3000;
+			}
+			else if(vol_value > 3300)
+			{
+				vol_value = 3300;
+			}
+			reg_value |= ((vol_value - 3000)/100) + 0x0c;
+		}
+		if(axp_i2c_write(AXP20_ADDR, reg_addr, reg_value))
+		{
+			printf("boot power:unable to set ldo4\n");
+			return -1;
+		}
+
+		reg_addr = BOOT_POWER20_OUTPUT_CTL;
+		if(!axp_i2c_read(AXP20_ADDR, reg_addr, &reg_value))
+		{
+			reg_value &= ~(1<<3);
+			if (onoff)
+				reg_value |= (1<<3);
+			if(axp_i2c_write(AXP20_ADDR, reg_addr, reg_value))
+			{
+				printf("boot power:unable to set ldo2\n");
+				return -1;
+			}
+		}
+	}
+
     return 0;
 }
 /*
@@ -743,7 +714,7 @@ static int axp20_set_gpio0ldo(int set_vol, int onoff)
 	else
 	{
 		reg_value &= ~(7 << 0);
-		reg_value |=  (0x01 << 0);
+		reg_value |=  (0x03 << 0);
 	}
 	if(axp_i2c_write(AXP20_ADDR, BOOT_POWER20_GPIO0_CTL, reg_value))
 	{
@@ -751,7 +722,16 @@ static int axp20_set_gpio0ldo(int set_vol, int onoff)
 
 		return -1;
 	}
-
+	if(axp_i2c_read(AXP20_ADDR, BOOT_POWER20_GPIO0_VOL, &reg_value))
+		return -1;
+	reg_value &= ~0xf0;
+	if (set_vol < 1800)
+		set_vol = 1800;
+	if (set_vol > 3300)
+		set_vol = 3300;
+	reg_value |= ((set_vol - 1800) / 100)<<4;
+	if(axp_i2c_write(AXP20_ADDR, BOOT_POWER20_GPIO0_VOL, reg_value))
+		return -1;
 	return 0;
 }
 /*
@@ -927,24 +907,6 @@ int axp20_set_supply_status_byname(char *vol_name, int vol_value, int onoff)
 		sppply_index = simple_strtoul(vol_name + 3, NULL, 10);
 
 		return axp20_set_ldo_output(sppply_index, vol_value, onoff);
-	}
-	else if(!strncmp(vol_name, "aldo", 4))
-	{
-		sppply_index = simple_strtoul(vol_name + 4, NULL, 10);
-
-		return axp20_set_aldo_output(sppply_index, vol_value, onoff);
-	}
-	else if(!strncmp(vol_name, "eldo", 4))
-	{
-		sppply_index = simple_strtoul(vol_name + 4, NULL, 10);
-
-		return axp20_set_eldo_output(sppply_index, vol_value, onoff);
-	}
-	else if(!strncmp(vol_name, "dldo", 4))
-	{
-		sppply_index = simple_strtoul(vol_name + 4, NULL, 10);
-
-		return axp20_set_dldo_output(sppply_index, vol_value, onoff);
 	}
 	else if(!strncmp(vol_name, "gpio", 4))
 	{

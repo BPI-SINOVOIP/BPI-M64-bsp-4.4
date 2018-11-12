@@ -21,26 +21,26 @@
 
 /* it has type : struct ufdt_node** */
 #define for_each(it, node)													\
-	{ if ((node) != NULL)													\
+	if ((node) != NULL)													\
 	for (it = (node)->nodes; it != (node)->nodes + (node)->mem_size; ++it)	\
 	if (*it)																\
-	}
+
 
 #define for_each_child(it, node)                                    \
-	{ if (ufdt_node_tag(node) == FDT_BEGIN_NODE)					\
+	if (ufdt_node_tag(node) == FDT_BEGIN_NODE)					\
 	for ((it) = &(((struct ufdt_node_fdt_node *)node)->child); *it; \
 	it = &((*it)->sibling))											\
-	}
+
 
 #define for_each_prop(it, node)										\
-		{ for_each_child(it, node)									\
+		 for_each_child(it, node)									\
 			if (ufdt_node_tag(*it) == FDT_PROP)						\
-		}
+
 
 #define for_each_node(it, node)										\
-		{ for_each_child(it, node)									\
+		for_each_child(it, node)									\
 			if (ufdt_node_tag(*it) == FDT_BEGIN_NODE)				\
-		}
+
 
 /*
  * Gets prop name from FDT requires complicated manipulation.

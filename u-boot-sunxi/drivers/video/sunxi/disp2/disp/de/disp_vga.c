@@ -370,8 +370,6 @@ static s32 disp_vga_exit(struct disp_device* vga)
 
 	kfree(vga);
 	kfree(vgap);
-	vga = NULL;
-	vgap = NULL;
 	return 0;
 }
 
@@ -592,7 +590,32 @@ static s32 disp_vga_get_static_config(struct disp_device *vga,
 	config->type = vga->type;
 	config->mode = vgap->vga_mode;
 	if (vgap->tv_func.tv_get_input_csc)
-		vgap->tv_func.tv_get_input_csc(vga->disp);
+		config->format = vgap->tv_func.tv_get_input_csc(vga->disp);
+
+exit:
+	return ret;
+}
+
+static bool
+disp_vga_check_config_dirty(struct disp_device *vga,
+			    struct disp_device_config *config)
+{
+	bool ret = false;
+	struct disp_vga_private_data *vgap = NULL;
+
+	if (!vga) {
+		DE_WRN("NULL hdl!\n");
+		goto exit;
+	}
+
+	vgap = disp_vga_get_priv(vga);
+	if (!vgap) {
+		DE_WRN("NULL hdl!\n");
+		goto exit;
+	}
+
+	if ((vgap->enabled == 0) || (config->mode != vgap->vga_mode))
+		ret = true;
 
 exit:
 	return ret;
@@ -635,7 +658,7 @@ s32 disp_init_vga(void)
 	for (hwdev_index = 0; hwdev_index < num_devices; hwdev_index++) {
 		if (!bsp_disp_feat_is_supported_output_types(hwdev_index,
 							DISP_OUTPUT_TYPE_VGA)) {
-			DE_WRN("screen %d do not support VGA TYPE!\n",
+			DE_INF("screen %d do not support VGA TYPE!\n",
 				hwdev_index);
 			continue;
 		}
@@ -693,6 +716,7 @@ s32 disp_init_vga(void)
 		vga->get_mode = disp_vga_get_mode;
 		vga->set_static_config = disp_vga_set_static_config;
 		vga->get_static_config = disp_vga_get_static_config;
+		vga->check_config_dirty = disp_vga_check_config_dirty;
 		vga->check_support_mode = disp_vga_check_support_mode;
 		vga->get_input_csc = disp_vga_get_input_csc;
 		vga->suspend = disp_vga_suspend;

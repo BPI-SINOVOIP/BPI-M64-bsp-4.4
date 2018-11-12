@@ -178,7 +178,7 @@ static int cpufreq_thermal_notifier(struct notifier_block *nb,
 						     min_freq,
 						     max_freq);
 			policy->user_policy.max = policy->max;
-			pr_info
+			pr_debug
 			("CPU Budget:update CPU%d cpufreq max to min %lu~%lu\n",
 			policy->cpu,
 			max_freq,

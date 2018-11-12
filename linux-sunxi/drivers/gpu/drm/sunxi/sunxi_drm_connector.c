@@ -134,6 +134,20 @@ void sunxi_drm_connector_enable(struct drm_connector *connector)
 	}
 }
 
+void sunxi_drm_connector_enable_soft(struct drm_connector *connector)
+{
+	struct sunxi_drm_connector *sunxi_connector;
+	struct sunxi_hardware_res  *hw_res;
+
+	sunxi_connector = to_sunxi_connector(connector);
+	hw_res = sunxi_connector->hw_res;
+	if (hw_res != NULL &&
+		hw_res->ops != NULL &&
+		hw_res->ops->enable != NULL) {
+		hw_res->ops->soft_enable(connector);
+	}
+}
+
 void sunxi_drm_connector_disable(struct drm_connector *connector)
 {
 	struct sunxi_drm_connector *sunxi_connector;
@@ -203,6 +217,15 @@ void sunxi_drm_display_power(struct drm_connector *connector, int mode)
 	sunxi_connector->dmps = mode;
 }
 
+void sunxi_drm_display_power_soft(struct drm_connector *connector)
+{
+	struct sunxi_drm_connector *sunxi_connector;
+	sunxi_connector = to_sunxi_connector(connector);
+
+	sunxi_drm_connector_enable_soft(connector);
+	sunxi_connector->dmps = DRM_MODE_DPMS_ON;
+}
+
 static int sunxi_drm_connector_dpms(struct drm_connector *connector,
 	int mode)
 {
@@ -251,8 +274,7 @@ sunxi_drm_connector_detect(struct drm_connector *connector, bool force)
 void sunxi_chain_enable(struct drm_connector *connector,
 	enum chain_bit_mask id)
 {
-	pr_info("%s\n", __func__);	
-	
+
 	struct drm_encoder *encoder;
 	struct sunxi_drm_encoder *sunxi_enc;
 	struct sunxi_hardware_res *hw_res;

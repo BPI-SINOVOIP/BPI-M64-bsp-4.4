@@ -101,6 +101,9 @@ s32 tcon0_cpu_rd_16b(u32 sel, u32 index, u32 *data);
 
 s32 tcon1_open(u32 sel);
 s32 tcon1_close(u32 sel);
+#ifdef TCON_POL_CORRECT
+u32 tcom1_cfg_correct(u32 sel, struct disp_video_timings *timing);
+#endif
 s32 tcon1_src_select(u32 sel, enum __lcd_src_t src, enum __de_perh_t de_no);
 s32 tcon1_src_get(u32 sel);
 s32 tcon1_cfg_ex(u32 sel, disp_panel_para *panel);
@@ -113,6 +116,7 @@ s32 tcon1_yuv_range(u32 sel, u32 onoff);
 u32 tcon0_get_cpu_tri2_start_delay(u32 sel);
 s32 rgb_src_sel(u32 src);
 s32 dsi_src_sel(u32 sel, u32 src);
+s32 tcon_set_sync_pol(u32 sel, u32 ver_pol, u32 hor_pol);
 
 #if defined(SUPPORT_DSI)
 extern __u32 dsi_pixel_bits[4];

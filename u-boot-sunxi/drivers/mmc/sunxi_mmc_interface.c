@@ -15,6 +15,10 @@
 #include "mmc_def.h"
 
 int mmc_switch(struct mmc *mmc, u8 set, u8 index, u8 value);
+int mmc_cache_ctrl(int dev_num, u8 enable);
+int mmc_flush_cache(int dev_num);
+
+
 
 static int mmc_wp_grp_aligned(struct mmc *mmc, unsigned int from, unsigned int nr)
 {
@@ -726,8 +730,8 @@ int mmc_user_scan_wp_sta(struct mmc *mmc)
 	s32 err = 0, ret = 0;
 	u32 wp_addr = 0;
 	u8 wp_type[8] = {0};
-	u32 wp_hit_addr[10] = {0}; /* record the first 10 wp group info */
-	u32 wp_hit_type[10] = {0};
+	u32 wp_hit_addr[11] = {0}; /* record the first 10 wp group info */
+	u32 wp_hit_type[11] = {0};
 	u32 wp_hit_cnt = 0;
 	u32 wp_grp_cnt = mmc->block_dev.lba / mmc->wp_grp_size;
 	u32 sta, val = 0;
@@ -913,6 +917,7 @@ ERR_RET:
 
 
 
+
 static ulong mmc_do_burn_boot(int dev_num, lbaint_t start, lbaint_t blkcnt, const void*src)
 {
 	s32 err = 0;
@@ -933,18 +938,148 @@ static ulong mmc_do_burn_boot(int dev_num, lbaint_t start, lbaint_t blkcnt, cons
 		goto ERR_RET;
 	}
 
+	if (mmc->cfg->platform_caps.drv_burn_boot_pos & DRV_PARA_BURN_FORCE_FLUSH_CACHE) {
+		/*force flush cache**/
+		MMCINFO("%s: force flush cache\n", __FUNCTION__);
+		mmc_cache_ctrl(dev_num, 1);
+		/*
+		{
+			ALLOC_CACHE_ALIGN_BUFFER(char, ext_csd, MMC_MAX_BLOCK_LEN);
+			err = mmc_send_ext_csd(mmc, ext_csd);
+			MMCINFO("%s: check cache ctrl %d\n", __FUNCTION__, ext_csd[EXT_CSD_CACHE_CTRL]);
+		}
+		*/
+		mmc_flush_cache(dev_num);
+		/*
+		{
+			ALLOC_CACHE_ALIGN_BUFFER(char, ext_csd, MMC_MAX_BLOCK_LEN);
+			err = mmc_send_ext_csd(mmc, ext_csd);
+			MMCINFO("%s: check cache flush %d\n", __FUNCTION__, ext_csd[EXT_CSD_FLUSH_CACHE]);
+		}
+		*/
+		mmc_cache_ctrl(dev_num, 0);
+		/*
+		{
+			ALLOC_CACHE_ALIGN_BUFFER(char, ext_csd, MMC_MAX_BLOCK_LEN);
+			err = mmc_send_ext_csd(mmc, ext_csd);
+			MMCINFO("%s: check cache ctrl %d\n", __FUNCTION__, ext_csd[EXT_CSD_CACHE_CTRL]);
+		}
+		*/
+		MMCINFO("%s: force flush cache end\n", __FUNCTION__);
+	}
+
+
 	/* read and check */
 	rblk = mmc_bread(dev_num, start, blkcnt, dst);
-	if ((rblk<blkcnt) || memcmp(src, dst, blkcnt * mmc->write_bl_len)) {
+	if ((rblk < blkcnt) || memcmp(src, dst, blkcnt * mmc->write_bl_len)) {
 		MMCINFO("%s: check boot0 fail\n", __FUNCTION__);
 		err = -1;
 	} else
 		MMCDBG("%s: check boot0 ok\n", __FUNCTION__);
+/*
+	if (!err) {
+		void *buf_a01 = NULL;
+		if ((buf_a01 = (void *)malloc(blkcnt * mmc->write_bl_len)) == NULL) {
+			MMCINFO("%s: request memory fail\n", __FUNCTION__);
+			return 0;
+		}
+		memset(buf_a01, 0, blkcnt * mmc->write_bl_len);
+		if (memcmp(buf_a01, src, blkcnt * mmc->write_bl_len) == 0) {
+			MMCINFO("%s: src data is all zero\n", __FUNCTION__);
+			free(buf_a01);
+			return 0;
+		}
+		if (memcmp(buf_a01, dst, blkcnt * mmc->write_bl_len) == 0){
+			MMCINFO("%s: dst data is all zero\n", __FUNCTION__);
+			free(buf_a01);
+			return 0;
+		}
+
+		memset(buf_a01, 0xff, blkcnt * mmc->write_bl_len);
+		if (memcmp(buf_a01, src, blkcnt * mmc->write_bl_len) == 0){
+			MMCINFO("%s: src data is all ff\n", __FUNCTION__);
+			free(buf_a01);
+			return 0;
+		}
+		if (memcmp(buf_a01, dst, blkcnt * mmc->write_bl_len) == 0){
+			MMCINFO("%s: dst data is all ff\n", __FUNCTION__);
+			free(buf_a01);
+			return 0;
+		}
+	}
+*/
+
 
 ERR_RET:
 	free(dst);
 	return (err ? 0 : blocks_do);
 }
+
+/*
+ * Flush the cache to the non-volatile storage.
+ */
+int mmc_flush_cache(int dev_num)
+{
+	struct mmc *mmc = find_mmc_device(dev_num);
+	int err = 0;
+/*
+	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL))
+		return err;
+*/
+
+	if (!IS_SD(mmc) &&
+			(mmc->cache_size > 0) &&
+			(mmc->cache_ctrl & 1)) {
+		err = mmc_switch(mmc, EXT_CSD_CMD_SET_NORMAL,
+				EXT_CSD_FLUSH_CACHE, 1);
+		if (err)
+			MMCINFO("%s: cache flush error %d\n", err);
+	}
+
+	return err;
+}
+
+
+/*
+ * Turn the cache ON/OFF.
+ * Turning the cache OFF shall trigger flushing of the data
+ * to the non-volatile storage.
+ * This function should be called with host claimed
+ */
+int mmc_cache_ctrl(int dev_num, u8 enable)
+{
+	struct mmc *mmc = find_mmc_device(dev_num);
+	int err = 0;
+
+/*
+	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL) ||
+			mmc_card_is_removable(host))
+		return err;
+*/
+	if (mmc && !IS_SD(mmc) &&
+			(mmc->cache_size > 0)) {
+		enable = !!enable;
+
+		if (mmc->cache_ctrl ^ enable) {
+			/*timeout = enable ? card->ext_csd.generic_cmd6_time : 0;*/
+			err = mmc_switch(mmc, EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_CACHE_CTRL, enable);
+			if (err)
+				MMCINFO("cache %s error %d\n",
+						enable ? "on" : "off",
+						err);
+			else
+				mmc->cache_ctrl = enable;
+			MMCINFO("***Turn cache %s***\n", enable ? "on" : "off");
+		}
+	}
+
+	return err;
+}
+
+
+
+
 
 
 static ulong mmc_burn_boot(int dev_num, lbaint_t start, lbaint_t blkcnt, const void*src)
@@ -1544,8 +1679,7 @@ static int
 sdmmc_secure_storage_read(s32 dev_num,u32 item,u8 *buf , lbaint_t blkcnt)
 {
 	s32 ret = 0;
-	s32 *fst_bak = NULL;
-	s32 *sec_bak = NULL;
+	s32 *fst_bak = (s32 *)buf;
 
 	if(buf == NULL){
 		MMCINFO("intput buf is NULL\n");
@@ -1565,46 +1699,13 @@ sdmmc_secure_storage_read(s32 dev_num,u32 item,u8 *buf , lbaint_t blkcnt)
 		goto out;
 	}
 
-	fst_bak = malloc(blkcnt*512);
-	if(fst_bak == NULL){
-		MMCINFO("malloc buff failed in fun %s line %d\n",__FUNCTION__,__LINE__);
-		ret = -1;
-		goto out;
-	}
-	sec_bak = malloc(blkcnt*512);
-	if(sec_bak == NULL){
-		MMCINFO("malloc buff failed in fun %s line %d\n",__FUNCTION__,__LINE__);
-		ret = -1;
-		goto out_fst;
-	}
-
 	/*first backups*/
 	ret = mmc_bread(dev_num,SDMMC_SECURE_STORAGE_START_ADD+SDMMC_ITEM_SIZE*2*item,blkcnt,fst_bak);
 	if(ret != blkcnt){
 		MMCINFO("read first backup failed in fun %s line %d\n",__FUNCTION__,__LINE__);
 		ret = -1;
-		goto out_sec;
-	}
-	/*second backups*/
-	ret = mmc_bread(dev_num,SDMMC_SECURE_STORAGE_START_ADD+SDMMC_ITEM_SIZE*2*item+SDMMC_ITEM_SIZE,blkcnt,sec_bak);
-	if(ret != blkcnt){
-		MMCINFO("read second backup failed fun %s line %d\n",__FUNCTION__,__LINE__);
-		ret = -1;
-		goto out_sec;
 	}
 
-	if(memcmp(fst_bak,sec_bak,blkcnt*512)){
-		MMCINFO("first and second bak compare failed fun %s line %d\n",__FUNCTION__,__LINE__);
-		ret = -1;
-	}else{
-		memcpy(buf,fst_bak,blkcnt*512);
-		ret = blkcnt;
-	}
-
-out_sec:
-	free(sec_bak);
-out_fst:
-	free(fst_bak);
 out:
 	return ret;
 }

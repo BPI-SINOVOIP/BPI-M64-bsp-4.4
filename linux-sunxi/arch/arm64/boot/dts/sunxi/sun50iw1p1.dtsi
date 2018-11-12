@@ -598,6 +598,7 @@
 			pinctrl-1 = <&uart1_pins_b>;
 			uart1_port = <1>;
 			uart1_type = <4>;
+			use_dma = <2>;
 			status = "okay";
 		};
 

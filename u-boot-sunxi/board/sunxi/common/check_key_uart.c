@@ -66,7 +66,7 @@ static int check_config_fel_key(uint32_t key_value)
 		//jum to fel
 		return FEL_MODE;
 	}
-	printf("key value = %d, fel_key = [%d,%d]\n", key_value, fel_key_min, fel_key_max);
+	printf("key value = %u, fel_key = [%u,%u]\n", key_value, fel_key_min, fel_key_max);
 	return NORMAL_MODE;
 
 }
@@ -90,7 +90,6 @@ static int check_config_fel_key(uint32_t key_value)
 //	int power_key = 0;
 //
 //	old_power_status = axp_probe_power_source();
-//	//add by guoyingyang
 //	while(sunxi_key_read() > 0) //press key and not loosen
 //	{
 //		time_tick++;
@@ -148,11 +147,29 @@ int check_update_key(void)
 	    return 0;
 	}
 
+#ifdef CONFIG_TPADC_KEY
+	int count = 0;
+	while (1)
+	{
+		key_value = sunxi_key_read();
+		if(check_config_fel_key(key_value) == FEL_MODE && count >= KEY_MAX_COUNT_GO_ON)
+		{
+			return -1;
+		}
+		else if (check_config_fel_key(key_value) == NORMAL_MODE)
+		{
+			return 0;
+		}
+		count++;
+		__msdelay(KEY_DELAY_EACH_TIME);
+	}
+#else
 	key_value = uboot_spare_head.boot_ext[0].data[2];
 	if(check_config_fel_key(key_value) == FEL_MODE)
 	{
 		return -1;
 	}
+#endif
 
 	return 0;
 }

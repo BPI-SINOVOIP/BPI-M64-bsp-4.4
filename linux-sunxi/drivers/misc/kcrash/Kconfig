@@ -1,0 +1,16 @@
+menuconfig KCRASH
+	bool "Kernel Crash dumper"
+	default n
+	---help---
+	  Dump log or save infomations when kernel crash.
+	  Crash events like oops, panic, oom and so on.
+
+if KCRASH
+	config KCRASH_PANIC
+		bool "Panic Event"
+		default y
+		---help---
+		  Dump log when panic.
+		  The log is writen to partition named "kcrash" with offset 0.
+
+endif

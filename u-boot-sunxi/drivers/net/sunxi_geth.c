@@ -617,6 +617,22 @@ static int mii_phy_init(struct eth_device *dev)
        geth_phy_write(dev, phy_addr, MII_BMCR, (phy_val & ~BMCR_PDOWN));
        while(geth_phy_read(dev, phy_addr, MII_BMCR) & BMCR_PDOWN);
 
+	/*
+	* It doesn't really disable auto-negotiation any more,
+	* just for compatibility.
+	*/
+#ifdef DISABLE_AUTONEG
+	phy_val = geth_phy_read(dev, phy_addr, MII_CTRL1000);
+	phy_val &= ~ADVERTISE_1000FULL;
+	geth_phy_write(dev, phy_addr, MII_CTRL1000, phy_val);
+
+	phy_val = geth_phy_read(dev, phy_addr, MII_BMCR);
+	phy_val &= ~BMCR_SPEED1000;
+	phy_val |= BMCR_SPEED100;
+	phy_val |= BMCR_FULLDPLX;
+	geth_phy_write(dev, phy_addr, MII_BMCR, phy_val);
+#endif
+
        /* Wait BMSR_ANEGCOMPLETE be set */
        while(!(geth_phy_read(dev, phy_addr, MII_BMSR) & BMSR_ANEGCOMPLETE)) {
                if (i > 4) {
@@ -625,15 +641,6 @@ static int mii_phy_init(struct eth_device *dev)
                udelay(500*1000);
                i++;
        }
-
-#ifdef DISABLE_AUTONEG
-       phy_val = geth_phy_read(dev, phy_addr, MII_BMCR);
-       phy_val &= ~BMCR_ANENABLE;
-       phy_val &= ~BMCR_SPEED1000;
-       phy_val |= BMCR_SPEED100;
-       phy_val |= BMCR_FULLDPLX;
-       geth_phy_write(dev, phy_addr, MII_BMCR, phy_val);
-#endif
 
        phy_val = geth_phy_read(dev, phy_addr, MII_BMCR);
        reg_val = readl(dev->iobase + GETH_BASIC_CTL0);

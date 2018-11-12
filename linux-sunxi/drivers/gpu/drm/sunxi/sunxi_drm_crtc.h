@@ -100,4 +100,6 @@ int sunxi_drm_flip_ioctl(struct drm_device *dev, void *data,
 
 int sunxi_drm_info_fb_ioctl(struct drm_device *dev, void *data,
 				struct drm_file *file_priv);
+
+void sunxi_drm_crtc_soft_set_mode(struct drm_device *dev);
 #endif

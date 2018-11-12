@@ -654,6 +654,11 @@ static void mmc_get_para_from_fex(int sdc_no)
 				MMCINFO("burn boot0 to emmc boot part.\n");
 				cfg->platform_caps.drv_burn_boot_pos |= DRV_PARA_BURN_EMMC_BOOT_PART;
 			}
+
+			if (rval & DRV_PARA_BURN_FORCE_FLUSH_CACHE) {
+				MMCINFO("force flush cache on write boot.\n");
+				cfg->platform_caps.drv_burn_boot_pos |= DRV_PARA_BURN_FORCE_FLUSH_CACHE;
+			}
 		}
 
 		ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_wp", (uint32_t *)(&rval));

@@ -22,6 +22,10 @@
  * MA 02111-1307 USA
  */
 
+#include <common.h>
+#include <sys_config.h>
+#include <fdt_support.h>
+
 #ifndef CONFIG_SUNXI_DISPLAY
 
 void  __attribute__((weak)) display_update_dtb(void)
@@ -76,7 +80,28 @@ int __attribute__((weak)) board_display_show(int display_source)
 
 int __attribute__((weak)) board_display_framebuffer_set(int width, int height, int bitcount, void *buffer)
 {
-	return 0;
+	int ret = 0;
+#if !defined(CONFIG_BOOTLOGO_DISABLE) && !defined(CONFIG_SUNXI_MULITCORE_BOOT)
+	int node;
+
+	node = fdt_path_offset(working_fdt, "disp");
+	if (node >= 0) {
+		ret = fdt_setprop_u32(
+		    working_fdt, node, "fb_base",
+		    (uint32_t)(buffer - 54));
+		if (ret < 0)
+			pr_error(
+			    "fdt_setprop_u32 %s.%s(0x%x) fail.err code:%s\n",
+			    "disp", "fb_base",
+			    (uint32_t)(buffer - 54),
+			    fdt_strerror(ret));
+		else
+			ret = 0;
+	} else {
+		pr_error("%s:disp_fdt_nodeoffset %s fail\n", __func__, "disp");
+	}
+#endif
+	return ret;
 }
 
 void __attribute__((weak)) board_display_set_alpha_mode(int mode)

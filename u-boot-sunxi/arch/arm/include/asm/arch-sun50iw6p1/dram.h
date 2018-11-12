@@ -43,6 +43,9 @@ typedef struct __DRAM_PARA
     unsigned int		dram_mr1;
     unsigned int		dram_mr2;
     unsigned int		dram_mr3;
+    unsigned int		dram_mr4;
+    unsigned int		dram_mr5;
+    unsigned int		dram_mr6;
     unsigned int		dram_tpr0;	//DRAMTMG0
     unsigned int		dram_tpr1;	//DRAMTMG1
     unsigned int		dram_tpr2;	//DRAMTMG2
@@ -59,8 +62,11 @@ typedef struct __DRAM_PARA
     unsigned int		dram_tpr11;
     unsigned int		dram_tpr12;
     unsigned int		dram_tpr13;
-
-
+    unsigned int		dram_tpr14;
+    unsigned int		dram_tpr15;
+    unsigned int		dram_tpr16;
+    unsigned int		dram_tpr17;
+    unsigned int		dram_tpr18;
 }__dram_para_t;
 
 #ifdef FPGA_PLATFORM
@@ -68,6 +74,7 @@ unsigned int mctl_init(void *para);
 #else
 extern int init_DRAM( int type, __dram_para_t *buff );
 #endif
+extern int update_fdt_dram_para(void *dtb_base);
 #endif
 
 

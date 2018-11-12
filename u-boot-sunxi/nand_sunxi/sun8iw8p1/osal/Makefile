@@ -21,8 +21,6 @@
 # MA 02111-1307 USA
 #
 
-
 obj-y += nand_osal_uboot.o \
-		nand_uboot_fun.o \
-		nand_lib_cfg.o
+		nand_uboot_fun.o
 

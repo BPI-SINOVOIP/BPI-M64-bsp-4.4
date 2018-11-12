@@ -18,6 +18,7 @@
 #include "sunxi_drm_fbdev.h"
 #include "sunxi_drm_drv.h"
 #include "sunxi_drm_connector.h"
+#include "sunxi_drm_plane.h"
 
 struct fb_dmabuf_export {
 	__u32 fd;
@@ -226,8 +227,6 @@ int sunxi_fb_probe(struct drm_fb_helper *helper,
 	struct drm_mode_create_dumb dump_args = { 0 };
 	int ret;
 
-
-	sizes->surface_depth = 32;
 	mode_cmd.width = sizes->fb_width;
 	/* double buffers? or more? */
 	mode_cmd.height = sizes->fb_height * FBDEV_BUF_NUM;
@@ -402,8 +401,8 @@ bool sunxi_fb_initial_config(struct drm_fb_helper *fb_helper,
 	struct sunxi_drm_connector *sunxi_connector;
 	struct drm_display_mode *ref_modes = NULL;
 	struct drm_encoder	    *encoder;
-	struct drm_connector_helper_funcs *connector_funcs;
-	unsigned int assign_crtc = 0;
+	const struct drm_connector_helper_funcs *connector_funcs;
+	unsigned int assign_crtc = 0; /*indicate which crtc has benn assigned*/
 	struct drm_fb_helper_crtc *crtc;
 
 retry:
@@ -486,10 +485,11 @@ struct drm_fb_helper_funcs sunxi_drm_fb_helper = {
 int sunxi_drm_fbdev_creat(struct drm_device *dev)
 {
 	struct sunxi_drm_fbdev *fbdev;
-	struct sunxi_drm_private *private = dev->dev_private;
+	struct sunxi_drm_private *private = (struct sunxi_drm_private *)dev->dev_private;
 	struct drm_fb_helper *helper;
 	unsigned int num_crtc;
 	int ret;
+	unsigned int drm_format, depth, bpp;
 
 	DRM_DEBUG_KMS("[%d]\n", __LINE__);
 
@@ -525,12 +525,39 @@ int sunxi_drm_fbdev_creat(struct drm_device *dev)
 	* TODO disable all the possible outputs/crtcs before
 	* entering KMS mode
 	*/
-	drm_helper_disable_unused_functions(dev);
+	if (!private->init_para.boot_info.sync) {
+		drm_helper_disable_unused_functions(dev);
 
-	ret = drm_fb_helper_initial_config(helper, PREFERRED_BPP);
-	if (ret < 0) {
-		DRM_ERROR("failed to set up hw configuration.\n");
-		goto err_setup;
+		bpp = PREFERRED_BPP;
+		ret = drm_fb_helper_initial_config(helper, bpp);
+		if (ret < 0) {
+			DRM_ERROR("failed to set up hw configuration.\n");
+			goto err_setup;
+		}
+	} else {
+		if (private->init_para.boot_info.type == DISP_OUTPUT_TYPE_LCD) {
+			drm_format = disp_to_drm_format(private->init_para.boot_info.format);
+			drm_fb_get_bpp_depth(drm_format, &depth, &bpp);
+			ret = drm_fb_helper_initial_config(helper, (int)bpp);
+			if (ret < 0) {
+				DRM_ERROR("failed to set up hw configuration.\n");
+				goto err_setup;
+			}
+		} else if (private->init_para.boot_info.type == DISP_OUTPUT_TYPE_HDMI) {
+			bpp = PREFERRED_BPP;
+			ret = drm_fb_helper_initial_config(helper, bpp);
+			if (ret < 0) {
+				DRM_ERROR("failed to set up hw configuration.\n");
+				goto err_setup;
+			}
+		} else {
+			bpp = PREFERRED_BPP;
+			ret = drm_fb_helper_initial_config(helper, bpp);
+			if (ret < 0) {
+				DRM_ERROR("failed to set up hw configuration.\n");
+				goto err_setup;
+			}
+		}
 	}
 
 	return 0;

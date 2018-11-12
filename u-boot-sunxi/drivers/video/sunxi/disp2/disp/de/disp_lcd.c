@@ -660,10 +660,10 @@ static void lcd_get_sys_config(u32 disp, disp_lcd_cfg *lcd_cfg)
     ret = disp_sys_script_get_item(primary_key,"lcd_bl_en", (int *)gpio_info, 3);
     if (ret == 3)
     {
-	gpio_info->data = 0;
-	gpio_info->mul_sel = 1;
-    	lcd_cfg->lcd_bl_hdl = disp_sys_gpio_request(gpio_info, 1);
-        lcd_cfg->lcd_bl_en_used = 1;
+		gpio_info->data = 0;
+		gpio_info->mul_sel = 1;
+		lcd_cfg->lcd_bl_hdl = disp_sys_gpio_request(gpio_info, 1);
+		lcd_cfg->lcd_bl_en_used = 1;
     }
 
 	sprintf(sub_name, "lcd_bl_en_power");
@@ -2220,7 +2220,7 @@ s32 disp_lcd_gpio_init(struct disp_device* lcd)
 			disp_gpio_set_t  gpio_info[1];
 
 			memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_gpio[i]), sizeof(disp_gpio_set_t));
-			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request(gpio_info, 1);
+			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request_simple(gpio_info, 1);
 		}
 	}
 
@@ -2245,7 +2245,7 @@ s32 disp_lcd_gpio_exit(struct disp_device* lcd)
 
 			memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_gpio[i]), sizeof(disp_gpio_set_t));
 			gpio_info->mul_sel = 7;
-			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request(gpio_info, 1);
+			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request_simple(gpio_info, 1);
 			disp_sys_gpio_release(lcdp->lcd_cfg.gpio_hdl[i], 2);
 			lcdp->lcd_cfg.gpio_hdl[i] = 0;
 		}

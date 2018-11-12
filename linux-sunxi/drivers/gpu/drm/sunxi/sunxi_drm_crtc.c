@@ -161,7 +161,6 @@ static void sunxi_drm_crtc_dpms(struct drm_crtc *crtc, int mode)
 	* off: disable irq,
 	* if on we must display the content when off
 	*/
-
 	inused = drm_helper_crtc_in_use(crtc);
 	switch (mode) {
 	case DRM_MODE_DPMS_ON:
@@ -437,7 +436,7 @@ static int sunxi_drm_crtc_page_flip(struct drm_crtc *crtc,
 
 	/* when the page flip is requested, crtc's dpms should be on */
 	if (sunxi_crtc->dpms > DRM_MODE_DPMS_ON) {
-		DRM_ERROR("failed page flip request.\n");
+		DRM_ERROR("failed page flip request. sunxi_crtc->dpms:%d\n", sunxi_crtc->dpms);
 		return -EINVAL;
 	}
 
@@ -654,7 +653,7 @@ static int sunxi_drm_crtc_set_property(struct drm_crtc *crtc,
 	return -EINVAL;
 }
 
-static int sunxi_crtc_set_config(struct drm_mode_set *set)
+int sunxi_crtc_set_config(struct drm_mode_set *set)
 {
 	int ret = -EINVAL;
 	struct sunxi_drm_crtc *sunxi_crtc;
@@ -683,7 +682,7 @@ static int sunxi_crtc_set_config(struct drm_mode_set *set)
 }
 
 static struct drm_crtc_funcs sunxi_crtc_funcs = {
-	.set_config	= sunxi_crtc_set_config,
+	.set_config	= drm_crtc_helper_set_config,
 	.page_flip	= sunxi_drm_crtc_page_flip,
 	.destroy	= sunxi_drm_crtc_destroy,
 	.set_property	= sunxi_drm_crtc_set_property,
@@ -1195,4 +1194,125 @@ prop_err:
 crtc_err:
 
 	return -EINVAL;
+}
+
+static void sunxi_drm_crtc_soft_dpms(struct drm_crtc *crtc)
+{
+	/* dpm just open the dmps , nothing about crtc used */
+	struct sunxi_drm_crtc *sunxi_crtc;
+	bool enable;
+
+	sunxi_crtc = to_sunxi_crtc(crtc);
+
+	enable = 1;
+	sunxi_set_global_cfg(crtc, MANAGER_ENABLE_DIRTY, &enable);
+	spin_lock(&sunxi_crtc->update_reg_lock);
+	sunxi_crtc->update_frame_user_cnt++;
+	spin_unlock(&sunxi_crtc->update_reg_lock);
+
+	sunxi_drm_crtc_enable(&sunxi_crtc->drm_crtc);
+	sunxi_crtc->dpms = DRM_MODE_DPMS_ON;
+}
+
+void sunxi_drm_crtc_soft_set_mode(struct drm_device *dev)
+{
+	struct drm_crtc *crtc;
+	int i = 0, j = 0;
+	struct sunxi_drm_private *private;
+	struct drm_fb_helper *fb_helper;
+	struct drm_connector *connector;
+	struct drm_encoder *encoder;
+	struct sunxi_drm_crtc *sunxi_crtc;
+	struct drm_mode_set *mode_set;
+	struct drm_connector_helper_funcs  *con_func;
+
+	private = (struct sunxi_drm_private *)dev->dev_private;
+	if (!private) {
+		DRM_ERROR("dev->dev_private is NULL!\n");
+		return;
+	}
+
+	fb_helper = private->fb_helper;
+	if (!fb_helper) {
+		DRM_ERROR("private->fb_helper is NULL\n");
+		return;
+	}
+
+	for (i = 0; i < fb_helper->crtc_count; i++) {
+			mode_set = &fb_helper->crtc_info[i].mode_set;
+			crtc = mode_set->crtc;
+			sunxi_crtc = to_sunxi_crtc(crtc);
+			if ((!crtc) || (!mode_set->fb) || (!mode_set->connectors))
+				continue;
+
+			for (j = 0; j < mode_set->num_connectors; j++) {
+				if (mode_set->connectors
+					&& mode_set->connectors[j]) {
+					connector =  mode_set->connectors[j];
+					con_func = (struct drm_connector_helper_funcs *)connector->helper_private;
+					encoder = con_func->best_encoder(connector);
+					if (encoder)
+						connector->encoder = encoder;
+				}
+
+				/*set drm_crtc according to drm_fb_helper*/
+				crtc->primary->fb = fb_helper->fb;
+				drm_framebuffer_reference(fb_helper->fb);
+				crtc->enabled = 1;
+				crtc->x = mode_set->x;
+				crtc->y = mode_set->y;
+				if (mode_set->mode) {
+					if (fb_helper->fb)
+						/*initial crtc->y as fb height*/
+						crtc->y = fb_helper->fb->height;
+
+					memcpy(&crtc->mode, mode_set->mode,
+								sizeof(struct drm_display_mode));
+
+					/*set sunxi_crtc*/
+					drm_vblank_off(crtc->dev, sunxi_crtc->crtc_id);
+					/*sunxi_crtc->dpms = DRM_MODE_DPMS_OFF;
+					sunxi_drm_crtc_dpms(crtc, DRM_MODE_DPMS_ON);*/
+					sunxi_drm_crtc_soft_dpms(crtc);
+					/*find the fb plane*/
+					if (sunxi_set_fb_plane(crtc, 0, 0))
+						DRM_ERROR("failed set fb_plane.\n");
+					/* clear the wait for event*/
+					sunxi_drm_crtc_finish_pageflip(sunxi_crtc->drm_crtc.dev, sunxi_crtc);
+					sunxi_crtc->user_skip_cnt = 0;
+					sunxi_crtc->ker_skip_cnt = 0;
+					sunxi_crtc->ker_update_frame = 0;
+					sunxi_crtc->update_frame_ker_cnt = 0;
+					sunxi_crtc->update_frame_user_cnt = 0;
+
+					sunxi_drm_crtc_mode_set(crtc, mode_set->mode,
+						mode_set->mode, mode_set->x,
+						mode_set->y, NULL);
+					memcpy(&crtc->hwmode,  mode_set->mode,
+						sizeof(struct drm_display_mode));
+				}
+				drm_calc_timestamping_constants(crtc, mode_set->mode);
+
+				/*set encoder and connector*/
+				if (mode_set->connectors[j]) {
+					if (mode_set->connectors[j]->encoder)
+						sunxi_drm_encoder_soft_dpms_on(mode_set->connectors[j]->encoder,
+											mode_set->connectors[j]);
+
+					mode_set->connectors[j]->dpms = DRM_MODE_DPMS_ON;
+					sunxi_drm_display_power_soft(mode_set->connectors[j]);
+				}
+			}
+
+			/*Change the mode_set of the crtc which is not enabled
+			when system boot, in order make it can't be set
+			when directly call drm_mode_set_config_internal()*/
+			if (i != private->init_para.boot_info.disp) {
+				mode_set->num_connectors = 0;
+				if (mode_set->mode)
+					drm_mode_destroy(dev, mode_set->mode);
+			} else {
+				crtc->primary->crtc = crtc;
+			}
+		}
 }

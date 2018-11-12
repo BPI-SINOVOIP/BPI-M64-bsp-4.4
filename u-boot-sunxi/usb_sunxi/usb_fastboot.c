@@ -137,7 +137,15 @@ static int __usb_set_address(struct usb_device_request *req)
 	uchar address;
 
 	address = req->wValue & 0x7f;
+#ifdef CONFIG_ARCH_SUN3IW1P1
+	/* after enable mmu/dcache, usb may not work well if debug_level=0 */
+	int debug_level = get_sunxi_debug_level();
+	set_sunxi_debug_level(1);
 	printf("set address 0x%x\n", address);
+	set_sunxi_debug_level(debug_level);
+#else
+	printf("set address 0x%x\n", address);
+#endif
 
 	sunxi_udc_set_address(address);
 
@@ -1209,10 +1217,15 @@ static void __oem_operation(char *operation)
 	{
 		if ((gd->securemode == SUNXI_SECURE_MODE_WITH_SECUREOS) || (gd->securemode == SUNXI_SECURE_MODE_NO_SECUREOS)) {
 			printf("the system is secure\n");
+#ifdef CONFIG_FASTBOOT_LOCK_ENABLE_FOR_LINUX
+			/* for linux, there is no frp partition, make this if condition not equal */
+			if (sunxi_read_oem_unlock_ability() == 0x01) {
+#else
 			if (sunxi_read_oem_unlock_ability() == 0x00) {
-			__limited_fastboot_unlock();
-			return ;
-		}
+#endif
+				__limited_fastboot_unlock();
+				return ;
+			}
 			lockflag = SUNXI_UNLOCKED;
 			sunxi_fastboot_write_status_flag("unlocked");
 		} else {

@@ -212,7 +212,51 @@ static int arch_timer_shutdown_phys_mem(struct clock_event_device *clk)
 {
 	return timer_shutdown(ARCH_TIMER_MEM_PHYS_ACCESS, clk);
 }
+#if defined(CONFIG_ARCH_SUN50IW1P1) \
+	|| defined(CONFIG_ARCH_SUN50IW2P1)
+#define ARCH_TVAL_TRY_MAX_TIME (12)
+#define ARCH_CVAL_MAX_DELTA    (40)
+static __always_inline void set_next_event(const int access, unsigned long evt,
+				  struct clock_event_device *clk)
+{
+	unsigned int  retry = 0;
+	unsigned long ctrl;
+	unsigned long tval;
+	u64           cnt;
+	u64           cval;
 
+	ctrl = arch_timer_reg_read(access, ARCH_TIMER_REG_CTRL, clk);
+	ctrl |= ARCH_TIMER_CTRL_ENABLE;
+	ctrl &= ~ARCH_TIMER_CTRL_IT_MASK;
+
+	/* sun50i timer maybe imprecise,
+	 * we should try to fix this.
+	 */
+	while (retry < ARCH_VCNT_TRY_MAX_TIME) {
+		if (access == ARCH_TIMER_PHYS_ACCESS) {
+			cnt = arch_counter_get_cntpct();
+			arch_timer_reg_write(access, ARCH_TIMER_REG_TVAL, evt, clk);
+			cval = arch_timer_reg_read_cval(access);
+		} else {
+			cnt = arch_counter_get_cntvct();
+			arch_timer_reg_write(access, ARCH_TIMER_REG_TVAL, evt, clk);
+			cval = arch_timer_reg_read_cval(access);
+		}
+
+		tval = cval - cnt;
+		if ((tval - evt) <= ARCH_CVAL_MAX_DELTA) {
+			/* set tval succeeded, let timer running */
+			arch_timer_reg_write(access, ARCH_TIMER_REG_CTRL, ctrl, clk);
+			return;
+		}
+		/* tval set value error, try again */
+		retry++;
+	}
+	/* set tval fail, just let timer running */
+	pr_warn("notice: set tval failed.\n");
+	arch_timer_reg_write(access, ARCH_TIMER_REG_CTRL, ctrl, clk);
+}
+#else
 static __always_inline void set_next_event(const int access, unsigned long evt,
 					   struct clock_event_device *clk)
 {
@@ -223,6 +267,7 @@ static __always_inline void set_next_event(const int access, unsigned long evt,
 	arch_timer_reg_write(access, ARCH_TIMER_REG_TVAL, evt, clk);
 	arch_timer_reg_write(access, ARCH_TIMER_REG_CTRL, ctrl, clk);
 }
+#endif
 
 static int arch_timer_set_next_event_virt(unsigned long evt,
 					  struct clock_event_device *clk)

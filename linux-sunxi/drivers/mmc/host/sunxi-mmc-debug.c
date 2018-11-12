@@ -30,7 +30,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/stat.h>
-
+#include <linux/delay.h>
 #include <linux/mmc/host.h>
 #include "sunxi-mmc.h"
 #include "sunxi-mmc-debug.h"
@@ -494,7 +494,7 @@ sunxi_mmc_set_perf(struct device *dev, struct device_attribute *attr,
 
 	sscanf(buf, "%lld", &value);
 	printk("set perf value %lld\n", value);
-;
+
 	mmc_claim_host(mmc);
 	if (!value) {
 		memset(&host->perf, 0, sizeof(host->perf));
@@ -507,13 +507,15 @@ sunxi_mmc_set_perf(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+
+
 int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 {
 	int ret;
 
 	host->maual_insert.show = maual_insert_show;
 	host->maual_insert.store = maual_insert_store;
-	sysfs_attr_init(host->maual_insert.attr);
+	sysfs_attr_init(&(host->maual_insert.attr));
 	host->maual_insert.attr.name = "sunxi_insert";
 	host->maual_insert.attr.mode = S_IRUGO | S_IWUSR;
 	ret = device_create_file(&pdev->dev, &host->maual_insert);
@@ -522,7 +524,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 
 	host->dump_register = dump_register;
 	host->dump_register[0].show = dump_host_reg_show;
-	sysfs_attr_init(host->dump_register[0].attr);
+	sysfs_attr_init(&(host->dump_register[0].attr));
 	host->dump_register[0].attr.name = "sunxi_dump_host_register";
 	host->dump_register[0].attr.mode = S_IRUGO;
 	ret = device_create_file(&pdev->dev, &host->dump_register[0]);
@@ -530,7 +532,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 		return ret;
 
 	host->dump_register[1].show = dump_gpio_reg_show;
-	sysfs_attr_init(host->dump_register[1].attr);
+	sysfs_attr_init(&(host->dump_register[1].attr));
 	host->dump_register[1].attr.name = "sunxi_dump_gpio_register";
 	host->dump_register[1].attr.mode = S_IRUGO;
 	ret = device_create_file(&pdev->dev, &host->dump_register[1]);
@@ -538,7 +540,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 		return ret;
 
 	host->dump_register[2].show = dump_ccmu_reg_show;
-	sysfs_attr_init(host->dump_register[2].attr);
+	sysfs_attr_init(&(host->dump_register[2].attr));
 	host->dump_register[2].attr.name = "sunxi_dump_ccmu_register";
 	host->dump_register[2].attr.mode = S_IRUGO;
 	ret = device_create_file(&pdev->dev, &host->dump_register[2]);
@@ -546,7 +548,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 		return ret;
 
 	host->dump_clk_dly.show = dump_clk_dly_show;
-	sysfs_attr_init(host->dump_clk_dly.attr);
+	sysfs_attr_init(&(host->dump_clk_dly.attr));
 	host->dump_clk_dly.attr.name = "sunxi_dump_clk_dly";
 	host->dump_clk_dly.attr.mode = S_IRUGO;
 	ret = device_create_file(&pdev->dev, &host->dump_clk_dly);
@@ -555,10 +557,19 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 
 	host->host_perf.show = sunxi_mmc_show_perf;
 	host->host_perf.store = sunxi_mmc_set_perf;
-	sysfs_attr_init(host->host_perf.attr);
+	sysfs_attr_init(&(host->host_perf.attr));
 	host->host_perf.attr.name = "sunxi_host_perf";
 	host->host_perf.attr.mode = S_IRUGO | S_IWUSR;
 	ret = device_create_file(&pdev->dev, &host->host_perf);
+	if (ret)
+		return ret;
+
+	host->host_mwr.show = sunxi_mmc_panic_rtest;
+	host->host_mwr.store = sunxi_mmc_pancic_wrtest;
+	sysfs_attr_init(&(host->host_mwr.attr));
+	host->host_mwr.attr.name = "sunxi_host_panic_wr";
+	host->host_mwr.attr.mode = S_IRUGO | S_IWUSR;
+	ret = device_create_file(&pdev->dev, &host->host_mwr);
 
 	return ret;
 }
@@ -566,6 +577,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 void mmc_remove_sys_fs(struct sunxi_mmc_host *host,
 		       struct platform_device *pdev)
 {
+	device_remove_file(&pdev->dev, &host->host_mwr);
 	device_remove_file(&pdev->dev, &host->host_perf);
 	device_remove_file(&pdev->dev, &host->maual_insert);
 	device_remove_file(&pdev->dev, &host->dump_register[0]);

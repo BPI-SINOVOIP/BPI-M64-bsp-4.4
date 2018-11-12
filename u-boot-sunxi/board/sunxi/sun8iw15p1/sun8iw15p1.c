@@ -29,6 +29,8 @@
 #include <asm/io.h>
 #include <power/sunxi/pmu.h>
 #include <asm/arch/ccmu.h>
+#include <asm/arch/dram.h>
+#include <fdt_support.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -164,10 +166,12 @@ extern int axp2585_probe(void);
  */
 int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 {
+	u32 axp_num = 0;
 #ifdef CONFIG_SUNXI_MODULE_AXP
 	if (!axp858_probe()) {
 		tick_printf("PMU: AXP858 found\n");
 		sunxi_axp_dev_pt[0] = &sunxi_axp_858;
+		axp_num++;
 	} else {
 		printf("probe axp858 failed\n");
 		sunxi_axp_dev_pt[0] = &sunxi_axp_null;
@@ -176,6 +180,7 @@ int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 	/*bmu probe*/
 	if (!axp2585_probe()) {
 		sunxi_axp_dev_pt[1] = &sunxi_axp_2585;
+		axp_num++;
 	} else {
 		printf("probe axp858 failed\n");
 		sunxi_axp_dev_pt[1] = &sunxi_axp_null;
@@ -183,9 +188,10 @@ int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 
 #else
     sunxi_axp_dev_pt[0] = &sunxi_axp_null;
+	sunxi_axp_dev_pt[1] = &sunxi_axp_null;
 #endif
-    //find one axp
-    return 1;
+
+	return axp_num;
 
 }
 
@@ -294,4 +300,53 @@ int board_eth_init(bd_t *bis)
     return rc;
 }
 #endif
+
+int update_fdt_dram_para(void *dtb_base)
+{
+	/*fix dram para*/
+	int nodeoffset = 0;
+	uint32_t *dram_para = NULL;
+	dram_para = (uint32_t *)uboot_spare_head.boot_data.dram_para;
+
+	pr_msg("(sunxi):update dtb dram start\n");
+	nodeoffset = fdt_path_offset(dtb_base, "/dram");
+	if (nodeoffset < 0) {
+		printf("## error: %s : %s\n", __func__, fdt_strerror(nodeoffset));
+		return -1;
+	}
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_clk", dram_para[0]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_type", dram_para[1]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_dx_odt", dram_para[2]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_dx_dri", dram_para[3]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_ca_dri", dram_para[4]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_odt_en", dram_para[5]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_para1", dram_para[6]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_para2", dram_para[7]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr0", dram_para[8]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr1", dram_para[9]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr2", dram_para[10]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr3", dram_para[11]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr4", dram_para[12]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr5", dram_para[13]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr6", dram_para[14]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr11", dram_para[15]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr12", dram_para[16]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr13", dram_para[17]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr14", dram_para[18]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr16", dram_para[19]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr17", dram_para[20]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_mr22", dram_para[21]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr0", dram_para[22]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr1", dram_para[23]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr2", dram_para[24]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr3", dram_para[25]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr6", dram_para[26]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr10", dram_para[27]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr11", dram_para[28]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr12", dram_para[29]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr13", dram_para[30]);
+	fdt_setprop_u32(dtb_base, nodeoffset, "dram_tpr14", dram_para[31]);
+	pr_msg("update dtb dram  end\n");
+	return 0;
+}
 

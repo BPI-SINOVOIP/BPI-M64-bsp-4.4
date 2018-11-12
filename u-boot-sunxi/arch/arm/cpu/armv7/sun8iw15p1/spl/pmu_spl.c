@@ -35,7 +35,14 @@
 #define pmu_err(format, arg...)	printf("[pmu]: "format, ##arg)
 #define pmu_info(format, arg...)	/*printf("[pmu]: "format,##arg)*/
 
+#ifdef CONFIG_SUNXI_AXP22
+#define RSB_SLAVE_ADDR   (0x3A3)
+#define PMU_POWER_KEY_OFFSET 0x5
+#else
 #define RSB_SLAVE_ADDR   (0x745)
+#define PMU_POWER_KEY_OFFSET 0x0
+#endif
+
 #define RSB_RUNTIME_ADDR (0x2d)
 
 #define PMU_IC_TYPY_REG     PMU_IC_TYPE

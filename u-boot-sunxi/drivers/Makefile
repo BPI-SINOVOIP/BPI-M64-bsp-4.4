@@ -8,6 +8,7 @@ obj-y += misc/
 obj-y += pcmcia/
 obj-y += dfu/
 obj-y += rtc/
+obj-$(CONFIG_SUNXI_IR) += ir/
 obj-y += sound/
 obj-y += tpm/
 obj-y += twserial/

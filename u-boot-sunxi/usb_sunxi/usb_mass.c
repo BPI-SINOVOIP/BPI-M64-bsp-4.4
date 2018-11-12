@@ -319,7 +319,7 @@ static int __usb_get_descriptor(struct usb_device_request *req, uchar *buffer)
 			qua_dscrpt = (struct usb_qualifier_descriptor *)buffer;
 			memset(&buffer, 0, sizeof(struct usb_qualifier_descriptor));
 
-			qua_dscrpt->bLength = MIN(req->wLength, sizeof(sizeof(struct usb_qualifier_descriptor)));
+			qua_dscrpt->bLength = MIN(req->wLength, sizeof(struct usb_qualifier_descriptor));
 			qua_dscrpt->bDescriptorType    = USB_DT_DEVICE_QUALIFIER;
 			qua_dscrpt->bcdUSB             = 0x200;
 			qua_dscrpt->bDeviceClass       = 0xff;

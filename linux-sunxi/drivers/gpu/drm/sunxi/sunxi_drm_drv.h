@@ -13,11 +13,17 @@
 
 #include <drm/drm_crtc.h>
 #include <drm/drm_fb_helper.h>
+#include "subdev/sunxi_lcd.h"
+#include "subdev/sunxi_hdmi.h"
+#include "subdev/sunxi_common.h"
+#include "drm_de/drm_al.h"
+#include "subdev/sunxi_rotate.h"
 
 struct sunxi_drm_private {
 	struct drm_fb_helper *fb_helper;
 	struct drm_property *crtc_mode_property;
 	struct sunxi_rotate_private *rotate_private;
+	struct disp_bsp_init_para init_para;
 };
 
 struct device *sunxi_drm_get_dev(void);

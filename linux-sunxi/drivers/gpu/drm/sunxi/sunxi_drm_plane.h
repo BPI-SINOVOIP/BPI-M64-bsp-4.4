@@ -32,7 +32,7 @@ struct sunxi_drm_plane {
 
 #define to_sunxi_plane(x)	\
 	container_of(x, struct sunxi_drm_plane, drm_plane)
-
+uint32_t disp_to_drm_format(enum disp_pixel_format format);
 int sunxi_set_fb_plane(struct drm_crtc *crtc,
 	unsigned int plane_id, unsigned int zoder);
 

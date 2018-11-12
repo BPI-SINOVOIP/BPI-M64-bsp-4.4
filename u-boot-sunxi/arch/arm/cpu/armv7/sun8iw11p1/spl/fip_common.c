@@ -13,6 +13,9 @@
 #include <sunxi_cfg.h>
 #include <stdarg.h>
 #include <vsprintf.h>
+#include <private_tee.h>
+#include <private_boot0.h>
+extern const boot0_file_head_t  BT0_head;
 extern size_t strlen(const char * s);
 
 int toc1_flash_read(u32 start_sector, u32 blkcnt, void *buff)
@@ -134,20 +137,30 @@ int load_fip(int *use_monitor)
 #endif
 		printf("Entry_name        = %s\n",   toc1_item->name);
 
-		if(strncmp(toc1_item->name, ITEM_UBOOT_NAME, sizeof(ITEM_UBOOT_NAME)) == 0)
-		{
+		if (strncmp(toc1_item->name, ITEM_UBOOT_NAME, sizeof(ITEM_UBOOT_NAME)) == 0) {
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SYS_TEXT_BASE);
-		}
-		else if(strlen(toc1_item->name) == strlen(item_dtb_name_with_index) &&
+		} else if (strncmp(toc1_item->name, ITEM_OPTEE_NAME, sizeof(ITEM_OPTEE_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)OPTEE_BASE);
+			struct spare_optee_head *tee_head = (struct spare_optee_head *)OPTEE_BASE;
+			memcpy(tee_head->dram_para, BT0_head.prvt_head.dram_para, 32*sizeof(int));
+			*use_monitor = 1;
+		} else if(strlen(toc1_item->name) == strlen(item_dtb_name_with_index) &&
 				strncmp(toc1_item->name, item_dtb_name_with_index, strlen(item_dtb_name_with_index)) == 0) {
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_DTB_STORE_IN_DRAM_BASE);
-		}
-		else if(strlen(toc1_item->name) == strlen(item_soccfg_name_with_index) &&
+		} else if(strlen(toc1_item->name) == strlen(item_soccfg_name_with_index) &&
 				strncmp(toc1_item->name, item_soccfg_name_with_index, strlen(item_soccfg_name_with_index)) == 0) {
 			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SOCCFG_STORE_IN_DRAM_BASE);
+		} else {
+			printf("unknow boot package file \n");
+			return -1;
 		}
 
 	}
-
+	if (*use_monitor) {
+		struct spare_boot_head_t *header;
+		/* Obtain a reference to the image by querying the platform layer */
+		header = (struct spare_boot_head_t *)CONFIG_SYS_TEXT_BASE;
+		header->boot_data.secureos_exist = 1;
+	}
 	return 0;
 }

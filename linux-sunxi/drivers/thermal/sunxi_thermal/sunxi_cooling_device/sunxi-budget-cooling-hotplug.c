@@ -103,7 +103,7 @@ int __ref sunxi_hotplug_update_state(struct sunxi_budget_cooling_device
 	    (hotplug->cluster_num_floor[cluster] >=
 	     max) ? max : hotplug->cluster_num_floor[cluster];
 #ifdef CONFIG_CPU_AUTOHOTPLUG_ROOMAGE
-	pr_info("CPU Budget hotplug: cluster%d min:%d max:%d\n", cluster, min,
+	pr_debug("CPU Budget hotplug: cluster%d min:%d max:%d\n", cluster, min,
 		max);
 	autohotplug_roomage_limit(cluster, min, max);
 #endif
@@ -121,7 +121,7 @@ int __ref sunxi_hotplug_update_state(struct sunxi_budget_cooling_device
 		    budget_get_any_offline_cpu(&cooling_device->
 					       cluster_cpus[cluster]);
 		if (cpuid < nr_cpu_ids) {
-			pr_info
+			pr_debug
 			    ("CPU Budget:Try to up cpu %d, cluster%d online %d, max %d\n",
 			     cpuid, cluster, online, max);
 			cpuid_l = cpuid;
@@ -140,7 +140,7 @@ int __ref sunxi_hotplug_update_state(struct sunxi_budget_cooling_device
 		    budget_get_any_online_cpu(&cooling_device->
 					      cluster_cpus[cluster]);
 		if (cpuid < nr_cpu_ids) {
-			pr_info
+			pr_debug
 			    ("CPU Budget:Try to down cpu %d, cluster%d online %d, max %d\n",
 			     cpuid, cluster, online, max);
 			cpuid_l = cpuid;
@@ -213,7 +213,7 @@ static int hotplug_thermal_notifier(struct notifier_block *nfb,
 			else
 				max = hotplug->cluster_num_roof[i];
 			if (online >= max) {
-				pr_info("CPU Budget:reject cpu %d to up,cluster%d online %d, limit %d\n",
+				pr_debug("CPU Budget:reject cpu %d to up,cluster%d online %d, limit %d\n",
 				     cpu, i, online, max);
 				return NOTIFY_BAD;
 			}

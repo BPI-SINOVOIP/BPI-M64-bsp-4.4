@@ -70,8 +70,12 @@
 #define get_wvalue(addr)	(*((volatile unsigned long  *)(addr)))
 #define put_wvalue(addr, v)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 
-int codec_play_audio_prepare(void);
+int codec_play_audio_prepare_step1(void);
+int codec_play_audio_prepare_step2(void);
+int codec_play_audio_prepare_step3(void);
 int codec_play_audio(void);
+int play_factory_tone(void);
+int play_boot_tone(void);
 
 #endif /*__SUN3I_SOUND_H__*/
 

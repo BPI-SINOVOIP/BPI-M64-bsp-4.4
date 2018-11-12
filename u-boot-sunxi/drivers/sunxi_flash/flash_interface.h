@@ -19,7 +19,7 @@ extern int (* sunxi_sprite_erase_pt)(int erase, void *mbr_buffer);
 extern uint (* sunxi_sprite_size_pt)(void);
 extern int (* sunxi_sprite_exit_pt) (int force) ;
 extern int (* sunxi_sprite_flush_pt)(void);
-extern int (* sunxi_sprite_force_erase_pt)(void)  ;
+extern int (*sunxi_sprite_force_erase_pt)(int erase, void *mbr_buffer);
 extern int (* sunxi_sprite_phyread_pt) (unsigned int start_block, unsigned int nblock, void *buffer);
 extern int (* sunxi_sprite_phywrite_pt)(unsigned int start_block, unsigned int nblock, void *buffer);
 

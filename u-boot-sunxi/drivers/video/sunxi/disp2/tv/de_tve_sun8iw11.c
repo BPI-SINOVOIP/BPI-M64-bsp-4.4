@@ -19,7 +19,7 @@ static unsigned int dac_type_info[TVE_DEVICE_NUM][TVE_DAC_NUM];
 s32 tve_low_set_reg_base(u32 sel, void __iomem *address)
 {
 	if (sel > 2)
-		printf("sel is %d,err!", sel);
+		printf("sel is %u,err!", sel);
 	else
 		tve_reg_base[sel] = address;
 	return 0;
@@ -471,6 +471,8 @@ s32 tve_low_set_tv_mode(u32 sel, enum disp_tv_mode mode, u32 cali)
 	case DISP_VGA_MOD_1280_800P_60:
 	case DISP_VGA_MOD_1366_768P_60:
 	case DISP_VGA_MOD_1440_900P_60:
+	case DISP_VGA_MOD_1600_900P_60:
+	case DISP_VGA_MOD_1280_720P_60:
 	case DISP_VGA_MOD_1920_1080P_60:
 	case DISP_VGA_MOD_1920_1200P_60:
 		TVE_WUINT32(sel, TVE_004, 0x08000000);

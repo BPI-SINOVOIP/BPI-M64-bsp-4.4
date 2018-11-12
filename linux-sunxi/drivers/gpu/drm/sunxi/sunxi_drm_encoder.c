@@ -20,6 +20,25 @@
 #include "subdev/sunxi_common.h"
 #include "drm_de/drm_al.h"
 
+void sunxi_encoder_info_dump(struct drm_encoder *encoder)
+{
+	struct sunxi_drm_encoder *sunxi_enc = NULL;
+	struct sunxi_hardware_res *hw_res;
+
+	pr_info("encoder info:\n");
+	if (!encoder)
+		return;
+
+	pr_info("encoder name:%s  type:%d\n",
+			encoder->name, encoder->encoder_type);
+	sunxi_enc = to_sunxi_encoder(encoder);
+	hw_res = sunxi_enc->hw_res;
+	pr_info("hw_res  reg_base:0x%lx  id:%d  irq_no:%d\n",
+			hw_res->reg_base, hw_res->res_id, hw_res->irq_no);
+}
+EXPORT_SYMBOL(sunxi_encoder_info_dump);
+
+
 struct sunxi_drm_encoder *
 	get_sunxi_enc(struct drm_device *dev, unsigned int nr)
 {
@@ -263,6 +282,7 @@ bool sunxi_tcon_dsi_reset(void *data)
 		to_sunxi_encoder(data);
 	struct sunxi_hardware_res *hw_res;
 
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	hw_res = sunxi_encoder->hw_res;
 
 	sunxi_clk_set(hw_res);
@@ -363,6 +383,8 @@ bool sunxi_tcon_dsi_enable(void *data)
 	hw_res = sunxi_encoder->hw_res;
 	lcd_private = (struct sunxi_lcd_private *)hw_res->private;
 
+	sunxi_clk_enable(hw_res);
+	tcon_init(sunxi_encoder->enc_id);
 	tcon0_open(sunxi_encoder->enc_id, lcd_private->panel);
 	dsi_open(sunxi_encoder->enc_id, lcd_private->panel);
 
@@ -731,6 +753,7 @@ int sunxi_drm_encoder_create(struct drm_device *dev,
 
 	encoder = &sunxi_enc->drm_encoder;
 	encoder->possible_crtcs = possible_crtcs;
+
 	drm_encoder_init(dev, encoder, &sunxi_encoder_funcs,
 		DRM_MODE_ENCODER_TMDS);
 
@@ -811,4 +834,24 @@ int sunxi_encoder_assign_ops(struct drm_device *dev, int nr,
 		sunxi_encoder->drm_encoder.base.id);
 
 	return 0;
+}
+
+void sunxi_drm_encoder_soft_dpms_on(struct drm_encoder *encoder,
+										struct drm_connector *connector)
+{
+	struct sunxi_drm_encoder *sunxi_enc = to_sunxi_encoder(encoder);
+	struct sunxi_hardware_res *hw_res = sunxi_enc->hw_res;
+	struct sunxi_drm_connector *sunxi_connector;
+	bool inused;
+
+	if (connector->connector_type == DRM_MODE_CONNECTOR_DSI) {
+		sunxi_connector = to_sunxi_connector(connector);
+		sunxi_irq_request(sunxi_connector->hw_res);
+	} else {
+		inused = drm_helper_encoder_in_use(encoder);
+		if (inused)
+			sunxi_irq_request(hw_res);
+	}
+
+	sunxi_enc->dpms = DRM_MODE_DPMS_ON;
 }

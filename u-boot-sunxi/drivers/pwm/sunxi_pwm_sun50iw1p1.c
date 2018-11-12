@@ -33,9 +33,6 @@
 #endif
 
 uint pwm_active_sta[4] = {1, 0, 0, 0};
-uint pwm_pin_count[4] = {0};
-
-user_gpio_set_t pwm_gpio_info[PWM_NUM][2];
 
 #define sunxi_pwm_debug 0
 #undef  sunxi_pwm_debug
@@ -298,40 +295,16 @@ int sunxi_pwm_enable(struct sunxi_pwm_chip* pchip)
 	int value;
 	char pin_name[6];
 	unsigned int reg_offset, reg_shift;
-	int i;
-	uint ret = 0;
+	int ret = 0;
 	int pwm = pchip->pwm;
 	int base = pchip->pwm_base;
 
-    for(i = 0; i < pwm_pin_count[pwm]; i++) {
-        ret = gpio_request(&pwm_gpio_info[pwm][i], 1);
-        if(ret == 0) {
-            pwm_debug("pwm gpio request failed!\n");
-        }
-
-        gpio_release(ret, 2);
-    }
-
-/*
-    temp = sunxi_pwm_read_reg(0);
-
-    if(pwm == 0) {
-        temp |= 1 << 4;
-        temp |= 1 << 6;
-        } else {
-            temp |= 1 << 19;
-            temp |= 1 << 21;
-            }
-
-		sunxi_pwm_pin_set_state("pwm", PWM_PIN_STATE_ACTIVE);
-    sunxi_pwm_write_reg(0, temp);
-*/
 	/*active pin config.*/
 	if (base > 0)
-		sprintf(pin_name, "spwm%d", pwm - base);
+		snprintf(pin_name, 6, "spwm%d", pwm - base);
 	else
-		sprintf(pin_name, "pwm%d", pwm);
-	sunxi_pwm_pin_set_state(pin_name, PWM_PIN_STATE_ACTIVE);
+		snprintf(pin_name, 6,  "pwm%d", pwm);
+	ret = sunxi_pwm_pin_set_state(pin_name, PWM_PIN_STATE_ACTIVE);
 
 	/* enable clk for pwm controller. */
 	reg_offset = pchip->config->reg_clk_gating_offset;
@@ -347,7 +320,7 @@ int sunxi_pwm_enable(struct sunxi_pwm_chip* pchip)
 	value = SET_BITS(reg_shift, 1, value, 1);
 	sunxi_pwm_writel(pchip, reg_offset, value);
 
-    return 0;
+	return ret;
 }
 
 void sunxi_pwm_disable(struct sunxi_pwm_chip* pchip)
@@ -359,34 +332,7 @@ void sunxi_pwm_disable(struct sunxi_pwm_chip* pchip)
 
 	base = pchip->pwm_base;
 	pwm = pchip->pwm;
-#ifndef FPGA_PLATFORM
 
-    int i;
-    uint ret = 0;
-
-    for(i = 0; i < pwm_pin_count[pwm]; i++) {
-        ret = gpio_request(&pwm_gpio_info[pwm][i], 1);
-        if(ret == 0) {
-            pwm_debug("pwm gpio request failed!\n");
-        }
-
-        gpio_release(ret, 2);
-    }
-#endif
-
-/*
-    temp = sunxi_pwm_read_reg(0);
-
-    if(pwm == 0) {
-        temp &= ~(1 << 4);
-        temp &= ~(1 << 6);
-        } else {
-            temp &= ~(1 << 19);
-            temp &= ~(1 << 21);
-            }
-	sunxi_pwm_write_reg(0, temp);
-	sunxi_pwm_pin_set_state("pwm", PWM_PIN_STATE_SLEEP);
-*/
 	/* disable pwm controller. */
 	reg_offset = pchip->config->reg_enable_offset;
 	reg_shift = pchip->config->reg_enable_shift;
@@ -403,12 +349,12 @@ void sunxi_pwm_disable(struct sunxi_pwm_chip* pchip)
 
 	/* disable pin config. */
 	if (base > 0) {
-		sprintf(pin_name, "spwm%d", pwm - base);
+		snprintf(pin_name, 6, "spwm%d", pwm - base);
 #if defined CLK_GATE_SUPPORT
 		sclk_count--;
 #endif
 	} else {
-		sprintf(pin_name, "pwm%d", pwm);
+		snprintf(pin_name, 6, "pwm%d", pwm);
 #if defined CLK_GATE_SUPPORT
 		clk_count--;
 #endif

@@ -21,7 +21,6 @@ static int pmu_type;
 
 static int axp_probe(void)
 {
-#if 0
     u8  pmu_type;
 
     if (axp_i2c_read(AXP22_ADDR, 0x3, &pmu_type)) {
@@ -44,9 +43,6 @@ static int axp_probe(void)
 
     printf("unknown pmu\n");
     return -1;
-#endif
-    return SUNXI_AXP_22X;
-
 }
 
 static int axp22X_set_dcdc5(int set_vol)
@@ -134,7 +130,7 @@ int set_rtc_voltage(int set_vol)
 
 int pmu_init(u8 power_mode)
 {
-    //i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+    i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
     pmu_type = axp_probe();
 
     return pmu_type;

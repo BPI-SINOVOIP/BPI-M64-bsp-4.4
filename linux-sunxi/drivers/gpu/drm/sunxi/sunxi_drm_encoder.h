@@ -49,5 +49,6 @@ struct drm_connector *sunxi_get_conct(struct drm_encoder *encoder);
 
 int sunxi_encoder_assign_ops(struct drm_device *dev, int nr,
 	enum encoder_ops_type type, void *private);
-
+void sunxi_drm_encoder_soft_dpms_on(struct drm_encoder *encoder,
+										struct drm_connector *connector);
 #endif

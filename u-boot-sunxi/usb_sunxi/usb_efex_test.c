@@ -316,7 +316,15 @@ static int __usb_set_address(struct usb_device_request *req)
 	uchar address;
 
 	address = req->wValue & 0x7f;
+#ifdef CONFIG_ARCH_SUN3IW1P1
+	/* after enable mmu/dcache, usb may not work well if debug_level=0 */
+	int debug_level = get_sunxi_debug_level();
+	set_sunxi_debug_level(1);
 	printf("set address 0x%x\n", address);
+	set_sunxi_debug_level(debug_level);
+#else
+	printf("set address 0x%x\n", address);
+#endif
 
 	sunxi_udc_set_address(address);
 
@@ -533,7 +541,7 @@ static int __usb_get_descriptor(struct usb_device_request *req, uchar *buffer)
 			qua_dscrpt = (struct usb_qualifier_descriptor *)buffer;
 			memset(&buffer, 0, sizeof(struct usb_qualifier_descriptor));
 
-			qua_dscrpt->bLength = MIN(req->wLength, sizeof(sizeof(struct usb_qualifier_descriptor)));
+			qua_dscrpt->bLength = MIN(req->wLength, sizeof(struct usb_qualifier_descriptor));
 			qua_dscrpt->bDescriptorType    = USB_DT_DEVICE_QUALIFIER;
 			qua_dscrpt->bcdUSB             = 0x200;
 			qua_dscrpt->bDeviceClass       = 0xff;
@@ -954,7 +962,6 @@ static int __sunxi_usb_efex_test_op_cmd(u8 *cmd_buffer)
 
 	switch(cmd->app_cmd)
 	{
-		printf("======guoyingyang =====\n");
 		case FEX_CMD_fes_trans:
 			sunxi_usb_dbg("FEX_CMD_fes_trans\n");
 

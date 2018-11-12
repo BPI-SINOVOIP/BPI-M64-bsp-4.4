@@ -309,7 +309,7 @@ __s32 spi_nand_read_x1(__u32 spi_no, __u32 page_num, __u32 mbyte_cnt, __u32 sbyt
 		} else {
 			/*read bad mark area*/
 			txnum = 4;
-			rxnum = 1;
+			rxnum = sbyte_cnt;
 
 			sdata[0] = SPI_NAND_FAST_READ_X1;
 

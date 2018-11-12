@@ -220,8 +220,15 @@ static int __usb_set_address(struct usb_device_request *req)
 	uchar address;
 
 	address = req->wValue & 0x7f;
+#ifdef CONFIG_ARCH_SUN3IW1P1
+	/* after enable mmu/dcache, usb may not work well if debug_level=0 */
+	int debug_level = get_sunxi_debug_level();
+	set_sunxi_debug_level(1);
 	printf("set address 0x%x\n", address);
-
+	set_sunxi_debug_level(debug_level);
+#else
+	printf("set address 0x%x\n", address);
+#endif
 	sunxi_udc_set_address(address);
 
 	return SUNXI_USB_REQ_SUCCESSED;

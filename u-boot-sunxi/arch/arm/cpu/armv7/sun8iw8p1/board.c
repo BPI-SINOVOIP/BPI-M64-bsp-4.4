@@ -94,7 +94,7 @@ int power_source_init(void)
     nodeoffset =  fdt_path_offset(working_fdt,FDT_PATH_POWER_SPLY);
     if(nodeoffset >=0)
     {
-        fdt_getprop_u32(working_fdt, nodeoffset, "dcdc3_vol", &dcdc_vol);
+        fdt_getprop_u32(working_fdt, nodeoffset, "dcdc2_vol", &dcdc_vol);
     }
     if(!dcdc_vol)
     {
@@ -105,44 +105,42 @@ int power_source_init(void)
         cpu_vol = dcdc_vol%10000;
     }
 
-    if(!axp_probe())
+    if(axp_probe() > 0)
     {
         axp_probe_factory_mode();
         if(!axp_probe_power_supply_condition())
         {
-            if(!axp_set_supply_status(0, PMU_SUPPLY_DCDC3, cpu_vol, -1))
+            if(!axp_set_supply_status(0, PMU_SUPPLY_DCDC2, cpu_vol, -1))
             {
-                tick_printf("PMU: dcdc3 %d\n", cpu_vol);
+                tick_printf("PMU: dcdc2 %d\n", cpu_vol);
                 sunxi_clock_set_corepll(uboot_spare_head.boot_data.run_clock, 0);
             }
             else
             {
-                printf("axp_set_dcdc3 fail\n");
+                printf("axp_set_dcdc2 fail\n");
             }
         }
         else
         {
             printf("axp_probe_power_supply_condition error\n");
         }
+        axp_set_charge_vol_limit();
+        axp_set_all_limit();
+        axp_set_hardware_poweron_vol();
+        axp_set_power_supply_output();
+        power_limit_init();
     }
     else
     {
         printf("axp_probe error\n");
+        sunxi_clock_set_corepll(uboot_spare_head.boot_data.run_clock, 0);
+        power_limit_init();
     }
 
     pll1 = sunxi_clock_get_corepll();
 
     tick_printf("PMU: pll1 %d Mhz,PLL6=%d Mhz\n", pll1,sunxi_clock_get_pll6());
     printf("AXI=%d Mhz,AHB=%d Mhz, APB1=%d Mhz \n", sunxi_clock_get_axi(),sunxi_clock_get_ahb(),sunxi_clock_get_apb1());
-
-
-    axp_set_charge_vol_limit();
-    axp_set_all_limit();
-    axp_set_hardware_poweron_vol();
-
-    axp_set_power_supply_output();
-
-    power_limit_init();
 
     return 0;
 }

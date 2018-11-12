@@ -150,9 +150,9 @@ s32 dsi_start(u32 sel,__dsi_start_t	func)
 	}
 	dsi_dev[sel]->dsi_basic_ctl0.bits.inst_st =	0;
 	dsi_dev[sel]->dsi_basic_ctl0.bits.inst_st =	1;
-	if (func==DSI_START_HSC)	{
-		dsi_dev[sel]->dsi_inst_func[DSI_INST_ID_LP11].bits.lane_cen	 = 0;
-	}
+	if (func == DSI_START_HSC)
+		dsi_dev[sel]->dsi_inst_func[DSI_INST_ID_LP11].bits.lane_cen =
+		    (dsi_dev[sel]->dsi_pixel_ctl0.bits.pd_plug_dis) ? 0 : 1;
 	return 0;
 }
 

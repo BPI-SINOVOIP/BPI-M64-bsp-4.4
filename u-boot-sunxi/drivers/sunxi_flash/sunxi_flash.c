@@ -91,7 +91,7 @@ sunxi_null_flush(void){
 }
 
 static int
-sunxi_null_force_erase(void){
+sunxi_null_force_erase(int erase, void *mbr_buffer) {
     return 0;
 }
 
@@ -236,7 +236,7 @@ int (* sunxi_sprite_erase_pt)(int erase, void *mbr_buffer) = sunxi_null_erase;
 uint (* sunxi_sprite_size_pt)(void) = sunxi_null_size;
 int (* sunxi_sprite_exit_pt) (int force) = sunxi_null_exit;
 int (* sunxi_sprite_flush_pt)(void) = sunxi_null_flush;
-int (* sunxi_sprite_force_erase_pt)(void)  = sunxi_null_force_erase;
+int (*sunxi_sprite_force_erase_pt)(int erase, void *mbr_buffer)  = sunxi_null_force_erase;
 int (* sunxi_sprite_phyread_pt) (unsigned int start_block, unsigned int nblock, void *buffer) = sunxi_null_op;
 int (* sunxi_sprite_phywrite_pt)(unsigned int start_block, unsigned int nblock, void *buffer) = sunxi_null_op;
 #ifdef CONFIG_SUNXI_SPINOR
@@ -334,9 +334,9 @@ int sunxi_sprite_phywrite(uint start_block, uint nblock, void *buffer)
 	return sunxi_sprite_phywrite_pt(start_block, nblock, buffer);
 }
 
-int sunxi_sprite_force_erase(void)
+int sunxi_sprite_force_erase(int erase, void *mbr_buffer)
 {
-    return sunxi_sprite_force_erase_pt();
+    return sunxi_sprite_force_erase_pt(erase, mbr_buffer);
 }
 //-------------------------------------sprite interface end-----------------------------------------------
 
@@ -628,6 +628,7 @@ int sunxi_flash_upload_boot0(char * buffer, int size)
 	    case STORAGE_NAND:
 			ret = nand_read_boot0(buffer, size);
 			break;
+		case STORAGE_SD1:
 	    case STORAGE_EMMC:
 	    case STORAGE_EMMC3:
 	        ret = card_read_boot0(buffer, size);

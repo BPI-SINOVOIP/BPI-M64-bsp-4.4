@@ -29,6 +29,22 @@ void flush_dcache_all(void)
 	);
 }
 
+static int fix_cache_range(unsigned long *start, unsigned long *stop)
+{
+
+	if (*start & (CONFIG_SYS_CACHELINE_SIZE - 1))
+	{
+		*start &= ~(CONFIG_SYS_CACHELINE_SIZE - 1);
+	}
+
+	if (*stop & (CONFIG_SYS_CACHELINE_SIZE - 1))
+	{
+		*stop &= ~(CONFIG_SYS_CACHELINE_SIZE - 1);
+		*stop += CONFIG_SYS_CACHELINE_SIZE;
+	}
+	return 0;
+}
+
 static int check_cache_range(unsigned long start, unsigned long stop)
 {
 	int ok = 1;
@@ -40,7 +56,7 @@ static int check_cache_range(unsigned long start, unsigned long stop)
 		ok = 0;
 
 	if (!ok)
-		debug("CACHE: Misaligned operation at range [%08lx, %08lx]\n",
+		printf("CACHE: Misaligned operation at range [%08lx, %08lx]\n",
 			start, stop);
 
 	return ok;
@@ -48,6 +64,7 @@ static int check_cache_range(unsigned long start, unsigned long stop)
 
 void invalidate_dcache_range(unsigned long start, unsigned long stop)
 {
+	fix_cache_range(&start, &stop);
 	if (!check_cache_range(start, stop))
 		return;
 
@@ -59,6 +76,7 @@ void invalidate_dcache_range(unsigned long start, unsigned long stop)
 
 void flush_dcache_range(unsigned long start, unsigned long stop)
 {
+	fix_cache_range(&start, &stop);
 	if (!check_cache_range(start, stop))
 		return;
 

@@ -23,15 +23,19 @@
 				ref_chip_addr = <0x3b>;
 				pa_double_used = <0x0>;
 				ref_channel_num = <0x3>;
-				codec_mic_used = <0x0>;
+				codec_mic_used = <0x1>;
 				power_vol = <1800000>;
 				slot_width = <0x18>;
 				gpio-power = <&r_pio PL 9 1 1 1 1>;
 			};
-			touchscreen: atmel_ctp@4A {
+			touchscreen0: atmel_ctp@4A {
 				compatible = "atmel,mXT224";
 				reg = <0x4A>;
 				atmel,suspend_mode = <0>;
+			};
+			touchscreen1: sitronix@70 {
+				compatible = "sitronix,st1633i";
+				reg = <0x70>;
 			};
 		};
 		twi1: twi@0x01c2b000{
@@ -40,6 +44,11 @@
 				compatible = "STK3310";
 				stk3310_gpio-gpios = <&pio PB 9 6 1 1 1>;
 				reg = <0x48>;
+			};
+			max44009@4a{
+				compatible = "maxim,max44009";
+				max44009_gpio-gpios = <&pio PB 9 6 1 1 1>;
+				reg = <0x4a>;
 			};
 			tmp103@70{
 				compatible = "TMP 103";
@@ -54,7 +63,7 @@
 			key_cnt = <3>;
 			key0 = <191 115>;
 			key1 = <391 114>;
-			key2 = <600 542>;
+			key2 = <600 113>;
 		};
 	};
 	wlan:wlan {

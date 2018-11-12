@@ -807,7 +807,7 @@ static s32 disp_edp_backlight_enable(struct disp_device *edp)
 
 		memcpy(gpio_info, &(edpp->edp_bl_en), sizeof(disp_gpio_set_t));
 
-		edpp->edp_bl_gpio_hdl = disp_sys_gpio_request(gpio_info, 1);
+		edpp->edp_bl_gpio_hdl = disp_sys_gpio_request_simple(gpio_info, 1);
 	}
 	bl = disp_edp_get_bright(edp);
 	disp_edp_set_bright(edp, bl);

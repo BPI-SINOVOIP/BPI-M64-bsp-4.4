@@ -37,7 +37,7 @@ __s32 Spic_init(__u32 spi_no)
 	SPINAND_PIORequest(spi_no);
 	SPIC_IO_BASE = SPINAND_GetIOBaseAddr();
 	SPINAND_ClkRequest(spi_no);
-	SPINAND_SetClk(spi_no, 30);
+
 
 	rval = SPI_SOFT_RST|SPI_TXPAUSE_EN|SPI_MASTER|SPI_ENABLE;
 	writel(rval, SPI_GCR);
@@ -46,7 +46,7 @@ __s32 Spic_init(__u32 spi_no)
 	rval = SPI_SET_SS_1|SPI_DHB|SPI_SS_ACTIVE0;
 	writel(rval, SPI_TCR);
 
-	writel(0x1000, SPI_CCR); /*SPI data clk = source clk / 2, Duty Ratio ≈ 50%*/
+	SPINAND_SetClk(spi_no, 30);
 
 	writel(SPI_TXFIFO_RST|(SPI_TX_WL<<16)|(SPI_RX_WL), SPI_FCR);
 	writel(SPI_ERROR_INT, SPI_IER);

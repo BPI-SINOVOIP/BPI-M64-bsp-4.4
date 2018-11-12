@@ -53,8 +53,6 @@
 #define  SUNXI_AXP_858					858
 #define  SUNXI_AXP_2585                  2585
 
-
-
 #define  RSB_SADDR_AXP22X	         	(0x3A3)
 #define  RSB_SADDR_AXP809		        (0x3A3)
 #define  RSB_SADDR_AXP806		        (0x745)

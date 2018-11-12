@@ -54,8 +54,6 @@
 
 #define CONFIG_NORMAL_BOOT_STACK         BOOT_COMMON_STACK
 #define CONFIG_SECURE_BOOT_STACK         BOOT_COMMON_STACK
-/* #define CONFIG_STORAGE_MEDIA_NAND */
-/* #define CONFIG_STORAGE_MEDIA_MMC */
 
 
 /*********************************************************************
@@ -115,7 +113,7 @@
 
 /* #define CONFIG_SUNXI_DMA */
 #define CONFIG_SUNXI_CHIPID
-#define CONFIG_SUNXI_ARISC_EXIST
+/*#define CONFIG_SUNXI_ARISC_EXIST*/
 /* #define CONFIG_SUNXI_ARISC_NOT_RESET */
 
 /* #define CONFIG_SUNXI_MULITCORE_BOOT */
@@ -171,14 +169,15 @@
  *module support
  **********************************************************************/
 #define CONFIG_SUNXI_MODULE_SPRITE
-/* #define CONFIG_SUNXI_MODULE_NAND */
-/* #define CONFIG_SUNXI_MODULE_SDMMC */
+/*#define CONFIG_SUNXI_MODULE_NAND*/
+#define CONFIG_SUNXI_MODULE_SDMMC
 #define CONFIG_SUNXI_MODULE_USB
 /* #define CONFIG_SUNXI_MODULE_AXP */
 /* #define CONFIG_SUNXI_MODULE_DISPLAY */
 
 #ifdef CONFIG_SUNXI_MODULE_SDMMC
 /* mmc config */
+#define CONFIG_STORAGE_MEDIA_MMC
 #define CONFIG_MMC
 #define CONFIG_GENERIC_MMC
 #define CONFIG_CMD_MMC
@@ -192,6 +191,7 @@
 
 #ifdef CONFIG_SUNXI_MODULE_NAND
 /* Nand config */
+#define CONFIG_STORAGE_MEDIA_NAND
 #define CONFIG_NAND
 #define CONFIG_STORAGE_NAND
 #define CONFIG_NAND_SUNXI

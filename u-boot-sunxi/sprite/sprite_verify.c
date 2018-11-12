@@ -343,6 +343,39 @@ int sunxi_sprite_read_mbr(void *buffer, uint mbr_copy)
 
 }
 
+int sunxi_sprite_verify_mbr_from_flash(u32 blocks, u32 mbr_copy)
+{
+	int ret;
+	u32 data_len;
+	char  *data_buf = NULL;
+
+	printf("sunxi_sprite_verify_mbr_from_flash\n");
+	data_len = (blocks << 9);
+	data_buf = malloc(data_len);
+	if (data_buf == NULL) {
+		printf("%s: malloc fail\n", __func__);
+		return -1;
+	}
+	memset(data_buf, 0x0, data_len);
+
+	ret = sunxi_sprite_read_mbr(data_buf, mbr_copy);
+	if (ret < 0) {
+		printf("%s:sunxi_sprite_read_mbr fail\n", __func__);
+		free(data_buf);
+		return -1;
+	}
+
+	if (sunxi_sprite_verify_mbr(data_buf) < 0) {
+		printf("mbr_verify fail\n");
+		free(data_buf);
+		return -1;
+	}
+
+	free(data_buf);
+	return 0;
+}
+
+
 /*
 ************************************************************************************************************
 *

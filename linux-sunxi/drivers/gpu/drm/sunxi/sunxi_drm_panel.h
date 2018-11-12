@@ -20,6 +20,7 @@ struct sunxi_panel;
 struct panel_ops {
 	bool (*init)(struct sunxi_panel *panel);
 	bool (*open)(struct sunxi_panel *panel);
+	bool (*soft_open)(struct sunxi_panel *panel);
 	bool (*close)(struct sunxi_panel *panel);
 	bool (*reset)(struct sunxi_panel *panel);
 	bool (*bright_light)(struct sunxi_panel *panel,

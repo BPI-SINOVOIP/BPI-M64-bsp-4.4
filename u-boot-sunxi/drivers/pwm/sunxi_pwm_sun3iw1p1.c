@@ -31,9 +31,6 @@
 #endif
 
 uint pwm_active_sta[4] = {1, 0, 0, 0};
-uint pwm_pin_count[4] = {0};
-
-user_gpio_set_t pwm_gpio_info[PWM_NUM][2];
 
 #define sunxi_pwm_debug 0
 #undef  sunxi_pwm_debug
@@ -162,23 +159,6 @@ int sunxi_pwm_enable(int pwm)
 {
     uint temp;
 
-#ifndef FPGA_PLATFORM
-
-    int i;
-    uint ret = 0;
-
-    for(i = 0; i < pwm_pin_count[pwm]; i++)
-    {
-        ret = gpio_request(&pwm_gpio_info[pwm][i], 1);
-        if(ret == 0)
-        {
-            pwm_debug("pwm gpio request failed!\n");
-        }
-
-        gpio_release(ret, 2);
-    }
-
-#endif
 
     temp = sunxi_pwm_read_reg(0);
 
@@ -203,23 +183,6 @@ void sunxi_pwm_disable(int pwm)
 {
     uint temp;
 
-#ifndef FPGA_PLATFORM
-
-    int i;
-    uint ret = 0;
-
-    for(i = 0; i < pwm_pin_count[pwm]; i++)
-    {
-        ret = gpio_request(&pwm_gpio_info[pwm][i], 1);
-        if(ret == 0)
-        {
-            pwm_debug("pwm gpio request failed!\n");
-        }
-
-        gpio_release(ret, 2);
-    }
-
-#endif
 
     temp = sunxi_pwm_read_reg(0);
 

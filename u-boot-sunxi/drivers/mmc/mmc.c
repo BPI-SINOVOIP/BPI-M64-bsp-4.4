@@ -1919,6 +1919,12 @@ static int mmc_startup(struct mmc *mmc)
 		mmc->dev_life_time_typea = ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A];
 		mmc->dev_life_time_typeb = ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B];
 		memcpy(&mmc->vendor_health_report[0], &ext_csd[EXT_CSD_VENDOR_HEALTH_REPORT], 32);
+		mmc->cache_size =
+			ext_csd[EXT_CSD_CACHE_SIZE + 0] << 0 |
+			ext_csd[EXT_CSD_CACHE_SIZE + 1] << 8 |
+			ext_csd[EXT_CSD_CACHE_SIZE + 2] << 16 |
+			ext_csd[EXT_CSD_CACHE_SIZE + 3] << 24;
+		mmc->cache_ctrl = ext_csd[33];
 	}
 
 	err = mmc_set_capacity(mmc, mmc->part_num);
@@ -2156,6 +2162,8 @@ static int mmc_startup(struct mmc *mmc)
 		MMCINFO("wp_grp_size: 0x%x sector\n", mmc->wp_grp_size);
 		mmc_user_scan_wp_sta(mmc);
 	}
+	MMCINFO("cache size %d KB\n", mmc->cache_size>>3);
+	MMCINFO("cache ctl %d\n", mmc->cache_ctrl);
 	MMCINFO("SD/MMC %d init OK!!!\n", mmc->cfg->host_no);
 	return 0;
 }

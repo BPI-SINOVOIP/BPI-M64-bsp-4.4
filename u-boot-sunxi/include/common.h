@@ -861,6 +861,8 @@ int	sunxi_tick_printf(const char *fmt, ...);
 void printf_all(void);
 int dprintf(const char *fmt, ...);
 int uprintf(int log_level,const char *fmt, ...);
+int get_sunxi_debug_level(void);
+int set_sunxi_debug_level(int level);
 
 #define LOG_LEVEL_FORCE         -1
 #define LOG_LEVEL_NONE          0

@@ -38,6 +38,7 @@
 #define AW_IRQ_TIMER1                  (81)
 #define AW_IRQ_NMI                     (128)
 #define GIC_IRQ_NUM                    (178)
+#define AW_IRQ_CIR					   (141)
 
 #else
 

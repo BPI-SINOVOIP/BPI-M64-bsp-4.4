@@ -312,7 +312,7 @@ static void sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
 
 	if (req->cmd->opcode == SD_IO_RW_EXTENDED) {
 		cmd_val |= SD_IO_RW_DIRECT;
-		arg = (1 << 31) | (0 << 28) | (SDIO_CCCR_ABORT << 9) |
+		arg = (1U << 31) | (0 << 28) | (SDIO_CCCR_ABORT << 9) |
 		    ((req->cmd->arg >> 28) & 0x7);
 	} else {
 		cmd_val |= MMC_STOP_TRANSMISSION;
@@ -1046,12 +1046,10 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			clk_disable_unprepare(host->clk_rst);
 
 		if (!IS_ERR(host->pins_sleep)) {
-			rval =
-			    pinctrl_select_state(host->pinctrl,
-						 host->pins_sleep);
+			dev_dbg(mmc_dev(mmc), " set sleep pins\n");
+			rval = pinctrl_select_state(host->pinctrl, host->pins_sleep);
 			if (rval) {
-				dev_err(mmc_dev(mmc),
-					"could not set sleep pins\n");
+				dev_err(mmc_dev(mmc), "could not set sleep pins\n");
 				return;
 			}
 		}
@@ -1099,7 +1097,8 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		mmc_readl(host, REG_WIDTH));
 
 	/* set ddr mode */
-	if (host->power_on) {
+	if (host->power_on
+			&& ios->clock) {
 		/**If we set ddr mode,we should disable mclk first**/
 	clk_disable_unprepare(host->clk_mmc);
 	rval = mmc_readl(host, REG_GCTRL);
@@ -1747,6 +1746,8 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 	int ret;
 	u32 caps_val = 0;
 	struct gpio_config flags;
+	struct device_node *apk_np = of_find_node_by_name(NULL, "auto_print");
+	const char *apk_sta = NULL;
 
 	ret = of_property_read_u32(np, "ctl-spec-caps", &caps_val);
 	if (!ret) {
@@ -1964,11 +1965,18 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			 "could not get default pinstate,check if pin is needed\n");
 	}
 
-	host->pins_sleep = pinctrl_lookup_state(host->pinctrl,
-						PINCTRL_STATE_SLEEP);
-	if (IS_ERR(host->pins_sleep)) {
-		dev_warn(&pdev->dev,
-			 "could not get sleep pinstate,check if pin is needed\n");
+	if (apk_np
+		&& !of_property_read_string(apk_np, "status", &apk_sta)
+		&& !strcmp(apk_sta, "okay")) {
+		host->pins_sleep = pinctrl_lookup_state(host->pinctrl,
+						"uart0");
+		if (IS_ERR(host->pins_sleep))
+			dev_warn(&pdev->dev, "Cann't get uart0 pinstate,check if needed\n");
+	} else {
+		host->pins_sleep = pinctrl_lookup_state(host->pinctrl,
+					PINCTRL_STATE_SLEEP);
+		if (IS_ERR(host->pins_sleep))
+			dev_warn(&pdev->dev, "Cann't get sleep pinstate,check if needed\n");
 	}
 
 	host->reg_base = devm_ioremap_resource(&pdev->dev,

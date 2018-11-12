@@ -35,6 +35,7 @@
 #define   FDT_PATH_TARGET                    "/soc/target"
 #define   FDT_PATH_CARD_BOOT                 "/soc/card_boot"
 #define   FDT_PATH_CARD0_BOOT_PARA           "/soc/card0_boot_para"
+#define   FDT_PATH_CARD1_BOOT_PARA           "/soc/card1_boot_para"
 #define   FDT_PATH_CARD2_BOOT_PARA           "/soc/card2_boot_para"
 /*
   * mmc2 and mmc3 can be use only one at same time on sun8iw10, so put mmc3's config at the same

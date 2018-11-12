@@ -32,7 +32,7 @@ typedef struct global_data {
 	/* We cannot bracket this with CONFIG_PCI due to mpc5xxx */
 	unsigned long pci_clk;
 	unsigned long mem_clk;
-#if defined(CONFIG_LCD) || defined(CONFIG_VIDEO)
+#if defined(CONFIG_LCD) || defined(CONFIG_VIDEO) || defined(CONFIG_READ_LOGO_FOR_KERNEL)
 	unsigned long fb_base;	/* Base address of framebuffer mem */
 #endif
 #if defined(CONFIG_POST) || defined(CONFIG_LOGBUFFER)
@@ -92,9 +92,13 @@ typedef struct global_data {
 	unsigned long timebase_l;
 #ifdef CONFIG_SUNXI
 	long           securemode;
-       long           boot_card_num;
+	void          *parameter_mod_buf;
+	long           boot_card_num;
 	ulong          lockflag;
 	ulong          chargemode;
+
+	ulong          parameter_reloc_buf;
+	ulong          parameter_reloc_size;
 
 	ulong          malloc_noncache_start;
 
@@ -118,6 +122,7 @@ typedef struct global_data {
 	int            pmu_saved_status;
 	int 		   need_shutdown;
 	int            logo_status_multiboot;
+	int            ir_detect_status;
 
 #endif
 	struct arch_global_data arch;	/* architecture-specific data */

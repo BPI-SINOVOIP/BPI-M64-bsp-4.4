@@ -38,6 +38,17 @@ sunxi_debug_info debug_info[4];
 __attribute__((section(".data")))
 int   debug_level = LOG_LEVEL_INFO;
 
+int set_sunxi_debug_level(int level)
+{
+	debug_level = level;
+	return 0;
+}
+
+int get_sunxi_debug_level(void)
+{
+	return debug_level;
+}
+
 static int on_console(const char *name, const char *value, enum env_op op,
 	int flags)
 {

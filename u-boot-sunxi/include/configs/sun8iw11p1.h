@@ -74,10 +74,12 @@
 
 #define CONFIG_SYS_SRAM_BASE             (0x0)
 #define CONFIG_SYS_SRAM_SIZE             (0x8000) //32K  A1+A2
-#define CONFIG_SYS_SRAMA3_BASE           (0x8000) 
+#define CONFIG_SYS_SRAMA3_BASE           (0x8000)
 #define CONFIG_SYS_SRAMA3_SIZE           (0x3400) //13K  A3
-#define CONFIG_SYS_SRAMA4_BASE           (0xB400) 
+#define CONFIG_SYS_SRAMA4_BASE           (0xB400)
 #define CONFIG_SYS_SRAMA4_SIZE           (0x0C00) //3K   A4
+#define OPTEE_BASE                           (0x48600000)
+
 
 #define CONFIG_BOOT0_STACK_BOTTOM        (CONFIG_SYS_SRAM_BASE+CONFIG_SYS_SRAM_SIZE-0x10)
 
@@ -134,6 +136,7 @@
 /*
 * define all parameters
 */
+#define CONFIG_DETECT_RTC_BOOT_MODE
 #define FEL_BASE                         0xffff0020
 #define SUNXI_RUN_EFEX_FLAG              (0x5AA5A55A)
 
@@ -258,7 +261,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -336,7 +339,7 @@
 #define CONFIG_CPUX_I2C
 #define CONFIG_AXP_USE_I2C
 #define CONFIG_SYS_I2C_SPEED 400000
-#define CONFIG_SYS_I2C_SLAVE 0x10
+#define CONFIG_SYS_I2C_SLAVE (0x68 >> 1)
 
 #define CONFIG_SUNXI_KEY_SUPPORT
 
@@ -354,7 +357,7 @@
 
 
 /***************************************
- *module support: sdmmc&&nand platform | spinor platform  
+ *module support: sdmmc&&nand platform | spinor platform
  ****************************************/
 #ifndef CONFIG_SUN8IW11P1_NOR
 #define CONFIG_SUNXI_MODULE_SPRITE
@@ -371,6 +374,12 @@
 #define CONFIG_SUNXI_MODULE_AXP
 #endif
 
+#define CONFIG_GPT_SUPPORT
+#ifdef CONFIG_GPT_SUPPORT
+#define CONFIG_SUNXI_GPT
+#define CONFIG_EFI_PARTITION
+#define CONFIG_CONVERT_CARD0_TO_GPT
+#endif
 
 /***************************************************************
 *

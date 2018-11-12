@@ -1113,6 +1113,17 @@ config  TOUCHSCREEN_GT82X
 	help
 	  gt813, gt827, gt828 touchscreen driver
 
+config TOUCHSCREEN_SITRONIX
+	tristate "Sitronix I2C I/F Multi-Touch Controller"
+	depends on I2C
+	help
+	  Say Y here if you have a Sitronix multitouch panel.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called sitronix_i2c_touch.
+
 source "drivers/input/touchscreen/gslx680new/Kconfig"
 source "drivers/input/touchscreen/ftxxxx/Kconfig"
 source "drivers/input/touchscreen/gt9xx/Kconfig"

@@ -24,6 +24,7 @@ struct sunxi_hardware_ops {
 	bool    (*init)(void *init_data);
 	bool    (*reset)(void *init_data);
 	bool    (*enable)(void *enable_data);
+	bool    (*soft_enable)(void *enable_data);
 	bool    (*disable)(void *disable_data);
 	bool    (*updata_reg)(void *commit_data);
 	void    (*vsync_proc)(void *irq_data);
@@ -53,13 +54,8 @@ struct sunxi_hardware_res {
 	void *private;
 };
 
-struct sunxi_panel *sunxi_lcd_init(struct sunxi_hardware_res *hw_res,
-	int panel_id, int lcd_id);
-
 int sunxi_drm_init(struct drm_device *dev);
-
 void sunxi_drm_destroy(struct drm_device *dev);
 
 void sunxi_hwres_destroy(struct sunxi_hardware_res *res);
-
 #endif

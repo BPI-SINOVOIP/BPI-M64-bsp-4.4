@@ -73,12 +73,12 @@
 //#define CONFIG_SUNXI_HDCP_IN_SECURESTORAGE
 
 #define CONFIG_SYS_SRAM_BASE               (0x00000)
-#define CONFIG_SYS_SRAMA1_BASE             (0x10000)
+#define CONFIG_SYS_SRAMA1_BASE             (0x00000)
 #define CONFIG_SYS_SRAMA1_SIZE             (0x8000)
-#define CONFIG_SYS_SRAMA2_BASE             (0x20000)
-#define CONFIG_SYS_SRAMA2_SIZE             (0x8000)
-#define CONFIG_SYS_SRAMC_BASE              (0x18000)
-#define CONFIG_SYS_SRAMC_END               (0x34000)
+#define CONFIG_SYS_SRAMA2_BASE             (0x40000)
+#define CONFIG_SYS_SRAMA2_SIZE             (0x14000)
+#define CONFIG_SYS_SRAMB_BASE              (0x20000)
+#define CONFIG_SYS_SRAMB_END               (0x38000)
 
 #define PLAT_SDRAM_BASE                      0x40000000
 //trusted dram area
@@ -91,19 +91,24 @@
 #define CONFIG_BOOTPKG_STORE_IN_DRAM_BASE   (CONFIG_SYS_SDRAM_BASE + 0x2e00000)
 
 //toco mmu
-#define TOC0_MMU_BASE_ADDRESS            (0x48000)
-//boot0 stack, in sramc, the high 4K for cpu1 stack.
-#define CONFIG_BOOT0_STACK_BOTTOM        (0x53ff0)
+#define TOC0_MMU_BASE_ADDRESS            (0x42800000)
+/*boot0 stack, in sramc, the high 4K for cpu1 stack.*/
+#define CONFIG_BOOT0_STACK_BOTTOM        0x8000
 
 //dram base for uboot
 #define CONFIG_SYS_SDRAM_BASE                (PLAT_SDRAM_BASE)
-//base addr for boot 0 to load the fw image
-#define BL31_BASE                            (PLAT_TRUSTED_DRAM_BASE) //bl31:0x40000000-0x40200000
-#define BL31_SIZE                            (0x100000)  //1M
+
+
+/*base addr for boot 0 to load the fw image*/
 #define SCP_SRAM_BASE                        (CONFIG_SYS_SRAMA2_BASE)
 #define SCP_SRAM_SIZE                        (CONFIG_SYS_SRAMA2_SIZE)
-#define SCP_DRAM_BASE                        (PLAT_TRUSTED_DRAM_BASE+BL31_SIZE)
+#define SCP_DRAM_BASE                        (0x43080800)
 #define SCP_DRAM_SIZE                        (0x4000)
+#define SCP_CODE_DRAM_OFFSET		         (0x18000)
+
+#define CONFIG_SUNXI_ARISC_EXIST
+#define CONFIG_SUNXI_ARISC_NOT_RESET
+
 
 //fdt addr for kernel
 #define CONFIG_SUNXI_FDT_ADDR                (CONFIG_SYS_SDRAM_BASE+0x04000000)
@@ -199,13 +204,13 @@
 /*      the fowllowing defines are used in sbrom                                        */
 /*																						*/
 /****************************************************************************************/
-#define CONFIG_SBROMSW_BASE              (CONFIG_SYS_SRAMA2_BASE)
+#define CONFIG_SBROMSW_BASE              (CONFIG_SYS_SRAMB_BASE)
 #define CONFIG_PRINT_SIZE                (8*1024)
 /* #define CONFIG_STACK_BASE                (CONFIG_SYS_SRAMC_END-CONFIG_BOOT0_CPU1_STACK_SIZE -CONFIG_PRINT_SIZE) */
 #define CONFIG_STACK_BASE                (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - 0x10)
-#define CONFIG_BOOT0_CPU1_STACK_BOTTOM   (CONFIG_SYS_SRAMC_END-CONFIG_PRINT_SIZE)
-#define CONFIG_DEBUG_BASE                (CONFIG_BOOT0_CPU1_STACK_BOTTOM)
-#define CONFIG_NORMAL_DEBUG_BASE         (CONFIG_SYS_SRAMC_BASE)
+#define CONFIG_BOOT0_CPU1_STACK_BOTTOM   (CONFIG_SYS_SRAMB_END-CONFIG_PRINT_SIZE)
+#define CONFIG_DEBUG_BASE                (CONFIG_SYS_SRAMA1_BASE)
+#define CONFIG_NORMAL_DEBUG_BASE         (CONFIG_SYS_SRAMB_BASE)
 #define CONFIG_HEAP_BASE                 (CONFIG_SYS_SDRAM_BASE + 0x800000)
 #define CONFIG_HEAP_SIZE                 (16 * 1024 * 1024)
 #define CONFIG_TOC0_RET_ADDR             (0)
@@ -268,7 +273,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -364,6 +369,10 @@
 
 #define CONFIG_SUNXI_KEY_SUPPORT
 #define CONFIG_SUNXI_ARISC_EXIST
+#define CONFIG_SUNXI_ARISC_NOT_RESET
+#define CONFIG_OPTEE25
+
+
 #define CONFIG_SUNXI_SID_SECURITY_STATUS
 /*-----------------------------------------------------------------------
  * Stack sizes

@@ -96,6 +96,13 @@ int axp2585_probe(void)
 		value |= pmu_on_ctl << 4;
 		axp_i2c_write(AXP2585_ADDR, PWR_ON_CTL, value);
 		axp2585_boost_set();
+		if (axp_i2c_read(AXP2585_ADDR, PMU_BATFET_CTL, &value)) {
+			return -1;
+		}
+		value &= 0x7f;
+		if (axp_i2c_write(AXP2585_ADDR, PMU_BATFET_CTL, value)) {
+			return -1;
+		}
 #if 0
 		axp_i2c_write(AXP2585_ADDR, PMU_REG_EXTENSION_EN, 0x06);
 		axp_i2c_write(AXP2585_ADDR, PMU_REG_LOCK, 0x04);

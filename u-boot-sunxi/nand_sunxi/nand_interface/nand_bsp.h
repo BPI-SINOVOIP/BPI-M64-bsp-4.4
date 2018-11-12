@@ -152,7 +152,7 @@ extern  int NAND_UpdatePhyArch(void);
 extern  int nand_uboot_erase_all_chip(unsigned int force_flag);
 extern  int nand_physic_erase_block(unsigned int chip,unsigned int block);
 extern  int nand_is_blank(void);
-extern int nand_get_param_for_uboottail(boot_nand_para_t *nand_param);
+extern  int nand_get_param_for_uboottail(boot_nand_para_t *nand_param);
 
 extern struct _nand_info* NandHwInit(void);
 extern __s32 NandHwExit(void);

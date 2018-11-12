@@ -14,7 +14,6 @@
 
 
 #include <asm/arch/ccmu.h>
-//#include <asm/arch/ccmu.h>
 #include <asm/arch/dma.h>
 #include <sunxi_board.h>
 #include <sunxi_cfg.h>
@@ -24,9 +23,12 @@
 static  sunxi_dma_setting_t * codec_tx_dma;
 static  uint  codec_tx_dma_hd;
 u16*  tone_buf_global;
-uint  tone_size_global = 0;  //bytes
-uint  tone_skip_size_global = 44;  //bytes
-
+int tone_size_global = 0;
+int tone_skip_size_global = 44;
+int codec_play_audio_enable = 1;
+int set_factory_tone_size(void);
+int set_boot_tone_size(void);
+int set_sample_rate(int sample_rate);
 
 void sun3i_sound_mdelay(int i)
 {
@@ -38,6 +40,55 @@ void sun3i_sound_udelay(int i)
 	udelay(i);
 }
 
+typedef struct wav_header {
+    /* RIFF Header */
+    char riff_header[4]; /* Contains "RIFF" */
+    int wav_size; /* Size of the wav portion of the file, which follows the first 8 bytes. File size - 8 */
+    char wave_header[4]; /* Contains "WAVE" */
+
+    /* Format Header */
+    char fmt_header[4]; /* Contains "fmt " (includes trailing space) */
+    int fmt_chunk_size; /* Should be 16 for PCM */
+    short audio_format; /* Should be 1 for PCM. 3 for IEEE Float */
+    short num_channels;
+    int sample_rate;
+    int byte_rate; /* Number of bytes per second. sample_rate * num_channels * Bytes Per Sample */
+    short sample_alignment; /* num_channels * Bytes Per Sample */
+    short bit_depth; /* Number of bits per sample */
+
+    /* Data */
+    char data_header[4]; /* Contains "data" */
+    int data_bytes; /* Number of bytes in data. Number of samples * num_channels * sample byte size */
+    /* uint8_t bytes[]; */  /* Remainder of wave file is bytes */
+} wav_header;
+
+int dump_wav_header(struct wav_header* wav)
+{
+	printf("*****************wav header*******************\n");
+	printf("riff:%c%c%c%c\n",wav->riff_header[0],wav->riff_header[1],wav->riff_header[2],wav->riff_header[3]);
+	printf("wav_size:%d\n",wav->wav_size);
+	printf("wave_header:%c%c%c%c\n",wav->wave_header[0],wav->wave_header[1],wav->wave_header[2],wav->wave_header[3]);
+	printf("fmt_header:%c%c%c%c\n",wav->fmt_header[0],wav->fmt_header[1],wav->fmt_header[2],wav->fmt_header[3]);
+	printf("fmt_chunk_size:%d\n",wav->fmt_chunk_size);
+	printf("audio_format:%d\n",wav->audio_format);
+	printf("num_channels:%d\n",wav->num_channels);
+	printf("sample_rate:%d\n",wav->sample_rate);
+	printf("byte_rate:%d\n",wav->byte_rate);
+	printf("sample_alignment:%d\n",wav->sample_alignment);
+	printf("bit_depth:%d\n",wav->bit_depth);
+	printf("data_header:%c%c%c%c\n",wav->data_header[0],wav->data_header[1],wav->data_header[2],wav->data_header[3]);
+	printf("data_bytes:%d\n",wav->data_bytes);
+	printf("**********************************************\n");
+	return 0;
+}
+
+int is_valid_wav_header(struct wav_header* wav)
+{
+	if( strncmp("RIFF", wav->riff_header, 4) == 0)
+		return 1;
+
+	return 0;
+}
 
 void put_adda_wvalue(u32 addr, u32 data)
 {
@@ -297,13 +348,12 @@ int codec_audio_init(void)
 
 	cfg_reg = _ADDA_PHY_BASE + 0x28;  //	0x80000000
 	val = *((volatile unsigned int *)cfg_reg);
-	tmp_val = 0x44555556;
+	tmp_val = 0x41555556;
 	writel(tmp_val, cfg_reg);
 
 
 	cfg_reg = _ADDA_PHY_BASE + 0x04;  //0x04 	0x20600f40
 	val = *((volatile unsigned int *)cfg_reg);
-//	tmp_val = 0x20600f50;   //32k
 	tmp_val = 0x60600f50;   //16k
 	writel(tmp_val, cfg_reg);
 
@@ -335,7 +385,6 @@ static int codec_dma_send_start(u16 * pbuf, uint byte_cnt)
 
 	ret = sunxi_dma_start(codec_tx_dma_hd, (uint)pbuf, _ADDA_PHY_BASE + ADDA_o_DAC_TXDATA, byte_cnt);
 
-	//sunxi_dma_start(codec_tx_dma_hd, (uint)pbuf, _ADDA_PHY_BASE + 0x40, byte_cnt);
 	return ret;
 }
 
@@ -515,8 +564,18 @@ int printf_dma(void)
 	return 0;
 }
 
+int set_reg_by_wav_header(struct wav_header* wav)
+{
+	if (is_valid_wav_header(wav))
+	{
+		printf("set sample_rate:%d\n",wav->sample_rate);
+		set_sample_rate(wav->sample_rate);
+	}
+	return 0;
+}
+
 #if 0
-int load_tone_from_partition(u16 **tone_buf_p, uint *tone_size_p)
+int load_tone_from_partition(u16 **tone_buf_p, int *tone_size_p)
 {
 
 	uint   tone_start, tone_size;
@@ -545,16 +604,75 @@ int load_tone_from_partition(u16 **tone_buf_p, uint *tone_size_p)
 
 }
 #endif
-int load_tone_from_boot0(u16 **tone_buf_p, uint *tone_size_p)
+int load_tone_from_boot0(u16 **tone_buf_p, int *tone_size_p)
 {
-	int boottone_size = 0;
-	if (!script_parser_fetch("boottone", "boottone_size", &boottone_size, 1))
-		printf("tone_size = %d\n", boottone_size);
-	else
-		printf("can not get tone_size\n");
-
 	*tone_buf_p = (u16*)CONFIG_TONE_STORE_IN_DRAM_BASE;
-	*tone_size_p = boottone_size;
+	return 0;
+}
+
+int play_factory_tone(void)
+{
+	if (codec_play_audio_enable == 0)
+	{
+		printf("codec_play_audio_enable is 0\n");
+		return 0;
+	}
+#ifdef CONFIG_LOAD_FACTORY_TONE_BY_ENV
+	int ret = 0;
+	/* here used to run load_factory_tone, but now just use load_boot_tone */
+	printf("play same tone as boot, run load_boot_tone:%s\n", getenv("load_boot_tone"));
+	ret = run_command(getenv("load_boot_tone"), 0);
+	if (ret == 0)
+	{
+		printf("load factory tone success\n");
+		set_factory_tone_size();
+		printf("play factory tone\n");
+		codec_play_audio();
+		mdelay(1000);
+	}
+	else
+	{
+		printf("load factory tone fail\n");
+	}
+#else
+	mdelay(50); /* make sure there is enough time between init regs and play, or the play may not complete */
+	set_factory_tone_size();
+	printf("play factory tone\n");
+	codec_play_audio();
+#endif
+	codec_play_audio_enable = 0;
+	return 0;
+}
+
+int play_boot_tone(void)
+{
+	if (codec_play_audio_enable == 0)
+	{
+		printf("codec_play_audio_enable is 0\n");
+		return 0;
+	}
+#ifdef CONFIG_LOAD_BOOT_TONE_BY_ENV
+	int ret = 0;
+	printf("run load_boot_tone:%s\n", getenv("load_boot_tone"));
+	ret = run_command(getenv("load_boot_tone"), 0);
+	if (ret == 0)
+	{
+		printf("load boot tone success\n");
+		set_boot_tone_size();
+		printf("play boot tone\n");
+		codec_play_audio();
+	}
+	else
+	{
+		printf("load boot tone fail\n");
+	}
+#else
+	mdelay(50); /* make sure there is enough time between init regs and play, or the play may not complete */
+	set_boot_tone_size();
+	printf("play boot tone\n");
+	codec_play_audio();
+#endif
+	codec_play_audio_enable = 0;
 	return 0;
 }
 
@@ -563,10 +681,18 @@ int codec_play_audio(void)
 	int ret = 0;
 	int boottone_used;
 	int workmode = get_boot_work_mode();
-	int tone_data_size;
+	u16* buf_start;
+	int buf_size = 0;
+
 	printf("codec_play_audio\n");
 	if (workmode != WORK_MODE_BOOT)
 		return 0;
+
+	if (codec_play_audio_enable == 0)
+	{
+		printf("codec_play_audio_enable is 0\n");
+		return 0;
+	}
 
 	if (!script_parser_fetch("boottone", "boottone_used", &boottone_used, 1)) {
 		printf("boottone_used = %d\n", boottone_used);
@@ -576,16 +702,13 @@ int codec_play_audio(void)
 		printf("can not get boottone_used\n");
 		return 0;
 	}
-
-	tone_data_size = tone_size_global - tone_skip_size_global;
-	if(tone_data_size <= 0)
-	{
-		printf("abort, tone_data_size=%d\n", tone_data_size);
-		return 0;
-	}
-
+	set_reg_by_wav_header((struct wav_header*)tone_buf_global);
 	printf("codec_play_audio start\n");
-	ret = codec_dma_send_start(tone_buf_global + tone_skip_size_global, tone_data_size);
+	buf_start = tone_buf_global + tone_skip_size_global;
+	buf_size = tone_size_global - tone_skip_size_global;
+	buf_size &= 0x3fc00;   /* limit to 256k , align to 1024bytes */
+	printf("dma buff size:%d 0x%x\n", buf_size, buf_size);
+	ret = codec_dma_send_start(buf_start, buf_size);
 	if(ret < 0) {
 		printf("codec_dma_send_start error = %d\n",ret);
 	}
@@ -598,67 +721,99 @@ int codec_play_audio(void)
 	return 0;
 }
 
-typedef struct wav_header {
-    // RIFF Header
-    char riff_header[4]; // Contains "RIFF"
-    int wav_size; // Size of the wav portion of the file, which follows the first 8 bytes. File size - 8
-    char wave_header[4]; // Contains "WAVE"
 
-    // Format Header
-    char fmt_header[4]; // Contains "fmt " (includes trailing space)
-    int fmt_chunk_size; // Should be 16 for PCM
-    short audio_format; // Should be 1 for PCM. 3 for IEEE Float
-    short num_channels;
-    int sample_rate;
-    int byte_rate; // Number of bytes per second. sample_rate * num_channels * Bytes Per Sample
-    short sample_alignment; // num_channels * Bytes Per Sample
-    short bit_depth; // Number of bits per sample
-
-    // Data
-    char data_header[4]; // Contains "data"
-    int data_bytes; // Number of bytes in data. Number of samples * num_channels * sample byte size
-    // uint8_t bytes[]; // Remainder of wave file is bytes
-} wav_header;
-
-int dump_wav_header(struct wav_header* wav)
+int set_sample_rate(int sample_rate)
 {
-	printf("*****************wav header*******************\n");
-	printf("riff:%c%c%c%c\n",wav->riff_header[0],wav->riff_header[1],wav->riff_header[2],wav->riff_header[3]);
-	printf("wav_size:%d\n",wav->wav_size);
-	printf("wave_header:%c%c%c%c\n",wav->wave_header[0],wav->wave_header[1],wav->wave_header[2],wav->wave_header[3]);
-	printf("fmt_header:%c%c%c%c\n",wav->fmt_header[0],wav->fmt_header[1],wav->fmt_header[2],wav->fmt_header[3]);
-	printf("fmt_chunk_size:%d\n",wav->fmt_chunk_size);
-	printf("audio_format:%d\n",wav->audio_format);
-	printf("num_channels:%d\n",wav->num_channels);
-	printf("sample_rate:%d\n",wav->sample_rate);
-	printf("byte_rate:%d\n",wav->byte_rate);
-	printf("sample_alignment:%d\n",wav->sample_alignment);
-	printf("bit_depth:%d\n",wav->bit_depth);
-	printf("data_header:%c%c%c%c\n",wav->data_header[0],wav->data_header[1],wav->data_header[2],wav->data_header[3]);
-	printf("data_bytes:%d\n",wav->data_bytes);
-	printf("**********************************************\n");
+	volatile int tmp_val = 0;
+	volatile int cfg_reg = 0;
+	cfg_reg = _ADDA_PHY_BASE + 0x04;  //0x04 	0x20600f40
+	int reg_sample = 0;
+	if (sample_rate == 48000)
+		reg_sample = (0x0 << 29);  //011 48k
+	else if(sample_rate == 24000)
+		reg_sample = (0x2 << 29);   //010  24k
+	else if(sample_rate == 12000)
+		reg_sample = (0x4 << 29);   //100  12k
+	else if(sample_rate == 192000)
+		reg_sample = (0x6 << 29);   //110  192k
+	else if(sample_rate == 32000)
+		reg_sample = (0x1 << 29);   //001  32k
+	else if(sample_rate == 16000)
+		reg_sample = (0x3 << 29);   //011  16k
+	else if(sample_rate == 8000)
+		reg_sample = (0x5 << 29);   //101  8k
+	else if(sample_rate == 96000)
+		reg_sample = (0x7 << 29);   //111  96k
+
+	tmp_val = 0x00600f50 | reg_sample ;
+	writel(tmp_val, cfg_reg);
+
 	return 0;
 }
 
+
+
 int get_tone_size_from_wav_header(struct wav_header* wav)
 {
-	int tone_size = wav->wav_size + 8;
+	int tone_size = -1;
 	//dump_wav_header(wav);
-	printf("get size from wav header:%d\n", tone_size);
+	if (is_valid_wav_header(wav))
+	{
+		tone_size = wav->wav_size + 8;
+		printf("get size from wav header:%d\n", tone_size);
+	}
+	else
+	{
+		printf("not a valid wav header\n");
+	}
+
 	return tone_size;
 }
 
-int get_tone_size_from_boot0(void)
+int get_boot_tone_size_from_sysconfig(void)
+{
+	int boottone_size = -1;
+	if (!script_parser_fetch("boottone", "boottone_size", &boottone_size, 1))
+		printf("get size from sys_config:%d\n", boottone_size);
+
+	return boottone_size;
+}
+
+int get_boot_tone_size_from_boot0(void)
 {
 	int tone_size = uboot_spare_head.boot_ext[1].data[0];
 	printf("get size from boot0 :%d\n", tone_size);
 	return tone_size;
 }
 
-
-int codec_play_audio_prepare(void)
+int set_boot_tone_size(void)
 {
-	int ret = 0;
+	tone_size_global = get_boot_tone_size_from_sysconfig();
+
+	if (tone_size_global <= 0)
+	{
+		tone_size_global = get_boot_tone_size_from_boot0();
+	}
+
+	if (tone_size_global <= 0)
+	{
+		tone_size_global = get_tone_size_from_wav_header((struct wav_header*)tone_buf_global);
+	}
+
+	printf("tone_size_global:%d\n", tone_size_global);
+	return 0;
+}
+
+int set_factory_tone_size(void)
+{
+	tone_size_global = get_tone_size_from_wav_header((struct wav_header*)tone_buf_global);
+
+	printf("tone_size_global:%d\n", tone_size_global);
+	return 0;
+}
+
+int need_play_tone(void)
+{
 	int boottone_used = 0;
 
 	int workmode = get_boot_work_mode();
@@ -674,23 +829,36 @@ int codec_play_audio_prepare(void)
 		return 0;
 	}
 
+	return 1;
+}
+
+/* Call me early enough to make sure codec have enough time to prepare */
+int codec_play_audio_prepare_step1(void)
+{
+	if ( need_play_tone() == 0 )
+		return 0;
+
 	printf("codec_play_audio start\n");
+	codec_audio_init();
+	return 0;
+}
+
+/* Call me early, but after dma is ready */
+int codec_play_audio_prepare_step2(void)
+{
+	int ret = 0;
+
+	if ( need_play_tone() == 0 )
+		return 0;
+
 	tone_buf_global = NULL;
 
-//	load_tone_from_partition(&tone_buf_global, &tone_size_global);
 	load_tone_from_boot0(&tone_buf_global, &tone_size_global);
-	if(tone_size_global <= 0)
-	{
 
-//		tone_size_global = get_tone_size_from_wav_header((struct wav_header*)tone_buf_global);
-		tone_size_global = get_tone_size_from_boot0();
-	}
 	if(tone_buf_global == NULL) {
 		printf("tone_buf is NULL\n");
 		return 0;
 	}
-
-	codec_audio_init();
 
 	codec_tx_dma  = malloc_noncache(sizeof(sunxi_dma_setting_t));
 	if(!(codec_tx_dma)) {
@@ -730,43 +898,75 @@ int codec_play_audio_prepare(void)
 
 	sunxi_dma_install_int(codec_tx_dma_hd,sunxi_dma_tx,0);
 
-	gpio_request_simple("boottone", NULL);
-
-#if 0  //move to another function, to avoid call delay
-	sun3i_sound_mdelay(800);
-	tone_size = 35 * 1024 / 512;  //debug: hard code tone_size
-	ret = codec_dma_send_start(tone_buf, tone_size*512);
-	if(ret < 0){
-		printf("codec_dma_send_start error = %d\n",ret);
-
-	}
-
-//	codec_dma_exit();
-
-
-	printf("codec_play_audio end\n");
-#endif
 	return 0;
 }
 
-
-
-int i2s_play_audio(void)
+/* Call me to enable speaker, enable too early may cause pop */
+int codec_play_audio_prepare_step3(void)
 {
-	return 0;
+       gpio_request_simple("boottone", NULL);
+       return 0;
 }
 
 int do_boottone (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-//	codec_play_audio_prepare();
 //	sun3i_sound_mdelay(800);
+	u16* tone_buf_global_tmp;
+	int tone_size_global_tmp;
+	int codec_play_audio_enable_tmp;
+
+	if (argc >= 2)
+	{
+		tone_buf_global_tmp = tone_buf_global;
+		tone_buf_global = (u16 *)simple_strtoul(argv[1], NULL, 16);
+	}
+	if (argc >= 3)
+	{
+		tone_size_global_tmp  = tone_size_global;
+		tone_size_global = simple_strtoul(argv[2], NULL, 16);
+	}
+	printf("play tone buffer %d\n",(int)tone_buf_global);
+	printf("play tone size %d\n", tone_size_global);
+
+	codec_play_audio_enable_tmp = codec_play_audio_enable;
+	codec_play_audio_enable = 1;
 	codec_play_audio();
+	codec_play_audio_enable = codec_play_audio_enable_tmp;
+
+	if (argc >= 2)
+		tone_buf_global = tone_buf_global_tmp;
+
+	if (argc >= 3)
+		tone_size_global = tone_size_global_tmp;
+	return 0;
+}
+
+int do_play_boot_tone (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	play_boot_tone();
+	return 0;
+}
+
+int do_play_factory_tone (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	play_factory_tone();
 	return 0;
 }
 
 U_BOOT_CMD(
-	boottone,	2,	1,	do_boottone,
+	boottone,	4,	1,	do_boottone,
 	"boottone   - play boot tone\n",
+	"argv1: tone_buff\n argv2: tone_size"
+);
+
+U_BOOT_CMD(
+	play_boot_tone,	1,	1,	do_play_boot_tone,
+	"play_boot_tone   - play boot tone\n",
+);
+
+U_BOOT_CMD(
+	play_factory_tone,	1,	1,	do_play_factory_tone,
+	"play_factory_tone   - play factory tone\n",
 );
 
 

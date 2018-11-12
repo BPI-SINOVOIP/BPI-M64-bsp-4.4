@@ -34,6 +34,8 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd);
 
 int sunxi_pwm_dev_init(struct sunxi_lcd_private *sunxi_lcd);
 
+struct sunxi_panel *sunxi_lcd_init(struct sunxi_hardware_res *hw_res,
+						int panel_id, int lcd_id);
 void sunxi_lcd_destroy(struct sunxi_panel *sunxi_panel,
 	struct sunxi_hardware_res *hw_res);
 

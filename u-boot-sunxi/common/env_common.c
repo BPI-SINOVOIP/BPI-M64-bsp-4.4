@@ -202,6 +202,10 @@ int env_import(const char *buf, int check)
 
 		if (crc32(0, ep->data, ENV_SIZE) != crc) {
 			set_default_env("!bad CRC");
+#ifdef CONFIG_SUNXI_SAVE_DEFAULT_ENV
+			puts("Now will save the default environment to env partition!\n");
+			saveenv();
+#endif
 			return 0;
 		}
 	}

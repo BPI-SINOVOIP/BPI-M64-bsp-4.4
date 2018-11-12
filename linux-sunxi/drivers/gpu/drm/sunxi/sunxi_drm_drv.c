@@ -80,6 +80,7 @@ static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 		DRM_ERROR("failed to init vblank.\n");
 		goto err_init_sunxi;
 	}
+
 	/*
 	* create and configure fb helper and also sunxi specific
 	* fbdev object.
@@ -89,6 +90,9 @@ static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 		DRM_ERROR("failed to initialize drm fbdev\n");
 		goto err_vblank;
 	}
+
+	if (private->init_para.boot_info.sync)
+		sunxi_drm_crtc_soft_set_mode(dev);
 
 	return 0;
 

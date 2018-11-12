@@ -396,6 +396,9 @@ efex_trans_set_t;
 #define  SUNXI_EFEX_EXT4_UBIFS_TAG      (0x7ff0)
 
 #define  SUNXI_EFEX_FLASH_TAG           (0x8000)
+#define  SUNXI_EFEX_FLASH_BOOT0_TAG     (0x8001)
+#define  SUNXI_EFEX_FLASH_BOOT1_TAG     (0x8002)
+
 
 #define  SUNXI_EFEX_TRANS_MASK			(0x30000)
 #define  SUNXI_EFEX_TRANS_START_TAG		(0x20000)

@@ -64,7 +64,7 @@ int usb_open_clock(void)
 
     //Gating AHB clock for USB_phy0
     reg_value = readl(SUNXI_CCM_BASE + 0x60);
-    reg_value |= (1 << 25);
+    reg_value |= (1 << 24);
     writel(reg_value, (SUNXI_CCM_BASE + 0x60));
 
     //delay to wati SIE stable
@@ -72,7 +72,7 @@ int usb_open_clock(void)
 
     //usb otg reset bit
     reg_value = readl(SUNXI_CCM_BASE + 0x2C0);
-    reg_value |= (1 << 25);
+    reg_value |= (1 << 24);
     writel(reg_value, (SUNXI_CCM_BASE + 0x2C0));
     __msdelay(10);
 
@@ -112,13 +112,13 @@ int usb_close_clock(void)
 
     /* AHB reset */
     reg_value = readl(SUNXI_CCM_BASE + 0x2C0);
-    reg_value &= ~(1 << 25);
+    reg_value &= ~(1 << 24);
     writel(reg_value, (SUNXI_CCM_BASE + 0x2C0));
     __msdelay(10);
 
     //Gating AHB clock for USB_phy0
     reg_value = readl(SUNXI_CCM_BASE + 0x60);
-    reg_value &= ~(1 << 25);
+    reg_value &= ~(1 << 24);
     writel(reg_value, (SUNXI_CCM_BASE + 0x60));
     __msdelay(10);
 

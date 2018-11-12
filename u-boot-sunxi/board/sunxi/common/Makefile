@@ -36,6 +36,7 @@ obj-y   += check_key_uart.o
 obj-y   += debug_mode.o
 obj-$(CONFIG_SUNXI_KEY_BURN)   += key_burn.o
 obj-$(CONFIG_SUNXI_SERIAL)   += sunxi_serial.o
+obj-$(CONFIG_BOX_STANDBY)	 += box_standby.o
 
 obj-y	  +=de_weak.o
 obj-$(CONFIG_VIDEO_SUNXI_V1)   += de_v1.o

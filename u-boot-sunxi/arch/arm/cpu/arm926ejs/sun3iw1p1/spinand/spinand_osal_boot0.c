@@ -83,7 +83,7 @@ int SPINAND_SetClk(__u32 nand_index, __u32 nand_clock)
 	__u32 cdr2 = 0;
 	__u32 cdr_sel = 0;
 
-	sclk0 = nand_clock*2;
+	sclk0 = nand_clock;
 
 	div = mclk / (sclk0 << 1);
 

@@ -137,11 +137,11 @@ int sunxi_card_sprite_main(int workmode, char *name)
 	sprite_cartoon_create();
 	//检查固件合法性
 	if(sprite_card_firmware_probe(name))
-    {
-    	printf("sunxi sprite firmware probe fail\n");
+	{
+		printf("sunxi sprite firmware probe fail\n");
 
-    	return -1;
-    }
+		return -1;
+	}
 
 	sprite_cartoon_upgrade(5);
 	tick_printf("firmware probe ok\n");
@@ -213,8 +213,8 @@ int sunxi_card_sprite_main(int workmode, char *name)
 	tick_printf("successed in downloading boot0\n");
 	sprite_cartoon_upgrade(100);
 
-    sprite_uichar_printf("CARD OK\n");
-	tick_printf("sprite success \n");
+	sprite_uichar_printf("CARD OK\n");
+	tick_printf("sprite success\n");
 	//烧写结束
 	__msdelay(3000);
 	//处理烧写完成后的动作
@@ -234,7 +234,7 @@ int sunxi_card_sprite_main(int workmode, char *name)
 	if(sprite_next_work == SUNXI_UPDATA_NEXT_ACTION_SPRITE_TEST)
 	{
 		//erase the magic from boot0 head
-        printf("try to earse boot0 head :");
+		printf("try to earse boot0 head :");
 		char* boot0_head_buf = NULL;
 		boot0_file_head_t  *boot0_head = NULL;
 		boot0_head_buf = (char *)malloc(1024);
@@ -244,12 +244,12 @@ int sunxi_card_sprite_main(int workmode, char *name)
 			printf("sunxi_sprite_error : read boot0 head failed\n");
 		}
 		boot0_head = (boot0_file_head_t *)boot0_head_buf;
-        printf("%s \n",boot0_head->boot_head.magic);
+		printf("%.*s\n", MAGIC_SIZE, boot0_head->boot_head.magic);
 		memset(boot0_head->boot_head.magic , 0x00 , 8);
-		printf("=====check_sum======%x \n",boot0_head->boot_head.check_sum);
-        if(!sunxi_flash_phywrite(BOOT0_SDMMC_START_ADDR, 1024/512, boot0_head_buf))
+		printf("=====check_sum======%x\n",boot0_head->boot_head.check_sum);
+		if(!sunxi_flash_phywrite(BOOT0_SDMMC_START_ADDR, 1024/512, boot0_head_buf))
 		{
-			printf("sunxi_sprite_error : can not write boot0 head into card \n");
+			printf("sunxi_sprite_error : can not write boot0 head into card\n");
 		}
 	}
 

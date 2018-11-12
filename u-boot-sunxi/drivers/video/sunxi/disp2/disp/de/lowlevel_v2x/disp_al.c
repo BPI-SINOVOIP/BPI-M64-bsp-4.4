@@ -1,6 +1,10 @@
 #include "disp_al.h"
 #include "de_hal.h"
 
+#if defined(CONFIG_ARCH_SUN8IW12P1)
+#define DISP2_TCON_TV_SYNC_POL_ISSUE
+#endif /*endif CONFIG_ARCH_SUN8IW12P1 */
+
 /*
  * disp_al_private_data - abstract layer private data
  * @output_type: current output type of specified device(eg. LCD/HDMI/TV)
@@ -833,7 +837,8 @@ int disp_al_lcd_query_irq(u32 screen_id, enum __lcd_irq_id_t irq_id,
 	int ret = 0;
 
 #if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
-	if (LCD_IF_DSI == panel->lcd_if) {
+	if (panel && LCD_IF_DSI == panel->lcd_if &&
+	    LCD_DSI_IF_COMMAND_MODE != panel->lcd_dsi_if) {
 		enum __dsi_irq_id_t dsi_irq =
 		    (LCD_IRQ_TCON0_VBLK == irq_id) ?
 		    DSI_IRQ_VIDEO_VBLK : DSI_IRQ_VIDEO_LINE;
@@ -954,15 +959,12 @@ int disp_al_lcd_get_start_delay(u32 screen_id, disp_panel_para *panel)
 #if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
 	u32 lcd_start_delay = 0;
 	u32 de_clk_rate = de_get_clk_rate() / 1000000;
-	if (panel) {
-		lcd_start_delay = ((tcon0_get_cpu_tri2_start_delay(screen_id)+1)
-				   << 3) * (panel->lcd_dclk_freq)
-			/ (panel->lcd_ht*de_clk_rate);
-
-	}
-	if (LCD_IF_DSI == panel->lcd_if)
+	if (panel && LCD_IF_DSI == panel->lcd_if) {
+		lcd_start_delay =
+		    ((tcon0_get_cpu_tri2_start_delay(screen_id) + 1) << 3) *
+		    (panel->lcd_dclk_freq) / (panel->lcd_ht * de_clk_rate);
 		return dsi_get_start_delay(screen_id)+lcd_start_delay;
-	else
+	} else
 #endif
 		return tcon_get_start_delay(screen_id,
 					    al_priv.tcon_type[screen_id]);
@@ -1003,6 +1005,14 @@ int disp_al_hdmi_cfg(u32 screen_id, struct disp_video_timings *video_info)
 
 	tcon_init(screen_id);
 	tcon1_set_timming(screen_id, video_info);
+#if defined(DISP2_TCON_TV_SYNC_POL_ISSUE)
+	tcon_set_sync_pol(screen_id, !video_info->ver_sync_polarity,
+			  !video_info->hor_sync_polarity);
+#endif /*endif DISP2_TCON_TV_SYNC_POL_ISSUE */
+
+#ifdef TCON_POL_CORRECT
+	tcom1_cfg_correct(screen_id, video_info);
+#endif
 	/*
 	 * If yuv output(cs != 0), remap yuv plane to (v y u) sequency
 	 * else disable color remap function

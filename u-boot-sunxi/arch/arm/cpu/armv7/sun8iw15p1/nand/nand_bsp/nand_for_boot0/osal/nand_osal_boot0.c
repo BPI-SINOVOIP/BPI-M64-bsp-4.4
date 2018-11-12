@@ -70,7 +70,7 @@ __u32 _Get_PLL_PERI(void)
 	factor_n = ((reg_val >> 8) & 0xFF) + 1;
 	factor_m0 = ((reg_val >> 0) & 0x1) + 1;
 	factor_m1 = ((reg_val >> 1) & 0x1) + 1;
-	clock = 24000000 * factor_n / factor_m0/factor_m1/4;
+	clock = 24000000 * factor_n / factor_m0/factor_m1/2;
 
 	return clock;
 }

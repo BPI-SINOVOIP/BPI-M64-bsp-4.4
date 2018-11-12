@@ -1154,6 +1154,31 @@ s32 tcon1_close(u32 sel)
 	return 0;
 }
 
+#ifdef TCON_POL_CORRECT
+u32 tcom1_cfg_correct(u32 sel, struct disp_video_timings *timing)
+{
+	if (timing->pixel_clk > 27000000)
+		lcd_dev[sel]->tcon0_io_pol.bits.sync_inv
+			= (timing->hor_sync_polarity ? 0 : 1)
+			| ((timing->ver_sync_polarity ? 0 : 1) << 1);
+	else
+		lcd_dev[sel]->tcon0_io_pol.bits.sync_inv = 0;
+
+	return 0;
+}
+#endif
+
+s32 tcon_set_sync_pol(u32 sel, u32 ver_pol, u32 hor_pol)
+{
+#if defined(HAVE_DEVICE_COMMON_MODULE)
+	lcd_dev[sel]->tcon0_io_pol.bits.sync_inv = hor_pol | (ver_pol << 1);
+#else
+	lcd_dev[sel]->tcon1_io_pol.bits.io0_inv = ver_pol;
+	lcd_dev[sel]->tcon1_io_pol.bits.io1_inv = hor_pol;
+#endif
+	return 0;
+}
+
 s32 tcon1_cfg(u32 sel, struct disp_video_timings *timing)
 {
 	u32 start_delay;

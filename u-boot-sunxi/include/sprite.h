@@ -43,4 +43,9 @@ extern int sprite_form_sysrecovery(void);
 extern int sprite_led_init(void);
 extern int sprite_led_exit(int status);
 
+#ifdef CONFIG_SUNXI_GPT
+int sunxi_mbr_convert_to_gpt(void *sunxi_mbr_buf, char *gpt_buf,int storage_type);
+int gpt_convert_to_sunxi_mbr(void *sunxi_mbr_buf, char *gpt_buf,int storage_type);
+#endif
+
 #endif /* __SPRITE_SYS_H */

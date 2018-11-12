@@ -99,7 +99,7 @@ sunxi_flash_nand_flush(void)
 }
 
 static int
-sunxi_flash_nand_force_erase(void)
+sunxi_flash_nand_force_erase(int erase, void *mbr_buffer)
 {
 #ifdef CONFIG_SUNXI_UBIFS
 	if (sunxi_get_mtd_ubi_mode_status())

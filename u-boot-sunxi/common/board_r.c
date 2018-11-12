@@ -78,8 +78,14 @@
 #include <private_toc.h>
 #include <boot0_extend.h>
 #endif
+#include <asm/arch/timer.h>
 
 #include <sun3i-sound.h>
+#include <pwm_led.h>
+
+#if defined(CONFIG_BOX_STANDBY)
+extern int do_box_standby(void);
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -322,8 +328,51 @@ static int run_main_loop(void)
 }
 
 extern int script_init(void);
+#ifdef CONFIG_RELOCATE_PARAMETER
+extern int parameter_init(void);
+#endif
 extern int PowerCheck(void);
 extern int sunxi_keydata_burn_by_usb(void);
+
+#ifdef CONFIG_READ_LOGO_FOR_KERNEL
+static int sunxi_read_bootlogo(void)
+{
+	int workmode = get_boot_work_mode();
+	if ((workmode == WORK_MODE_USB_PRODUCT) ||
+		(workmode == WORK_MODE_USB_UPDATE) ||
+		(workmode == WORK_MODE_USB_DEBUG)) {
+		return 0;
+	}
+	int ret = 0;
+	u32 rblock = 0;
+	u32 start_block = 0;
+	uint addr = gd->fb_base;
+	printf("logo addr = 0x%x\n",addr);
+	start_block = sunxi_partition_get_offset_byname("bootlogo");
+	if(start_block == 0 )
+	{
+		printf("can't get bootlogo partition\n");
+		return 0;
+	}
+	rblock = sunxi_partition_get_size_byname("bootlogo");
+	if(rblock * 512 > SUNXI_LOGO_FOR_KERNEL_BUFFER_SIZE)
+	{
+		printf("logo read fail!\nbootlogo partition size big than buffer size\n");
+		return 0;
+	}
+	ret = sunxi_flash_read(start_block, rblock, (void *)addr);
+	if(ret != 0)
+	{
+		printf("sunxi_read_bootlogo: read bootlogo partition successful\n");
+	}
+	else
+	{
+		printf("sunxi_read_bootlogo: read bootlogo partition fail\n");
+	}
+
+	return 0;
+}
+#endif
 
 static int initr_sunxi_base(void)
 {
@@ -678,12 +727,22 @@ init_fnc_t init_sequence_r[] = {
 	show_platform_info,
 	initr_malloc,
 	script_init,
+#ifdef CONFIG_RELOCATE_PARAMETER
+	parameter_init,
+#endif
 	bootstage_relocate,
 	power_init_board,
 	stdio_init,
 	initr_jumptable,
 	console_init_r,		/* fully init console as a device */
+#ifdef CONFIG_SUNXI_UBOOT_WATCHDOG
+	/* watchdog_dump, */
+	watchdog_feed,
+#endif
 	interrupt_init,
+#if defined(CONFIG_BOX_STANDBY)
+	do_box_standby,
+#endif
 
 #if defined(CONFIG_ARM) || defined(CONFIG_x86)
 	initr_enable_interrupts,
@@ -693,7 +752,7 @@ init_fnc_t init_sequence_r[] = {
 	platform_dma_init,
 
 #ifdef CONFIG_BOOT_TONE
-	codec_play_audio_prepare,
+	codec_play_audio_prepare_step2,
 #endif
 
 #ifdef CONFIG_AUTO_UPDATE
@@ -707,10 +766,19 @@ init_fnc_t init_sequence_r[] = {
 #endif
 	sunxi_burn_key,
 	initr_env,
+#ifdef CONFIG_PWM_LED
+	pwm_led_init,
+	/* pwm_led_test, */
+#endif
+#ifdef CONFIG_READ_LOGO_FOR_KERNEL
+	sunxi_read_bootlogo,
+#endif
 	initr_sunxi_base,
-
 #ifdef CONFIG_BOOT_TONE
-	codec_play_audio,
+	codec_play_audio_prepare_step3,
+#endif
+#ifdef CONFIG_BOOT_TONE
+	play_boot_tone,
 #endif
 
 #ifdef CONFIG_EINK_PANEL_USED
@@ -730,6 +798,9 @@ init_fnc_t init_sequence_r[] = {
 
 #endif
 	usb_net_init,
+#ifdef CONFIG_SUNXI_UBOOT_WATCHDOG
+	watchdog_feed,
+#endif
 	run_main_loop,
 };
 
@@ -746,6 +817,7 @@ extern ulong _fiq;
 #ifdef CONFIG_USE_IRQ
 void intr_vector_fix(void)
 {
+	__maybe_unused void *addr = 0x00;
 	int i = 0;
 	ulong * vec_array[8] = {0};
 	vec_array[i++] = &_reset_vec;
@@ -764,7 +836,7 @@ void intr_vector_fix(void)
 		debug("after  fix: vector %d, addr %lx ,value 0x%lx\n", i ,(ulong)vec_array[i], *(vec_array[i]));
 	}
 #ifdef  CONFIG_ARCH_SUN3IW1P1
-    memcpy((void*) 0, (const void *) _start, 1024);
+	memcpy((void *)addr, (const void *)_start, 1024);
 #endif
 }
 #endif

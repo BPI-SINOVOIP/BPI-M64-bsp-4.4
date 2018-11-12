@@ -37,6 +37,12 @@
 
 
 #define HAVE_VENDOR_COMMON_LIB
+
+/*********************************************************************
+ *crash_dump support
+ **********************************************************************/
+#define CONFIG_SUNXI_CRASH
+
 /*
  * High Level Configuration Options
  */
@@ -70,13 +76,15 @@
 //toco mmu
 #define TOC0_MMU_BASE_ADDRESS            (CONFIG_SYS_SDRAM_BASE + 0x2800000)
 //boot0 stack
-#define CONFIG_BOOT0_STACK_BOTTOM        (CONFIG_SYS_SRAMA1_BASE+CONFIG_SYS_SRAMA1_SIZE-0x10)
+/*#define CONFIG_BOOT0_STACK_BOTTOM        (CONFIG_SYS_SRAMA1_BASE+CONFIG_SYS_SRAMA1_SIZE-0x10)*/
+#define CONFIG_BOOT0_STACK_BOTTOM		CONFIG_STACK_BASE
 
 //dram base for uboot
 #define CONFIG_SYS_SDRAM_BASE                (PLAT_SDRAM_BASE)
 //base addr for boot 0 to load the fw image
 #define BL31_BASE                            (PLAT_TRUSTED_DRAM_BASE) //bl31:0x40000000-0x40200000
 #define BL31_SIZE                            (0x100000)  //1M
+#define OPTEE_BASE                           (0x48600000)
 #define SCP_SRAM_BASE                        (CONFIG_SYS_SRAMA2_BASE)
 #define SCP_SRAM_SIZE                        (CONFIG_SYS_SRAMA2_SIZE)
 #define SCP_DRAM_BASE                        (PLAT_TRUSTED_DRAM_BASE+BL31_SIZE)
@@ -168,6 +176,7 @@
 #define CONFIG_SUNXI_CHIPID
 //boot0 fes --end
 
+/* #define CONFIG_DETECT_RTC_BOOT_MODE */
 #define CONFIG_SUNXI_MULITCORE_BOOT
 #define CONFIG_LZMA
 #define CONFIG_SUNXI_CORE_VOL           1200
@@ -245,7 +254,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -359,6 +368,12 @@
 #define CONFIG_SUNXI_MODULE_USB
 #define CONFIG_SUNXI_MODULE_DISPLAY
 
+#define CONFIG_GPT_SUPPORT
+#ifdef CONFIG_GPT_SUPPORT
+#define CONFIG_SUNXI_GPT
+#define CONFIG_EFI_PARTITION
+#define CONFIG_CONVERT_CARD0_TO_GPT
+#endif
 
 
 

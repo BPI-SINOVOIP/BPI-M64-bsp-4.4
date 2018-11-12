@@ -48,6 +48,8 @@ int sunxi_key_init(void)
     /* below code init tp controller*/
 	struct sunxi_tpcontrol *sunxi_tpkey_base = (struct sunxi_tpcontrol *)SUNXI_TPCONTROL_BASE;
 	u32 tp_reg_val = 0;
+    u32 gpio_reg_val = 0;
+    u32 gpio_reg_mask = 0;
 
     tp_reg_val = 0xf<<24;
     tp_reg_val |= 1<<23;
@@ -64,8 +66,15 @@ int sunxi_key_init(void)
 
     tp_reg_val = sunxi_tpkey_base->ctrl1;
     tp_reg_val &= ~(0x0f);
-    tp_reg_val |= 1<<0;   /* select X2 */
+    tp_reg_val |= 1<<0;   /* select X1 */
     sunxi_tpkey_base->ctrl1 = tp_reg_val;
+
+    /*configuer gpio*/
+    gpio_reg_mask = 0xf << 0;
+    gpio_reg_val = *(volatile unsigned int *)(SUNXI_PIO_BASE);
+    gpio_reg_val &= ~gpio_reg_mask;
+    gpio_reg_val |= 0x2 << 0;
+    *(volatile unsigned int *)(SUNXI_PIO_BASE) = gpio_reg_val;
 
     /* clear fifo */
     tp_reg_val = sunxi_tpkey_base->int_fifoc;

@@ -42,6 +42,7 @@
 #include <fdt_support.h>
 #include <sys_config_old.h>
 #include <cputask.h>
+#include "asm/arch/rtc_region.h"
 
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nannd flash, mmc2.
@@ -195,5 +196,27 @@ int sunxi_set_secure_mode(void)
 	}
 
 	return 0;
+}
+
+int sunxi_set_bootmode_flag(u8 flag)
+{
+	volatile uint reg_val;
+	do {
+		writel(flag, RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+		reg_val = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+	} while ((reg_val & 0xff) != flag);
+
+	return 0;
+}
+
+
+int sunxi_get_bootmode_flag(void)
+{
+	uint fel_flag;
+
+	/* operation should be same with kernel write rtc */
+	fel_flag = readl(RTC_DATA_HOLD_REG_BASE + SUNXI_RTC_GPREG_NUM*0x4);
+
+	return fel_flag;
 }
 

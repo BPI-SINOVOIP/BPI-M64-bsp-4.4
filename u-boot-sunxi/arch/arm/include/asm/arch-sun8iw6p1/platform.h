@@ -177,5 +177,6 @@
 #define RVBARADDR3_L		             (SUNXI_CPUX_CFG_BASE_A32+0xB8)
 #define RVBARADDR3_H		             (SUNXI_CPUX_CFG_BASE_A32+0xBC)
 
+#define CCI400_BASE     (0x01790000)
 
 #endif

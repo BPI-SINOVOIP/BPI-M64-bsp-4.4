@@ -49,7 +49,7 @@ static struct map_info secure_storage_map = {{0}};
 *
 *    name          :  __probe_name_in_map 在secure storage map中查找指定项
 *
-*    parmeters     :  buffer : 
+*parmeters     :  buffer :
 *
 *    return        :
 *
@@ -621,13 +621,11 @@ int sunxi_secure_storage_erase(const char *item_name)
 int sunxi_secure_storage_erase_all(void)
 {
 	int ret;
-
 	if(!secure_storage_inited)
 	{
-		printf("%s err: secure storage has not been inited\n", __func__);
-
-		return -1;
+		sunxi_secure_storage_init();
 	}
+
 	memset(&secure_storage_map, 0x00, 4096);
 	ret = sunxi_secstorage_write(0, (unsigned char *)&secure_storage_map, 4096);
 	if(ret<0)
@@ -640,5 +638,4 @@ int sunxi_secure_storage_erase_all(void)
 
 	return 0;
 }
-
 

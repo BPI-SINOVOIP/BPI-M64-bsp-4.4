@@ -46,7 +46,7 @@
 #include <sys_config_old.h>
 #include <sys_partition.h>
 #include <sunxi_mbr.h>
-
+#include <ufdt_support.h>
 DECLARE_GLOBAL_DATA_PTR;
 
 
@@ -151,6 +151,11 @@ int do_boota_linux (void *kernel_addr, void *dtb_base, uint arch_type)
 		printf("fdt header check error befor boot\n");
 		return -1;
 	}
+#ifdef CONFIG_OF_LIBUFDT
+	if (sunxi_support_ufdt((void *)dtb_base, fdt_totalsize(dtb_base)) < 0) {
+		printf("sunxi dto merge fail\n");
+	}
+#endif
 
 	announce_and_cleanup(fake);
 	if (sunxi_probe_secure_monitor()) {
@@ -181,20 +186,22 @@ void * memcpy2(void * dest,const void * src,__kernel_size_t n)
 
 void update_bootargs(void)
 {
+	int dram_clk = 0;
 	char *str;
 	char cmdline[1024] = {0};
 	char tmpbuf[128] = {0};
 	char *verifiedbootstate_info = getenv("verifiedbootstate");
 	str = getenv("bootargs");
-
 	strcpy(cmdline,str);
-	//charge type
-	if(gd->chargemode)
-	{
-		if((0==strcmp(getenv("bootcmd"),"run setargs_mmc boot_normal"))||(0==strcmp(getenv("bootcmd"),"run setargs_nand boot_normal")))
-		{
-			printf("only in boot normal mode, pass charger para to kernel\n");
-			strcat(cmdline," androidboot.mode=charger");
+
+	if ((!strcmp(getenv("bootcmd"), "run setargs_mmc boot_normal")) \
+			|| !strcmp(getenv("bootcmd"), "run setargs_nand boot_normal")) {
+		if (gd->chargemode == 0) {
+			printf ("in boot normal mode,pass normal para to cmdline\n");
+			strcat(cmdline, " androidboot.mode=normal");
+		} else {
+			printf("in charger mode, pass charger para to cmdline\n");
+			strcat(cmdline, " androidboot.mode=charger");
 		}
 	}
 #ifdef CONFIG_SUNXI_SERIAL
@@ -209,6 +216,13 @@ void update_bootargs(void)
 	/*boot type*/
 	sprintf(tmpbuf," boot_type=%d",get_boot_storage_type_ext());
 	strcat(cmdline,tmpbuf);
+
+	/*dram_clk*/
+	script_parser_fetch("dram_para", "dram_clk", (int *)&dram_clk, 1);
+#ifdef CONFIG_ARCH_SUN8IW15P1
+	sprintf(tmpbuf, " dram_clk=%d", dram_clk);
+	strcat(cmdline, tmpbuf);
+#endif
 	/* gpt support */
 	if(PART_TYPE_GPT == sunxi_partition_get_type())
 	{
@@ -232,7 +246,6 @@ extern int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-
 	ulong os_load_addr;
 	ulong os_data = 0,os_len = 0;
 	ulong rd_data,rd_len;
@@ -259,27 +272,44 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	arch_type = get_arch_type(fb_hdr);
 	kernel_addr = (void *)fb_hdr->kernel_addr;
 #ifdef CONFIG_SUNXI_SECURE_SYSTEM
+	uint count = 0;
+	uint wait_for_power_key = 1;
 	if(gd->securemode)
 	{
+		/* ORANGE, indicating a device may be freely modified.
+		 * Device integrity is left to the user to verify out-of-band.
+		 * The bootloader displays a warning to the user before allowing
+		 * the boot process to continue.*/
 		if (gd->lockflag == SUNXI_UNLOCKED) {
 			setenv("verifiedbootstate", "orange");
-			printf("start to display warnings.bmp\n");
-			sunxi_bmp_display("warnings.bmp");
+			printf("Your device software can't be checked for corruption.\n");
+			printf("Please lock the bootloader.\n");
+			sunxi_bmp_display("orange_warning.bmp");
+			do {
+				if (axp_probe_key()) {
+					/* PAUSE BOOT */
+					printf("pause boot,shutdown machine\n");
+					sunxi_board_shutdown();
+				}
+				__msdelay(1000);
+				count++;
+			} while	(count < 5);
+			printf("orange state:start to display bootlogo\n");
+			sunxi_bmp_display("bootlogo.bmp");
 		} else {
-			ulong total_len = ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size) + 	\
-							  ALIGN(fb_hdr->kernel_size, fb_hdr->page_size)  +  \
-							  fb_hdr->page_size;
-
-			printf("total_len=%d\n", (unsigned int)total_len);
+			ulong total_len;
 			ulong sign_data , sign_len;
 			int ret;
-
-			if (!strcmp(getenv("verifiedbootstate"), "yellow")) {
-				printf("start to display warnings.bmp\n");
-				sunxi_bmp_display("warnings.bmp");
+			if (fb_hdr->ramdisk_size) {
+				total_len = ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size) + \
+							ALIGN(fb_hdr->kernel_size, fb_hdr->page_size) + \
+							  fb_hdr->page_size;
 			} else {
-				setenv("verifiedbootstate", "green");
+				total_len = ALIGN(fb_hdr->kernel_size, fb_hdr->page_size) + \
+							fb_hdr->page_size;
 			}
+			printf("total_len=%ld\n", total_len);
+
 			if (android_image_get_signature(fb_hdr, &sign_data, &sign_len))
 				ret = sunxi_verify_embed_signature((void *)os_load_addr,
 					(unsigned int)total_len,
@@ -288,12 +318,48 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				ret = sunxi_verify_signature((void *)os_load_addr,
 					(unsigned int)total_len, argv[2]);
 
+			/* YELLOW, indicating the boot partition has been verified using the
+			 * embedded certificate, and the signature is valid. The bootloader
+			 * displays a warning and the fingerprint of the public key before
+			 * allowing the boot process to continue.*/
+			if (!strcmp(getenv("verifiedbootstate"), "yellow")) {
+				printf("Your device has loaded a different operating system.\n");
+				printf("stop booting until the power key is pressed\n");
+				sunxi_bmp_display("yellow_pause_warning.bmp");
+				do {
+					if (axp_probe_key()) {
+						/* PAUSE BOOT */
+						printf("pause boot,waiting for press power key again\n");
+						sunxi_bmp_display("yellow_continue_warning.bmp");
+						do {
+							if (axp_probe_key()) {
+								/* CONTINUE BOOT */
+								wait_for_power_key = 0;
+								/* timeout,continue to bootup */
+								count = 5;
+							}
+						} while (wait_for_power_key);
+					}
+					__msdelay(1000);
+					count++;
+				} while	(count < 5);
+				printf("yellow state:start to display bootlogo\n");
+				sunxi_bmp_display("bootlogo.bmp");
+			} else {
+				/* GREEN, indicating a full chain of trust extending from the
+				 * bootloader to verified partitions, including the bootloader,
+				 * boot partition, and all verified partitions.*/
+				setenv("verifiedbootstate", "green");
+			}
+
+			/* RED, indicating the device has failed verification. The bootloader
+			 * displays an error and stops the boot process.*/
 			if (ret) {
 				printf("boota: verify the %s failed\n", argv[2]);
 				setenv("verifiedbootstate", "red");
 
-				printf("start to display warnings.bmp\n");
-				sunxi_bmp_display("warnings.bmp");
+				printf("Your device is corrupt.It can't be truseted and will not boot.\n");
+				sunxi_bmp_display("red_warning.bmp");
 				__msdelay(30000);
 				sunxi_board_shutdown();
 			}
@@ -301,7 +367,10 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 #endif
 	memcpy2((void*) (long)fb_hdr->kernel_addr, (const void *)os_data, os_len);
-	memcpy2((void*) (long)fb_hdr->ramdisk_addr, (const void *)rd_data, rd_len);
+	if (fb_hdr->ramdisk_size) {
+		memcpy2((void *)(long)fb_hdr->ramdisk_addr, (const void *)rd_data, rd_len);
+	}
+
 #ifdef SYS_CONFIG_MEMBASE
 	debug("moving sysconfig.bin from %lx to: %lx, size 0x%lx\n",
 		get_script_reloc_buf(SOC_SCRIPT),
@@ -314,7 +383,9 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	//update fdt bootargs from env config
 	fdt_chosen(working_fdt);
-	fdt_initrd(working_fdt,(ulong)fb_hdr->ramdisk_addr, (ulong)(fb_hdr->ramdisk_addr+rd_len));
+	if (fb_hdr->ramdisk_size) {
+		fdt_initrd(working_fdt, (ulong)fb_hdr->ramdisk_addr, (ulong)(fb_hdr->ramdisk_addr+rd_len));
+	}
 
 	pr_msg("ready to boot\n");
 #if 1

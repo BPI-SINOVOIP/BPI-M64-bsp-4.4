@@ -119,7 +119,7 @@
 
 /* RTC*/
 #define XO_CTRL_REG				            (SUNXI_RTC_BASE + 0x0160)
-
+#define ALARM0_IRQ_STA_REG                  (SUNXI_RTC_BASE + 0x30)
 #define RVBARADDR0_L                        (SUNXI_CPUXCFG_BASE+0x40)
 #define RVBARADDR0_H                        (SUNXI_CPUXCFG_BASE+0x44)
 

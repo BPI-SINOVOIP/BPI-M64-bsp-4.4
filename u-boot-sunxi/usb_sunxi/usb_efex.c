@@ -35,6 +35,7 @@
 #include "efex_queue.h"
 #include <sys_config_old.h>
 #include <sunxi_board.h>
+#include <sunxi_mbr.h>
 
 #ifndef CONFIG_SUNXI_SPINOR
 #define _EFEX_USE_BUF_QUEUE_
@@ -79,8 +80,8 @@ static  int sunxi_usb_efex_status_enable = 1;
 extern int do_bootelf(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 int  efex_suspend_flag = 0;
-
 DECLARE_GLOBAL_DATA_PTR;
+
 /*
 *******************************************************************************
 *                     do_usb_req_set_interface
@@ -140,7 +141,15 @@ static int __usb_set_address(struct usb_device_request *req)
 
 	address = req->wValue & 0x7f;
 	__udelay(10);
+#ifdef CONFIG_ARCH_SUN3IW1P1
+	/* after enable mmu/dcache, usb may not work well if debug_level=0 */
+	int debug_level = get_sunxi_debug_level();
+	set_sunxi_debug_level(1);
 	printf("set address 0x%x\n", address);
+	set_sunxi_debug_level(debug_level);
+#else
+	printf("set address 0x%x\n", address);
+#endif
 
 	sunxi_udc_set_address(address);
 
@@ -357,7 +366,7 @@ static int __usb_get_descriptor(struct usb_device_request *req, uchar *buffer)
 			qua_dscrpt = (struct usb_qualifier_descriptor *)buffer;
 			memset(&buffer, 0, sizeof(struct usb_qualifier_descriptor));
 
-			qua_dscrpt->bLength = MIN(req->wLength, sizeof(sizeof(struct usb_qualifier_descriptor)));
+			qua_dscrpt->bLength = MIN(req->wLength, sizeof(struct usb_qualifier_descriptor));
 			qua_dscrpt->bDescriptorType    = USB_DT_DEVICE_QUALIFIER;
 			qua_dscrpt->bcdUSB             = 0x200;
 			qua_dscrpt->bDeviceClass       = 0xff;
@@ -1023,6 +1032,26 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 					trans_data.act_send_buffer   = (void*)(ulong)trans->addr;	//设置发送地址，属于字节单位
 					trans_data.send_size         = trans->len;	//设置接收长度，字节单位
 					sunxi_usb_dbg("dram read: start 0x%x: length 0x%x\n", trans->addr, trans->len);
+				} else if ((trans->type & SUNXI_EFEX_FLASH_BOOT0_TAG) == SUNXI_EFEX_FLASH_BOOT0_TAG) {
+				    trans_data.act_send_buffer   = trans_data.base_send_buffer;
+					trans_data.send_size         = trans->len;
+					trans_data.flash_start       = trans->addr;
+					trans_data.flash_sectors     = (trans->len + 511) >> 9;
+					printf("upload boot0 flash: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
+					if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, (void *)trans_data.act_send_buffer)) {
+						printf("flash read err: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
+						trans_data.last_err      = -1;
+					}
+				} else if ((trans->type & SUNXI_EFEX_FLASH_BOOT1_TAG) == SUNXI_EFEX_FLASH_BOOT1_TAG) {
+					trans_data.act_send_buffer   = trans_data.base_send_buffer;
+					trans_data.send_size         = trans->len;
+					trans_data.flash_start       = trans->addr;
+					trans_data.flash_sectors     = (trans->len + 511) >> 9;
+					sunxi_usb_dbg("upload boot1 flash: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
+					if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, trans_data.act_send_buffer)) {
+						trans_data.last_err      = -1;
+					}
+					/*sunxi_dump(trans_data.act_send_buffer,64);*/
 				}
 				else	//属于flash数据，分别表示起始扇区，扇区数
 				{
@@ -1039,6 +1068,29 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 
 						trans_data.last_err      = -1;
 					}
+#ifdef CONFIG_SUNXI_GPT
+					if(trans_data.flash_start == 0 && trans_data.flash_sectors == 0x80)  /* gpt */
+					{
+						printf("convert gpt to mbr\n");
+						sunxi_mbr_t  *sunxi_mbr = malloc(SUNXI_MBR_SIZE);
+						int boot_storage_type;
+						if(get_boot_storage_type() == STORAGE_EMMC3)
+						{
+							boot_storage_type = STORAGE_EMMC;
+						}
+						else if (get_boot_storage_type() == STORAGE_SD1)
+						{
+							boot_storage_type = STORAGE_EMMC;
+						}
+						else
+						{
+							boot_storage_type = get_boot_storage_type();
+						}
+						gpt_convert_to_sunxi_mbr(sunxi_mbr, (char *)trans_data.act_send_buffer, boot_storage_type);
+						memcpy(trans_data.act_send_buffer, sunxi_mbr, SUNXI_MBR_SIZE);
+						free(sunxi_mbr);
+					}
+#endif
 				}
 			}
 
@@ -1124,14 +1176,18 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 			{
 				uint *storage_type = (uint *)trans_data.base_send_buffer;
 
-                                if(get_boot_storage_type() == STORAGE_EMMC3)
-                                {
-                                        *storage_type = STORAGE_EMMC;
-                                }
-                                else
-                                {
-				        *storage_type = get_boot_storage_type();
-                                }
+                if(get_boot_storage_type() == STORAGE_EMMC3)
+                {
+                    *storage_type = STORAGE_EMMC;
+                }
+				else if (get_boot_storage_type() == STORAGE_SD1)
+				{
+                    *storage_type = STORAGE_EMMC;
+				}
+                else
+                {
+			        *storage_type = get_boot_storage_type();
+                }
 				trans_data.act_send_buffer   = trans_data.base_send_buffer;
 				trans_data.send_size         = 4;
 				trans_data.last_err          = 0;
@@ -1314,7 +1370,7 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 		case FEX_CMD_fes_force_erase:
 			printf("FEX_CMD_fes_force_erase\n");
 			{
-                trans_data.last_err = sunxi_sprite_force_erase();
+				trans_data.last_err = sunxi_sprite_force_erase(1, NULL);
 				printf("FEX_CMD_fes_force_erase last err=%d\n", trans_data.last_err);
 			}
 			trans_data.app_next_status   = SUNXI_USB_EFEX_APPS_STATUS;
@@ -1418,10 +1474,10 @@ static void dram_data_recv_finish(uint data_type)
 		int sys_config_erase_flag;
 		printf("SUNXI_EFEX_ERASE_TAG\n");
 		erase_flag = *(uint *)trans_data.base_recv_buffer;
-		if(erase_flag)
+		/*if(erase_flag)
 		{
 		    erase_flag = 1;
-		}
+		}*/
 		printf("erase_flag = 0x%x\n", erase_flag);
 		if(0 != script_parser_fetch("platform", "eraseflag", &sys_config_erase_flag , 1))
 			printf("get eraseflag fail\n");

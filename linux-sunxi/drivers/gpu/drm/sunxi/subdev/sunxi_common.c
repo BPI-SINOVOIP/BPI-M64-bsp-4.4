@@ -117,6 +117,9 @@ int sunxi_irq_request(struct sunxi_hardware_res  *hw_res)
 		if (ret < 0) {
 			DRM_ERROR("fail to request irq\n");
 			return ret;
+		} else {
+			DRM_INFO("request irq:%s success\n",
+				drm_irq[hw_res->res_id]);
 		}
 #if 0
 		hw_res->irq_enable = 1;
@@ -306,6 +309,8 @@ int sunxi_drm_sys_gpio_request(struct disp_gpio_set_t *gpio_list)
 int sunxi_drm_sys_gpio_set_value(u32 p_handler, u32 value_to_gpio,
 	const char *gpio_name)
 {
+	DRM_DEBUG_DRIVER("%s  gpio_name:%s\n", __func__, gpio_name);
+
 	if (p_handler)
 		__gpio_set_value(p_handler, value_to_gpio);
 	else
@@ -389,7 +394,7 @@ int sunxi_drm_get_sys_item_char(struct device_node *node,
 	const char *str;
 
 	if (of_property_read_string(node, sub_name, &str)) {
-		DRM_INFO("failed to get [%s] string.\n", sub_name);
+		DRM_DEBUG_DRIVER("failed to get [%s] string.\n", sub_name);
 		return  -EINVAL;
 	}
 
@@ -407,7 +412,7 @@ int sunxi_drm_get_sys_item_gpio(struct device_node *node,
 	gpio = of_get_named_gpio_flags(node, sub_name, 0,
 		(enum of_gpio_flags *)&config);
 	if (!gpio_is_valid(gpio)) {
-		DRM_INFO("failed to get gpio[%s].\n", sub_name);
+		DRM_DEBUG_DRIVER("failed to get gpio[%s].\n", sub_name);
 		return -EINVAL;
 	}
 
@@ -433,7 +438,7 @@ struct device_node *sunxi_drm_get_name_node(char *device_name)
 
 	node = of_find_compatible_node(NULL, NULL, compat);
 	if (!node) {
-		DRM_ERROR("of_find_compatible_node %s fail\n", compat);
+		DRM_ERROR("There is NO dts node %s fail\n", compat);
 		return NULL;
 	}
 

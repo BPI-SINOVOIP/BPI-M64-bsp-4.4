@@ -557,6 +557,7 @@ struct mmc_platform_caps {
 	/* boot0 burn positon */
 #define DRV_PARA_NOT_BURN_USER_PART           (1U<<0)
 #define DRV_PARA_BURN_EMMC_BOOT_PART          (1U<<1)
+#define DRV_PARA_BURN_FORCE_FLUSH_CACHE       (1U<<3)
 	uint drv_burn_boot_pos;
 
 	/* struct mmc/drv_wipe_feature, define for driver secure wipe opeation */
@@ -685,6 +686,8 @@ struct mmc {
 	u64 capacity_boot;
 	u64 capacity_rpmb;
 	u64 capacity_gp[4];
+	u64 cache_size;
+	u32 cache_ctrl;
 	block_dev_desc_t block_dev;
 	char op_cond_pending;	/* 1 if we are waiting on an op_cond command */
 	char init_in_progress;	/* 1 if we have done mmc_start_init() */

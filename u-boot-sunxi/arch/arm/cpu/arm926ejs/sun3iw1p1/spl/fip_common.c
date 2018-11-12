@@ -45,9 +45,7 @@ uint toc1_item_read(struct sbrom_toc1_item_info *p_toc_item, void * p_dest, u32 
     return ret * 512;
 }
 
-#ifdef CONFIG_BOOT_TONE
 extern int toc1_tone_size;
-#endif
 
 int load_fip(int *use_monitor)
 {
@@ -62,7 +60,7 @@ int load_fip(int *use_monitor)
 #ifdef BOOT_DEBUG
     printf("*******************TOC1 Head Message*************************\n");
     printf("Toc_name          = %s\n",   toc1_head->name);
-    printf("Toc_magic         = %s\n",   toc1_head->magic);
+    printf("Toc_magic         = 0x%x\n", toc1_head->magic);
     printf("Toc_add_sum       = 0x%x\n", toc1_head->add_sum);
     printf("Toc_serial_num    = 0x%x\n", toc1_head->serial_num);
     printf("Toc_status        = 0x%x\n", toc1_head->status);
@@ -98,13 +96,11 @@ int load_fip(int *use_monitor)
             toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_DTB_STORE_IN_DRAM_BASE);
 #endif
         }
-#ifdef CONFIG_BOOT_TONE
         else if(strncmp(toc1_item->name, ITEM_TONE_NAME, sizeof(ITEM_TONE_NAME)) == 0)
         {
             toc1_tone_size = toc1_item->data_len;
             toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_TONE_STORE_IN_DRAM_BASE);
         }
-#endif
         else if(strncmp(toc1_item->name, ITEM_SOCCFG_NAME, sizeof(ITEM_SOCCFG_NAME)) == 0)
         {
             toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SOCCFG_STORE_IN_DRAM_BASE);

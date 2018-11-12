@@ -100,6 +100,8 @@
 //define storage in boot0
 #define CONFIG_STORAGE_MEDIA_SPINOR
 #define CONFIG_STORAGE_MEDIA_MMC
+#define CONFIG_STORAGE_MEDIA_NAND
+#define CONFIG_STORAGE_MEDIA_SPINAND
 
 #define UBOOT_START_SECTOR_IN_SPINOR    (24*1024/512)
 #define CONFIG_STANDBY_RUN_ADDR         (0x1000)
@@ -117,7 +119,7 @@
 
 #define CONFIG_SMALL_MEMSIZE
 #define CONFIG_SUNXI_LOGBUFFER
-#define CONFIG_READ_LOGO_FOR_KERNEL
+//#define CONFIG_READ_LOGO_FOR_KERNEL
 #define SUNXI_DISPLAY_FRAME_BUFFER_ADDR (CONFIG_SYS_SDRAM_BASE + 0x02010000)
 #define SUNXI_DISPLAY_FRAME_BUFFER_SIZE (0x0100000)
 /*
@@ -167,15 +169,16 @@
 ***************************************************************/
 //#define CONFIG_SUNXI_RSB
 #define CONFIG_SUNXI_I2C
-#define CONFIG_PMU_USE_I2C
 #define CONFIG_SYS_I2C_SPEED 400000
-#define CONFIG_SYS_I2C_SLAVE 0x68
+#define CONFIG_SYS_I2C_SLAVE 0x34
 #define CONFIG_USE_IRQ
 #define CONFIG_CMD_IRQ
 #define CONFIG_SUNXI_DMA
 //#define CONFIG_CMD_MEMORY
 
 #define BOARD_LATE_INIT  /* init the fastboot partitions */
+
+#define CONFIG_SUNXI_KEY_BURN
 
 #define CONFIG_USE_ARCH_MEMCPY
 #define CONFIG_USE_ARCH_MEMSET
@@ -220,7 +223,7 @@
 #define CONFIG_SYS_PROMPT   "sunxi#"
 #define CONFIG_SYS_CBSIZE   256         /* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE   384         /* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS  16          /* max number of command args */
+#define CONFIG_SYS_MAXARGS  32          /* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE         CONFIG_SYS_CBSIZE
@@ -300,7 +303,7 @@
 
 #define CONFIG_SYS_MMC_ENV_DEV 0
 
-//#define CONFIG_AXP_USE_I2C
+#define CONFIG_AXP_USE_I2C
 #define CONFIG_CPUX_I2C
 #define CONFIG_OF_LIBFDT
 
@@ -311,7 +314,6 @@
 
 #define SUNXI_KEY_SUPPORT
 #define CONFIG_SUNXI_KEY_SUPPORT
-
 
 /*-----------------------------------------------------------------------
  * Stack sizes
@@ -331,17 +333,17 @@
  ***************************************
  */
 #ifndef CONFIG_SUN8IW8P1_NOR
-#define CONFIG_SUNXI_MODULE_SPRITE
 #define CONFIG_SUNXI_MODULE_NAND
 #define CONFIG_SUNXI_MODULE_SDMMC
 #define CONFIG_SUNXI_MODULE_SPINOR
 #define CONFIG_SUNXI_MODULE_AXP
-#define CONFIG_SUNXI_MODULE_USB
-//#define CONFIG_SUNXI_MODULE_DISPLAY
+#define CONFIG_SUNXI_MODULE_DISPLAY
 #else
 #define CONFIG_SUNXI_MODULE_SPINOR
 #define CONFIG_SUNXI_MODULE_AXP
 #endif
+#define CONFIG_SUNXI_MODULE_SPRITE
+#define CONFIG_SUNXI_MODULE_USB
 
 /***************************************************************
 *
@@ -354,20 +356,24 @@
 #define CONFIG_CMD_BOOTD        /* boot the default command */
 #define CONFIG_CMD_FDT
 
-#ifndef CONFIG_SUN8IW8P1_NOR
 #define CONFIG_CMD_FAT          /* with this we can access bootfs in nand */
+#define CONFIG_CMD_SUNXI_EFEX
+
+#ifndef CONFIG_SUN8IW8P1_NOR
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_FASTBOOT
 #define CONFIG_CMD_SUNXI_SPRITE
 #define CONFIG_CMD_SUNXI_TIMER
-#define CONFIG_CMD_SUNXI_EFEX
 #define CONFIG_CMD_SUNXI_SHUTDOWN
 #define CONFIG_CMD_SUNXI_BMP
 #define CONFIG_CMD_SUNXI_MEMTEST
 #endif
 
+#ifdef CONFIG_SUNXI_KEY_BURN
+#define CONFIG_CMD_SUNXI_BURN
+#endif
 
 #ifdef CONFIG_SUNXI_MODULE_SDMMC
 #define CONFIG_STORAGE_MEDIA_MMC
@@ -378,8 +384,8 @@
 #define CONFIG_MMC_SUNXI
 #define CONFIG_MMC_SUNXI_USE_DMA
 #define CONFIG_STORAGE_EMMC
-#define CONFIG_MMC_LOGICAL_OFFSET       (20 * 1024 * 1024/512)
 #endif
+#define CONFIG_MMC_LOGICAL_OFFSET       (20 * 1024 * 1024/512)
 
 #ifdef CONFIG_SUNXI_MODULE_NAND
 #define CONFIG_STORAGE_MEDIA_NAND
@@ -404,8 +410,8 @@
 #define CONFIG_SUNXI_AXP20
 #define CONFIG_SUNXI_AXP_MAIN           PMU_TYPE_20X
 
-#define PMU_SCRIPT_NAME                 "pmu1_para"
-#define FDT_PATH_REGU                   "pmu1_regu"
+#define PMU_SCRIPT_NAME                 "charger0"
+#define FDT_PATH_REGU                   "regulator0"
 #endif
 
 #ifdef CONFIG_SUNXI_MODULE_SPINOR
@@ -442,5 +448,10 @@
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_MII
 #endif
+
+/* ifdef this can change GPIO interrupt clock select */
+#define CONFIG_SUNXI_GPIO_INT_DEB
+
+/* #define CONFIG_PWM_LED */
 
 #endif /* __CONFIG_H */

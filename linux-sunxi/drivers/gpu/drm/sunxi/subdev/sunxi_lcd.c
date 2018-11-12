@@ -40,10 +40,11 @@ static struct sunxi_lcd_private *sunxi_lcd_priv;
 
 int sunxi_lcd_bl_gpio_init(struct disp_lcd_cfg *lcd_cfg);
 static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd);
+static int sunxi_lcd_pin_soft_enalbe(struct sunxi_lcd_private *sunxi_lcd);
 /*static int sunxi_lcd_pin_disable(
 struct sunxi_lcd_private *sunxi_lcd);*/
 
-static sunxi_lcd_set_lcd_priv(struct sunxi_lcd_private *priv)
+static void sunxi_lcd_set_lcd_priv(struct sunxi_lcd_private *priv)
 {
 	sunxi_lcd_priv = priv;
 }
@@ -56,23 +57,22 @@ static struct sunxi_lcd_private *sunxi_lcd_get_lcd_priv(void)
 
 
 /* LCD panel control extern*/
-
+/*turn on lcd_bl_en_power, i.e. VCC-PD*/
 static int sunxi_lcd_extern_backlight_enable(
 	struct sunxi_lcd_private *sunxi_lcd)
 {
 	struct disp_gpio_set_t  gpio_info[1];
 	struct disp_lcd_cfg  *lcd_cfg = sunxi_lcd->lcd_cfg;
 
+	DRM_DEBUG_DRIVER("%s lcd_bl_en_used:%d  bl_enalbe:%d\n", __func__,
+			lcd_cfg->lcd_bl_en_used, sunxi_lcd->bl_enalbe);
 	if (lcd_cfg->lcd_bl_en_used && sunxi_lcd->bl_enalbe == 0) {
-
 		if (!((!strcmp(lcd_cfg->lcd_bl_en_power, "")) ||
 			(!strcmp(lcd_cfg->lcd_bl_en_power, "none")))) {
 			sunxi_drm_sys_power_enable(lcd_cfg->lcd_bl_en_power);
 		}
 		memcpy(gpio_info, &(lcd_cfg->lcd_bl_en),
 			sizeof(struct disp_gpio_set_t));
-		DRM_DEBUG_KMS("[%d] %s", __LINE__, __func__);
-
 #if 0
 		lcd_cfg->lcd_bl_gpio_hdl =
 			sunxi_drm_sys_gpio_request(gpio_info);
@@ -83,12 +83,14 @@ static int sunxi_lcd_extern_backlight_enable(
 	return 0;
 }
 
+/*turn off lcd_bl_en_power, i.e. VCC-PD*/
 static int sunxi_lcd_extern_backlight_disable(
 		struct sunxi_lcd_private *sunxi_lcd)
 {
 	struct disp_gpio_set_t  gpio_info[1];
 	struct disp_lcd_cfg  *lcd_cfg = sunxi_lcd->lcd_cfg;
 
+	DRM_DEBUG_DRIVER("%s:", __func__);
 	if (lcd_cfg->lcd_bl_en_used && sunxi_lcd->bl_enalbe == 1) {
 		memcpy(gpio_info, &(lcd_cfg->lcd_bl_en),
 			sizeof(struct disp_gpio_set_t));
@@ -97,7 +99,7 @@ static int sunxi_lcd_extern_backlight_disable(
 #if 0
 		sunxi_drm_sys_gpio_release(lcd_cfg->lcd_bl_gpio_hdl);
 #endif
-		DRM_DEBUG_KMS("[%d] %s", __LINE__, __func__);
+		DRM_DEBUG_DRIVER("disable\n");
 
 		if (!((!strcmp(lcd_cfg->lcd_bl_en_power, "")) ||
 		(!strcmp(lcd_cfg->lcd_bl_en_power, "none")))) {
@@ -110,6 +112,8 @@ static int sunxi_lcd_extern_backlight_disable(
 	return 0;
 }
 
+/*turn on lcd_power/lcd_power1/lcd_power2*/
+/*i.e. vcc-mipi/lcd/pe*/
 void sunxi_lcd_extrn_power_on(struct sunxi_lcd_private *sunxi_lcd, int i)
 {
 	struct disp_lcd_cfg *lcd_cfg = sunxi_lcd->lcd_cfg;
@@ -120,6 +124,8 @@ void sunxi_lcd_extrn_power_on(struct sunxi_lcd_private *sunxi_lcd, int i)
 	}
 }
 
+/*turn off lcd_power/lcd_power1/lcd_power2*/
+/*i.e. vcc-mipi/lcd/pe*/
 void sunxi_lcd_extrn_power_off(struct sunxi_lcd_private *sunxi_lcd, int i)
 {
 	struct disp_lcd_cfg *lcd_cfg = sunxi_lcd->lcd_cfg;
@@ -130,11 +136,15 @@ void sunxi_lcd_extrn_power_off(struct sunxi_lcd_private *sunxi_lcd, int i)
 	}
 }
 
+/*lcd_gpio_1: LCD-RST*/
 void sunxi_lcd_sys_gpio_set_value(struct sunxi_lcd_private *sunxi_lcd,
 	u32 io_index, u32 value_to_gpio)
 {
 	struct disp_lcd_cfg *lcd_cfg = sunxi_lcd->lcd_cfg;
 	char gpio_name[20];
+
+	if (!lcd_cfg->gpio_hdl[io_index])
+		return;
 
 	sprintf(gpio_name, "lcd_gpio_%d", io_index);
 	sunxi_drm_sys_gpio_set_value(
@@ -142,7 +152,7 @@ void sunxi_lcd_sys_gpio_set_value(struct sunxi_lcd_private *sunxi_lcd,
 		value_to_gpio, gpio_name);
 }
 
-
+/*get tcon_div/lcd_div/dsi_div/dsi_rate info*/
 struct lcd_clk_info *sunxi_lcd_clk_info_init(struct disp_panel_para *panel)
 {
 	/* tcon inner div */
@@ -256,6 +266,8 @@ static bool default_panel_init(struct sunxi_panel *sunxi_panel)
 			{LCD_CMAP_G3, LCD_CMAP_R2, LCD_CMAP_G1, LCD_CMAP_R0},
 		},
 	};
+
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	lcd_cfg->backlight_dimming = 0;
 	items = sizeof(lcd_gamma_tbl) / 2;
 	for (i = 0; i < items-1; i++) {
@@ -342,6 +354,7 @@ bool default_panel_close(struct sunxi_panel *panel)
 	return true;
 }
 
+/*set pwm and backlight*/
 bool sunxi_lcd_default_set_bright(struct sunxi_panel *sunxi_panel,
 	unsigned int bright)
 {
@@ -354,6 +367,7 @@ bool sunxi_lcd_default_set_bright(struct sunxi_panel *sunxi_panel,
 
 	sunxi_lcd_bl_gpio_init(sunxi_lcd->lcd_cfg);
 	sunxi_common_pwm_set_bl(sunxi_lcd, bright);
+
 	/* to add spec bright for spec lcd*/
 	if (bright > 0)
 		sunxi_lcd_extern_backlight_enable(sunxi_lcd);
@@ -363,11 +377,14 @@ bool sunxi_lcd_default_set_bright(struct sunxi_panel *sunxi_panel,
 	return true;
 }
 
-
+/*enable pwm and set pwm value*/
+/*request lcd_bl_en gpio and set it output 1*/
 bool sunxi_lcd_inet_set_bright(struct sunxi_panel *sunxi_panel,
 	unsigned int bright)
 {
 	struct sunxi_lcd_private *sunxi_lcd = sunxi_panel->private;
+
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	if (bright > 0)
 		sunxi_drm_sys_pwm_enable(sunxi_lcd->pwm_info);
 	else
@@ -419,6 +436,7 @@ enum drm_mode_status
 	if (cmp_panel_with_display_mode(mode, sunxi_lcd_p->panel))
 		status = MODE_OK;
 
+	DRM_DEBUG_DRIVER("%s status:%d\n", __func__, status);
 	return status;
 }
 
@@ -466,6 +484,7 @@ unsigned int sunxi_lcd_get_modes(struct sunxi_panel *sunxi_panel)
 		(struct sunxi_lcd_private *)sunxi_panel->private;
 	struct drm_connector *connector = sunxi_panel->drm_connector;
 
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	panel = sunxi_lcd_p->panel;;
 	mode = drm_mode_create(connector->dev);
 	if (!mode) {
@@ -485,8 +504,9 @@ unsigned int sunxi_lcd_get_modes(struct sunxi_panel *sunxi_panel)
 }
 
 enum drm_connector_status
-	sunxi_common_detect(struct sunxi_panel *panel)
+	sunxi_lcd_common_detect(struct sunxi_panel *panel)
 {
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	return connector_status_connected;
 }
 
@@ -496,7 +516,7 @@ static struct  panel_ops  default_panel = {
 	.close = default_panel_close,
 	.reset = NULL,
 	.bright_light = sunxi_lcd_default_set_bright,
-	.detect  = sunxi_common_detect,
+	.detect  = sunxi_lcd_common_detect,
 	.change_mode_to_timming = NULL,
 	.check_valid_mode = sunxi_lcd_valid_mode,
 	.get_modes = sunxi_lcd_get_modes,
@@ -535,6 +555,7 @@ static bool inet_dsi_panel_init(struct sunxi_panel *sunxi_panel)
 		},
 	};
 
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	items = sizeof(lcd_gamma_tbl) / 2;
 	for (i = 0; i < items - 1; i++) {
 			u32 num = lcd_gamma_tbl[i + 1][0] -
@@ -921,11 +942,14 @@ static struct LCM_setting_table LCM_S070WV20_setting[] = {
 	{REGFLAG_END_OF_TABLE, REGFLAG_END_OF_TABLE, {} }
 };
 
+/*enable dsi clk and send a set of cmds of dsi to init dsi LCD panel*/
 static void inet_dsi_init(u32 sel)
 {
 	__u32 i;
 	char model_name[25];
 	u8 tmp[5];
+
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	disp_sys_script_get_item("lcd0", "lcd_model_name",
 		(int *)model_name, 25);
 	dsi_clk_enable(sel, 1);
@@ -950,9 +974,12 @@ static void inet_dsi_init(u32 sel)
 	return;
 }
 
+/*send a set of dsi cmd to  dsi LCD panel to make it close*/
 static void inet_dsi_exit(u32 sel)
 {
 	u8 tmp[5];
+
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	dsi_dcs_wr(sel, DSI_DCS_SET_DISPLAY_OFF, tmp, 0);
 	sunxi_drm_delayed_ms(20);
 	dsi_dcs_wr(sel, DSI_DCS_ENTER_SLEEP_MODE, tmp, 0);
@@ -962,27 +989,64 @@ static void inet_dsi_exit(u32 sel)
 
 bool inet_dsi_panel_open(struct sunxi_panel *sunxi_panel)
 {
+	DRM_DEBUG_DRIVER("%s\n", __func__);
+
+	/*lcd_power(vcc-mipi)*/
 	sunxi_lcd_extrn_power_on(sunxi_panel->private, 0);
 	sunxi_drm_delayed_ms(5);
+
+	/*lcd_power_1(vcc-lcd)*/
 	sunxi_lcd_extrn_power_on(sunxi_panel->private, 1);
 	sunxi_drm_delayed_ms(5);
+
+	/*lcd_power_2(vcc-pe)*/
 	sunxi_lcd_extrn_power_on(sunxi_panel->private, 2);
 	sunxi_drm_delayed_ms(5);
+
+	/*lcd_gpio_0( ???):set output 1*/
 	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 0, 1);
 	sunxi_drm_delayed_ms(20);
+
+	/*lcd_gpio_0(LCD-RST):set output 1*/
 	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 1, 1);
 	sunxi_drm_delayed_ms(5);
+
+	/*enable lcd_pin_power*/
+	/*make the pintrl of lcd0/1 node to active state*/
+	/*it usually do NOT have lcd pin power*/
 	sunxi_lcd_pin_enalbe(sunxi_panel->private);
 	sunxi_drm_delayed_ms(100);
+
+	/*enable dsi clk and send a set of cmds of dsi*/
+	/*to init dsi LCD panel*/
 	inet_dsi_init(0);
 	sunxi_drm_delayed_ms(200);
+
+	/*enable encoder(tcon)*/
 	sunxi_chain_enable(sunxi_panel->drm_connector, CHAIN_BIT_ENCODER);
 	sunxi_drm_delayed_ms(50);
 	return true;
 }
 
+bool inet_dsi_panel_open_soft(struct sunxi_panel *sunxi_panel)
+{
+	DRM_DEBUG_DRIVER("%s\n", __func__);
+
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 0);
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 1);
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 2);
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 0, 1);
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 1, 1);
+	sunxi_lcd_pin_soft_enalbe(sunxi_panel->private);
+	return true;
+}
+
+
+
 bool inet_dsi_panel_close(struct sunxi_panel *panel)
 {
+	DRM_DEBUG_DRIVER("%s\n", __func__);
+
 	sunxi_chain_disable(panel->drm_connector, CHAIN_BIT_ENCODER);
 	sunxi_drm_delayed_ms(200);
 	inet_dsi_exit(0);
@@ -999,10 +1063,11 @@ bool inet_dsi_panel_close(struct sunxi_panel *panel)
 static struct  panel_ops  inet_dsi_panel = {
 	.init = inet_dsi_panel_init,
 	.open = inet_dsi_panel_open,
+	.soft_open = inet_dsi_panel_open_soft,
 	.close = inet_dsi_panel_close,
 	.reset = NULL,
 	.bright_light = sunxi_lcd_inet_set_bright,
-	.detect  = sunxi_common_detect,
+	.detect  = sunxi_lcd_common_detect,
 	.change_mode_to_timming = NULL,
 	.check_valid_mode = sunxi_lcd_valid_mode,
 	.get_modes = sunxi_lcd_get_modes,
@@ -1012,7 +1077,6 @@ static void tm_dsi_init(u32 sel)
 {
 	__u32 i;
 	char model_name[25];
-	u8 tmp[5];
 	disp_sys_script_get_item("lcd0", "lcd_model_name",
 		(int *)model_name, 25);
 	dsi_clk_enable(sel, 1);
@@ -1062,14 +1126,32 @@ bool tm_dsi_panel_open(struct sunxi_panel *sunxi_panel)
 	return true;
 }
 
+bool tm_dsi_panel_soft_open(struct sunxi_panel *sunxi_panel)
+{
+	/*lcd_power = vcc-mipi*/
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 0);
+	/*lcd_power1 = vcc-lcd*/
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 1);
+
+	/*lcd_pin_power*/
+	sunxi_lcd_pin_soft_enalbe(sunxi_panel->private);
+
+	/*Mipi mode*/
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 2, 1);
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 1, 1);
+
+	return true;
+}
+
 
 static struct  panel_ops  tm_dsi_panel = {
 	.init = inet_dsi_panel_init,
 	.open = tm_dsi_panel_open,
+	.soft_open = tm_dsi_panel_soft_open,
 	.close = inet_dsi_panel_close,
 	.reset = NULL,
 	.bright_light = sunxi_lcd_inet_set_bright,
-	.detect  = sunxi_common_detect,
+	.detect  = sunxi_lcd_common_detect,
 	.change_mode_to_timming = NULL,
 	.check_valid_mode = sunxi_lcd_valid_mode,
 	.get_modes = sunxi_lcd_get_modes,
@@ -1131,6 +1213,23 @@ bool bpi_dsi_panel_open(struct sunxi_panel *sunxi_panel)
 	return true;
 }
 
+bool bpi_dsi_panel_soft_open(struct sunxi_panel *sunxi_panel)
+{
+	/*lcd_power = vcc-mipi*/
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 0);
+	/*lcd_power1 = vcc-lcd*/
+	sunxi_lcd_extrn_power_on(sunxi_panel->private, 1);
+
+	/*lcd_pin_power*/
+	sunxi_lcd_pin_soft_enalbe(sunxi_panel->private);
+
+	/*Mipi mode*/
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 1, 1);
+	sunxi_lcd_sys_gpio_set_value(sunxi_panel->private, 0, 1);
+
+	return true;
+}
+
 bool bpi_dsi_panel_close(struct sunxi_panel *panel)
 {
 	sunxi_chain_disable(panel->drm_connector, CHAIN_BIT_ENCODER);
@@ -1148,10 +1247,11 @@ bool bpi_dsi_panel_close(struct sunxi_panel *panel)
 static struct  panel_ops  bpi_lcd7_panel = {
 	.init = inet_dsi_panel_init,
 	.open = bpi_dsi_panel_open,
+	.soft_open = bpi_dsi_panel_soft_open,
 	.close = bpi_dsi_panel_close,
 	.reset = NULL,
 	.bright_light = sunxi_lcd_inet_set_bright,
-	.detect  = sunxi_common_detect,
+	.detect  = sunxi_lcd_common_detect,
 	.change_mode_to_timming = NULL,
 	.check_valid_mode = sunxi_lcd_valid_mode,
 	.get_modes = sunxi_lcd_get_modes,
@@ -1189,11 +1289,21 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 	ret = sunxi_drm_get_sys_item_gpio(node, "lcd_bl_en", gpio_info);
 	if (ret == 0) {
 		lcd_cfg->lcd_bl_en_used = 1;
+		DRM_INFO("get gpio:lcd_bl_en: ");
+		DRM_INFO("name:%s port:%d  port_num:%d mul_sel:%d pull:%d \
+							drv_level:%d data:%d gpio:%d\n",
+							gpio_info->gpio_name, gpio_info->port,
+							gpio_info->port_num, gpio_info->mul_sel,
+							gpio_info->pull, gpio_info->drv_level,
+							gpio_info->data, gpio_info->gpio);
 	}
 
 	sprintf(sub_name, "lcd_bl_en_power");
 	ret = sunxi_drm_get_sys_item_char(node, sub_name,
 		lcd_cfg->lcd_bl_en_power);
+	if (ret == 0)
+		DRM_INFO("get %s(%s)\n", sub_name,
+				lcd_cfg->lcd_bl_en_power);
 
 	/* lcd fix power */
 	for (i = 0; i < LCD_POWER_NUM; i++) {
@@ -1208,6 +1318,8 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 			lcd_cfg->lcd_fix_power[i]);
 		if (ret == 0) {
 			lcd_cfg->lcd_fix_power_used[i] = 1;
+			DRM_INFO("get %s(%s)\n", sub_name,
+					lcd_cfg->lcd_fix_power[i]);
 		}
 	}
 
@@ -1223,6 +1335,8 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 			lcd_cfg->lcd_power[i]);
 		if (ret == 0) {
 			lcd_cfg->lcd_power_used[i] = 1;
+			DRM_INFO("get %s(%s)\n", sub_name,
+					lcd_cfg->lcd_power[i]);
 		}
 	}
 
@@ -1233,6 +1347,13 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 		ret = sunxi_drm_get_sys_item_gpio(node, sub_name, gpio_info);
 		if (ret == 0) {
 			lcd_cfg->lcd_gpio_used[i] = 1;
+			DRM_INFO("get gpio:%s: ", sub_name);
+			DRM_INFO("name:%s port:%d  port_num:%d mul_sel:%d pull:%d \
+								drv_level:%d data:%d gpio:%d\n",
+							gpio_info->gpio_name, gpio_info->port,
+							gpio_info->port_num, gpio_info->mul_sel,
+							gpio_info->pull, gpio_info->drv_level,
+							gpio_info->data, gpio_info->gpio);
 		}
 	}
 
@@ -1241,18 +1362,35 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 	ret = sunxi_drm_get_sys_item_gpio(node, "lcd_gpio_scl", gpio_info);
 	if (ret == 0) {
 		lcd_cfg->lcd_gpio_used[LCD_GPIO_SCL] = 1;
+		DRM_INFO("get lcd_gpio_scl: ");
+		DRM_INFO("name:%s port:%d  port_num:%d mul_sel:%d pull:%d \
+								drv_level:%d data:%d gpio:%d\n",
+							gpio_info->gpio_name, gpio_info->port,
+							gpio_info->port_num, gpio_info->mul_sel,
+							gpio_info->pull, gpio_info->drv_level,
+							gpio_info->data, gpio_info->gpio);
 	}
 
 	gpio_info = &(lcd_cfg->lcd_gpio[LCD_GPIO_SDA]);
 	ret = sunxi_drm_get_sys_item_gpio(node, "lcd_gpio_sda", gpio_info);
 	if (ret == 0) {
 		lcd_cfg->lcd_gpio_used[LCD_GPIO_SDA] = 1;
+		DRM_INFO("get lcd_gpio_sda: ");
+		DRM_INFO("name:%s port:%d  port_num:%d mul_sel:%d pull:%d \
+								drv_level:%d data:%d gpio:%d\n",
+							gpio_info->gpio_name, gpio_info->port,
+							gpio_info->port_num, gpio_info->mul_sel,
+							gpio_info->pull, gpio_info->drv_level,
+							gpio_info->data, gpio_info->gpio);
 	}
 
 	for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
 		sprintf(sub_name, "lcd_gpio_power%d", i);
 		ret = sunxi_drm_get_sys_item_char(node, sub_name,
 			lcd_cfg->lcd_gpio_power[i]);
+		if (ret == 0)
+			DRM_INFO("get %s(%s)\n", sub_name,
+					lcd_cfg->lcd_gpio_power[i]);
 	}
 
 	for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
@@ -1263,6 +1401,9 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 		}
 		ret = sunxi_drm_get_sys_item_char(node, sub_name,
 			lcd_cfg->lcd_pin_power[i]);
+		if (ret == 0)
+			DRM_INFO("get %s(%s)\n", sub_name,
+					lcd_cfg->lcd_pin_power[i]);
 	}
 
 	/* backlight adjust */
@@ -1514,36 +1655,7 @@ int sunxi_get_lcd_sys_info(struct sunxi_lcd_private *sunxi_lcd)
 	return 0;
 }
 
-int sunxi_lcd_gpio_init(struct disp_lcd_cfg *lcd_cfg)
-{
-	int i;
-	/* for use the gpio ctl the lcd panel,
-	* don't contain the lcd IO pin.
-	*/
-	for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
-		if (!((!strcmp(lcd_cfg->lcd_gpio_power[i], "")) ||
-		(!strcmp(lcd_cfg->lcd_gpio_power[i], "none")))) {
-
-			sunxi_drm_sys_power_enable(lcd_cfg->lcd_gpio_power[i]);
-		}
-	}
-
-	for (i = 0; i < LCD_GPIO_NUM; i++) {
-		lcd_cfg->gpio_hdl[i] = 0;
-
-		if (lcd_cfg->lcd_gpio_used[i]) {
-			struct disp_gpio_set_t  gpio_info[1];
-
-			memcpy(gpio_info, &(lcd_cfg->lcd_gpio[i]),
-				sizeof(struct disp_gpio_set_t));
-			lcd_cfg->gpio_hdl[i] =
-				sunxi_drm_sys_gpio_request(gpio_info);
-		}
-	}
-
-	return 0;
-}
-
+/*enable lcd_bl_en_power(VCC-PD) and gpio lcd_bl_en output 1*/
 int sunxi_lcd_bl_gpio_init(struct disp_lcd_cfg *lcd_cfg)
 {
 	struct disp_gpio_set_t  gpio_info[1];
@@ -1566,11 +1678,12 @@ int sunxi_lcd_bl_gpio_init(struct disp_lcd_cfg *lcd_cfg)
 	return 0;
 }
 
-
+/*enable lcd_pin_power*/
+/*make the pintrl of lcd0/1 node to active state*/
 static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd)
 {
 	int  i;
-	char dev_name[25];
+	/*char dev_name[25];*/
 	struct disp_lcd_cfg  *lcd_cfg = sunxi_lcd->lcd_cfg;
 	for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
 		if (!((!strcmp(lcd_cfg->lcd_pin_power[i], "")) ||
@@ -1579,8 +1692,8 @@ static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd)
 		}
 	}
 
-	sprintf(dev_name, "lcd%d", sunxi_lcd->lcd_id);
-	sunxi_drm_sys_pin_set_state(dev_name, DISP_PIN_STATE_ACTIVE);
+	/*sprintf(dev_name, "lcd%d", sunxi_lcd->lcd_id);
+	sunxi_drm_sys_pin_set_state(dev_name, DISP_PIN_STATE_ACTIVE);*/
 
 	if (LCD_IF_DSI ==  sunxi_lcd->panel->lcd_if) {
 		dsi_io_open(0, sunxi_lcd->panel);
@@ -1588,6 +1701,26 @@ static int sunxi_lcd_pin_enalbe(struct sunxi_lcd_private *sunxi_lcd)
 
 	return 0;
 }
+
+static int sunxi_lcd_pin_soft_enalbe(struct sunxi_lcd_private *sunxi_lcd)
+{
+	int  i;
+	/*char dev_name[25];*/
+	struct disp_lcd_cfg  *lcd_cfg = sunxi_lcd->lcd_cfg;
+
+	for (i = 0; i < LCD_GPIO_REGU_NUM; i++) {
+		if (!((!strcmp(lcd_cfg->lcd_pin_power[i], "")) ||
+		(!strcmp(lcd_cfg->lcd_pin_power[i], "none")))) {
+			sunxi_drm_sys_power_enable(lcd_cfg->lcd_pin_power[i]);
+		}
+	}
+
+	/*sprintf(dev_name, "lcd%d", sunxi_lcd->lcd_id);
+	sunxi_drm_sys_pin_set_state(dev_name, DISP_PIN_STATE_ACTIVE);*/
+
+	return 0;
+}
+
 
 /*static int sunxi_lcd_pin_disable(struct sunxi_lcd_private *sunxi_lcd)
 {
@@ -1676,9 +1809,9 @@ static ssize_t max_brightness_show(struct device *dev,
 					char *buf)
 {
 	ssize_t n = 0;
-	unsigned int max = 255;
+	int max = 255;
 
-	n += sprintf(buf + n, "%d\0", max);
+	n += sprintf(buf + n, "%d\n", max);
 	return n;
 }
 
@@ -1827,7 +1960,7 @@ int sunxi_common_pwm_set_bl(struct sunxi_lcd_private *sunxi_lcd,
 		if (backlight_bright != 0) {
 			backlight_bright += 1;
 		}
-		DRM_DEBUG_KMS("[%d] %s light:%d", __LINE__, __func__,
+		DRM_DEBUG_DRIVER("[%d] %s light:%d", __LINE__, __func__,
 			bright);
 		bright = (bright > 255) ? 255:bright;
 		backlight_bright =
@@ -1896,7 +2029,8 @@ void sunxi_lcd_panel_ops_destroy(struct panel_ops  *panel_ops)
 	return;
 }
 
-bool sunxi_fix_power_enable(struct disp_lcd_cfg  *lcd_cfg)
+/*enable fix_power(vcc-dsi-33)*/
+static bool sunxi_fix_power_enable(struct disp_lcd_cfg  *lcd_cfg)
 {
 	int i;
 	for (i = 0; i < LCD_POWER_NUM; i++) {
@@ -1907,7 +2041,8 @@ bool sunxi_fix_power_enable(struct disp_lcd_cfg  *lcd_cfg)
 	return true;
 }
 
-bool sunxi_fix_power_disable(struct disp_lcd_cfg  *lcd_cfg)
+/*disable fix_power(vcc-dsi-33)*/
+static bool sunxi_fix_power_disable(struct disp_lcd_cfg  *lcd_cfg)
 {
 	int i;
 	for (i = 0; i < LCD_POWER_NUM; i++) {
@@ -1918,6 +2053,9 @@ bool sunxi_fix_power_disable(struct disp_lcd_cfg  *lcd_cfg)
 	}
 	return true;
 }
+
+/*enable lcd gpio power*/
+/*request lcd_gpio_0/1*/
 static int sunxi_gpio_request(struct disp_lcd_cfg  *lcd_cfg)
 {
 	int i;
@@ -1938,12 +2076,18 @@ static int sunxi_gpio_request(struct disp_lcd_cfg  *lcd_cfg)
 				sizeof(struct disp_gpio_set_t));
 			lcd_cfg->gpio_hdl[i] =
 				sunxi_drm_sys_gpio_request(gpio_info);
+			if (lcd_cfg->gpio_hdl[i])
+				DRM_INFO("request gpio:%s success, hdl:%d\n",
+						gpio_info->gpio_name,
+						lcd_cfg->gpio_hdl[i]);
 		}
 	}
 
 	return 0;
 }
 
+/*release lcd_gpio_0/1*/
+/*disable lcd gpio power*/
 static int sunxi_gpio_release(struct disp_lcd_cfg  *lcd_cfg)
 {
 	int i;
@@ -1983,8 +2127,7 @@ bool sunxi_common_enable(void *data)
 	struct disp_lcd_cfg   *lcd_cfg;
 	struct sunxi_lcd_private *sunxi_lcd;
 
-	pr_info("%s\n", __func__);
-
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	sunxi_connector = to_sunxi_connector(data);
 	hw_res = sunxi_connector->hw_res;
 	sunxi_panel = sunxi_connector->panel;
@@ -1992,8 +2135,25 @@ bool sunxi_common_enable(void *data)
 	panel_ops = sunxi_panel->panel_ops;
 	lcd_cfg = sunxi_lcd->lcd_cfg;
 
+	sunxi_clk_set(sunxi_connector->hw_res);
+
+#if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
+	sunxi_irq_request(sunxi_connector->hw_res);
+#endif
+	/* after enable the tcon ,THK ok?*/
+	sunxi_clk_enable(sunxi_connector->hw_res);
+	dsi_cfg(sunxi_lcd->lcd_id, sunxi_lcd->panel);
+
+	/*enable fix_power(vcc-dsi-33)*/
 	sunxi_fix_power_enable(lcd_cfg);
+
+	/*enable lcd gpio power*/
+	/*request lcd_gpio_0/1*/
 	sunxi_gpio_request(lcd_cfg);
+
+	sunxi_lcd_extern_backlight_enable(sunxi_lcd);
+	sunxi_drm_sys_pwm_disable(sunxi_lcd->pwm_info);
+
 #if 0
 	sunxi_lcd_pin_enalbe(sunxi_lcd);
 #endif
@@ -2003,7 +2163,41 @@ bool sunxi_common_enable(void *data)
 	return true;
 }
 
-bool sunxi_common_disable(void *data)
+static bool sunxi_common_enable_soft(void *data)
+{
+	struct sunxi_drm_connector *sunxi_connector;
+	struct sunxi_hardware_res *hw_res;
+	struct sunxi_panel *sunxi_panel;
+	struct panel_ops *panel_ops;
+	struct disp_lcd_cfg   *lcd_cfg;
+	struct sunxi_lcd_private *sunxi_lcd;
+
+	DRM_DEBUG_DRIVER("%s\n", __func__);
+	sunxi_connector = to_sunxi_connector(data);
+	hw_res = sunxi_connector->hw_res;
+	sunxi_panel = sunxi_connector->panel;
+	sunxi_lcd = sunxi_panel->private;
+	panel_ops = sunxi_panel->panel_ops;
+	lcd_cfg = sunxi_lcd->lcd_cfg;
+
+	sunxi_fix_power_enable(lcd_cfg);
+	sunxi_gpio_request(lcd_cfg);
+
+	sunxi_clk_set(sunxi_connector->hw_res);
+
+	/* after enable the tcon ,THK ok?*/
+	sunxi_clk_enable(sunxi_connector->hw_res);
+
+	sunxi_lcd_extern_backlight_enable(sunxi_lcd);
+	sunxi_drm_sys_pwm_disable(sunxi_lcd->pwm_info);
+
+	if (panel_ops->soft_open)
+		panel_ops->soft_open(sunxi_panel);
+
+	return true;
+}
+
+static bool sunxi_common_disable(void *data)
 {
 	struct sunxi_drm_connector *sunxi_connector;
 	struct sunxi_hardware_res *hw_res;
@@ -2012,6 +2206,7 @@ bool sunxi_common_disable(void *data)
 	struct disp_lcd_cfg      *lcd_cfg;
 	struct sunxi_lcd_private *sunxi_lcd;
 
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	sunxi_connector = to_sunxi_connector(data);
 	hw_res = sunxi_connector->hw_res;
 	sunxi_panel = sunxi_connector->panel;
@@ -2035,7 +2230,7 @@ bool sunxi_common_disable(void *data)
 	return true;
 }
 
-bool sunxi_dsi_irq_query(void *data, int need_irq)
+static bool sunxi_dsi_irq_query(void *data, int need_irq)
 {
 #ifdef CONFIG_ARCH_SUN8IW11
 	enum __dsi_irq_id_t id;
@@ -2044,11 +2239,13 @@ bool sunxi_dsi_irq_query(void *data, int need_irq)
 	enum __dsi_irq_id_t id;
 #endif
 
+	DRM_DEBUG_DRIVER("%s:", __func__);
 	switch (need_irq) {
 	case QUERY_VSYNC_IRQ:
 		id = DSI_IRQ_VIDEO_VBLK;
 		break;
 	default:
+		drm_err("ERROR irq:%d\n", need_irq);
 		return false;
 	}
 	/* bug for sunxi_connector->connector_id */
@@ -2058,13 +2255,14 @@ bool sunxi_dsi_irq_query(void *data, int need_irq)
 	return false;
 }
 
-bool sunxi_dsi_init(void *data)
+static bool sunxi_dsi_init(void *data)
 {
 	struct sunxi_panel *sunxi_panel;
 	struct sunxi_lcd_private *sunxi_lcd;
 	struct sunxi_drm_connector *sunxi_connector =
 	to_sunxi_connector(data);
 
+	DRM_DEBUG_DRIVER("%s\n", __func__);
 	sunxi_panel = sunxi_connector->panel;
 	sunxi_lcd = (struct sunxi_lcd_private *)sunxi_panel->private;
 	sunxi_connector->hw_res->clk_rate = sunxi_lcd->clk_info->dsi_rate;
@@ -2072,12 +2270,12 @@ bool sunxi_dsi_init(void *data)
 	return true;
 }
 
-bool sunxi_lvds_init(void *data)
+static bool sunxi_lvds_init(void *data)
 {
 	return true;
 }
 
-bool sunxi_lvds_reset(void *data)
+static bool sunxi_lvds_reset(void *data)
 {
 	struct drm_connector *connector = (struct drm_connector *)data;
 	struct sunxi_drm_connector *sunxi_connector =
@@ -2095,7 +2293,7 @@ bool sunxi_lvds_reset(void *data)
 	return true;
 }
 
-bool sunxi_dsi_reset(void *data)
+static bool sunxi_dsi_reset(void *data)
 {
 	struct drm_connector *connector = (struct drm_connector *)data;
 	struct sunxi_drm_connector *sunxi_connector =
@@ -2104,26 +2302,19 @@ bool sunxi_dsi_reset(void *data)
 	struct sunxi_drm_crtc *sunxi_crtc;
 	struct sunxi_lcd_private *sunxi_lcd;
 
+	DRM_DEBUG_DRIVER("%s:", __func__);
 	if (!connector || !connector->encoder ||
 		!connector->encoder->crtc) {
+		drm_err("NULL handle and exit!");
 		return false;
 	}
+
+	DRM_DEBUG_DRIVER("do reset!\n");
 	sunxi_lcd = (struct sunxi_lcd_private *)
 		sunxi_connector->panel->private;
 	sunxi_encoder = to_sunxi_encoder(connector->encoder);
 	sunxi_crtc = to_sunxi_crtc(connector->encoder->crtc);
-	sunxi_clk_set(sunxi_connector->hw_res);
-#if 0
-	sunxi_irq_free(sunxi_crtc->hw_res);
-	sunxi_irq_free(sunxi_encoder->hw_res);
-#endif
 
-#if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
-	sunxi_irq_request(sunxi_connector->hw_res);
-#endif
-	/* after enable the tcon ,THK ok?*/
-	sunxi_clk_enable(sunxi_connector->hw_res);
-	dsi_cfg(sunxi_lcd->lcd_id, sunxi_lcd->panel);
 	return true;
 }
 
@@ -2131,6 +2322,7 @@ static struct sunxi_hardware_ops dsi_con_ops = {
 	.init = sunxi_dsi_init,
 	.reset = sunxi_dsi_reset,
 	.enable = sunxi_common_enable,
+	.soft_enable = sunxi_common_enable_soft,
 	.disable = sunxi_common_disable,
 	.updata_reg = NULL,
 	.vsync_proc = NULL,
@@ -2220,7 +2412,7 @@ static void sunxi_lcd_hwres_ops_destroy(struct sunxi_hardware_res *hw_res)
 	hw_res->ops = NULL;
 }
 
-bool sunxi_cmp_panel_type(enum disp_mod_id res_id, int type)
+static bool sunxi_cmp_panel_type(enum disp_mod_id res_id, int type)
 {
 	/* TODO for  DISP_MOD_EINK HDMI */
 	/* 0:hv(sync+de); 1:8080; 2:ttl; 3:lvds; 4:dsi; 5:edp */
@@ -2255,7 +2447,7 @@ bool sunxi_cmp_panel_type(enum disp_mod_id res_id, int type)
 	return false;
 }
 
-int sunxi_lcd_private_init(struct sunxi_panel *sunxi_panel, int lcd_id)
+static int sunxi_lcd_private_init(struct sunxi_panel *sunxi_panel, int lcd_id)
 {
 	struct sunxi_lcd_private *sunxi_lcd_p;
 	sunxi_lcd_p = kzalloc(sizeof(struct sunxi_lcd_private), GFP_KERNEL);
@@ -2302,7 +2494,7 @@ lcd_err:
 	return -EINVAL;
 }
 
-void sunxi_lcd_private_destroy(struct sunxi_lcd_private *sunxi_lcd_p)
+static void sunxi_lcd_private_destroy(struct sunxi_lcd_private *sunxi_lcd_p)
 {
 	if (sunxi_lcd_p->panel)
 		kfree(sunxi_lcd_p->panel);

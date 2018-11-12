@@ -234,7 +234,7 @@
 #define CONFIG_SYS_PROMPT           "sunxi#"
 #define CONFIG_SYS_CBSIZE           256         /* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE           384         /* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS          16          /* max number of command args */
+#define CONFIG_SYS_MAXARGS          32          /* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE         CONFIG_SYS_CBSIZE
@@ -444,7 +444,7 @@
     #define SPINOR_STORE_BUFFER_SIZE            (8<<20)
 #endif
 
-#define CONFIG_SYS_DCACHE_OFF
+//#define CONFIG_SYS_DCACHE_OFF
 
 /*for R6*/
 /*key use tp controlar*/
@@ -453,5 +453,7 @@
 #ifdef CONFIG_BOOT_TONE
 #define CONFIG_SUN3I_SOUND
 #endif
+
+#define CONFIG_PWR_GPIO
 
 #endif /* __CONFIG_H */

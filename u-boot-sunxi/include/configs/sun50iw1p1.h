@@ -166,6 +166,12 @@
 #define CONFIG_CMD_SUNXI_MEMTEST
 #endif
 
+#ifdef CONFIG_CMD_FASTBOOT
+/* Note: for Linux, there is no frp partitons, enable this macro */
+/* Note: for Android, please disable this macro */
+#define CONFIG_FASTBOOT_LOCK_ENABLE_FOR_LINUX
+#endif
+
 #define CONFIG_CMD_ECHO          /* bpi, enable */
 #define CONFIG_CMD_FAT			/* with this we can access bootfs in nand */
 #define CONFIG_CMD_BOOTA		/* boot android image */

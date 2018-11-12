@@ -44,6 +44,41 @@ int sunxi_sprite_erase_flash(void  *img_mbr_buffer)
 		return 0;
 	}
 
+	uint32_t eraseonly_flag = 0;
+	if(0 == script_parser_fetch("platform","eraseonly",(int *)&eraseonly_flag, 1))
+	{
+		if(1 == eraseonly_flag)
+		{
+			printf("\n*************** Force erase flash all!!! ***************\n\n");
+			if(-1 == sunxi_sprite_erase(1,img_mbr_buffer))
+			{
+				printf("\n*************** Erase flash all fail ***************\n\n");
+				__msdelay(50);
+				sunxi_update_subsequent_processing(3);
+				return -1;
+			}
+#ifdef CONFIG_SUNXI_SECURE_STORAGE
+			if(0 == sunxi_secure_storage_init())
+			{
+				printf("Secure storage init 0k,begin to erase\n");
+				if(0 == sunxi_secure_storage_erase_all())
+				{
+					printf("Erase secure storage all success!\n");
+				}
+				else
+				{
+					printf("Erase secure storage all fail!\n");
+				}
+				sunxi_secure_storage_exit();
+			}
+#endif
+			printf("\n*************** Erase flash all success ***************\n\n");
+			__msdelay(50);
+			sunxi_update_subsequent_processing(3);
+			return -1;
+		}
+	}
+
 	if (0 != script_parser_fetch("platform", "eraseflag", (int *)&need_erase_flag, 1))
 		printf("get eraseflag fail\n");
 
@@ -51,6 +86,16 @@ int sunxi_sprite_erase_flash(void  *img_mbr_buffer)
 		printf("do need erase flash\n");
 	else
 		printf("not need erase flash\n");
+
+	printf("%s, erase_flag=%u\n", __func__, need_erase_flag);
+	if (need_erase_flag == 0x12) {
+		printf("force erase all flash\n");
+		sunxi_sprite_force_erase(1, img_mbr_buffer);
+#ifdef CONFIG_SUNXI_SECURE_STORAGE
+		sunxi_secure_storage_erase_all();
+#endif
+		return 0;
+	}
 
 	if (need_erase_flag == 0x11) {
 		printf("force erase flash\n");
@@ -93,7 +138,7 @@ int sunxi_sprite_erase_flash(void  *img_mbr_buffer)
 		return -1;
 	}
 	sunxi_sprite_exit(1);
-	printf("need_erase_flag = %d\n", (int)need_erase_flag);
+	printf("need_erase_flag = %u\n", need_erase_flag);
 	printf("begin to erase\n");
 	sunxi_sprite_erase(need_erase_flag, img_mbr_buffer);
 	printf("finish erase\n");

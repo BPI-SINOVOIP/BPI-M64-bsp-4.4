@@ -24,6 +24,7 @@
 #include <config.h>
 #include <common.h>
 #include <sunxi_mbr.h>
+#include <gpt.h>
 #include <malloc.h>
 #include <sys_config.h>
 #include <sunxi_board.h>
@@ -36,6 +37,8 @@
 extern uint img_file_start;
 extern int sunxi_sprite_deal_part_from_sysrevoery(sunxi_download_info *dl_map);
 extern int __imagehd(HIMAGE tmp_himage);
+extern int char8_char16_compare(const char *char8, const efi_char16_t *char16, size_t char16_len);
+
 
 typedef struct tag_IMAGE_HANDLE
 {
@@ -113,42 +116,81 @@ _img_open_fail_:
 	return NULL;
 }
 
-
-int  card_part_info(__u32 *part_start, __u32 *part_size, const char *str)
+int card_part_info(__u32 *part_start, __u32 *part_size, const char *str)
 {
-    char   buffer[SUNXI_MBR_SIZE];
-    sunxi_mbr_t    *mbr;
-    int    i;
+#ifdef CONFIG_GPT_SUPPORT
+	char *part_buff = NULL;
+	gpt_header *gpt_head;
+	gpt_entry *entry;
+	uint partition_logic_offset = 0;
+	int part_buff_size = SUNXI_GPT_SIZE;
+	int storage_type = 0;
+	int i = 0;
 
-    if(!sunxi_flash_read(0, SUNXI_MBR_SIZE/512, buffer))
-    {
-    	printf("read mbr failed\n");
+	part_buff = malloc(part_buff_size);
 
-    	return -1;
-    }
-    mbr = (sunxi_mbr_t *)buffer;
+	if (!part_buff) {
+		printf("%s:malloc fail\n", __func__);
+		return -1;
+	}
 
-    for(i=0;i<mbr->PartCount;i++)
-    {
-    	printf("part name  = %s\n", mbr->array[i].name);
-    	printf("part start = %d\n", mbr->array[i].addrlo);
-    	printf("part size  = %d\n", mbr->array[i].lenlo);
-    }
+	memset(part_buff, 0x0, part_buff_size);
 
-    for(i=0;i<mbr->PartCount;i++)
-    {
-        if(!strcmp(str, (char *)mbr->array[i].name))
-        {
-            *part_start = mbr->array[i].addrlo;
-            *part_size  = mbr->array[i].lenlo;
+	/* read partition table */
+	if (!sunxi_flash_read(0, part_buff_size >> 9, part_buff)) {
+		printf("read gpt failed\n");
+		return -1;
+	}
 
-            return 0;
-        }
-    }
+	gpt_head = (gpt_header *)(part_buff + GPT_HEAD_OFFSET);
+	entry = (gpt_entry *)(part_buff + GPT_ENTRY_OFFSET);
 
-    return -1;
+	storage_type = get_boot_storage_type();
+	if (storage_type == STORAGE_EMMC || storage_type == STORAGE_EMMC3 ||
+	    storage_type == STORAGE_SD) {
+		partition_logic_offset = CONFIG_MMC_LOGICAL_OFFSET;
+	}
+
+	for (i = 0; i < gpt_head->num_partition_entries; i++) {
+		if (!char8_char16_compare(str, entry[i].partition_name,
+					  PARTNAME_SZ)) {
+			*part_start = (uint)(entry[i].starting_lba -
+					     partition_logic_offset);
+			*part_size = (uint)(entry[i].ending_lba -
+					    entry[i].starting_lba + 1);
+			return 0;
+		}
+	}
+	return -1;
+#else
+	char buffer[SUNXI_MBR_SIZE];
+	sunxi_mbr_t *mbr;
+	int i;
+
+	if (!sunxi_flash_read(0, SUNXI_MBR_SIZE / 512, buffer)) {
+		printf("read mbr failed\n");
+
+		return -1;
+	}
+	mbr = (sunxi_mbr_t *)buffer;
+
+	for (i = 0; i < mbr->PartCount; i++) {
+		printf("part name  = %s\n", mbr->array[i].name);
+		printf("part start = %d\n", mbr->array[i].addrlo);
+		printf("part size  = %d\n", mbr->array[i].lenlo);
+	}
+
+	for (i = 0; i < mbr->PartCount; i++) {
+		if (!strcmp(str, (char *)mbr->array[i].name)) {
+			*part_start = mbr->array[i].addrlo;
+			*part_size = mbr->array[i].lenlo;
+
+			return 0;
+		}
+	}
+	return -1;
+#endif
 }
-
 
 int sprite_form_sysrecovery(void)
 {

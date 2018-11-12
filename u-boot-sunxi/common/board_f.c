@@ -57,6 +57,9 @@
 #include <fdt_support.h>
 #include <private_toc.h>
 #include <sys_config_old.h>
+#include <sun3i-sound.h>
+#include <asm/arch/timer.h>
+#include <sunxi_board.h>
 
 /*
  * Pointer to initial global data area
@@ -164,8 +167,8 @@ static int display_text_info(void)
 	debug("Modem Support enabled\n");
 #endif
 #ifdef CONFIG_USE_IRQ
-	//debug("IRQ Stack: %08lx\n", IRQ_STACK_START);
-	//debug("FIQ Stack: %08lx\n", FIQ_STACK_START);
+	/*debug("IRQ Stack: %08lx\n", IRQ_STACK_START); */
+	/*debug("FIQ Stack: %08lx\n", FIQ_STACK_START); */
 #endif
 
 	return 0;
@@ -447,6 +450,18 @@ static int reserve_logbuffer(void)
 }
 #endif
 
+#ifdef CONFIG_READ_LOGO_FOR_KERNEL
+static int reserve_logobuffer(void)
+{
+	/* reserve buffer save logo for kernel*/
+	gd->relocaddr -= SUNXI_LOGO_FOR_KERNEL_BUFFER_SIZE;
+	gd->fb_base = gd->relocaddr;
+	debug("Reserving %d logobuffer at %08lx\n", SUNXI_LOGO_FOR_KERNEL_BUFFER_SIZE,
+		gd->fb_base);
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PRAM
 /* reserve protected RAM */
 static int reserve_pram(void)
@@ -630,7 +645,25 @@ static int reserve_sysconfig(void)
 	return 0;
 }
 
+static int reserve_parameter(void)
+{
+#ifdef CONFIG_RELOCATE_PARAMETER
+	/*
+	 * reserve memory for parameter
+	 * round down to next 4 kB limit
+	 */
+	ulong parameter_size = BOOT_PARAMETER_SIZE;
 
+	gd->start_addr_sp -= parameter_size;
+
+	/* syscfg addr after reloc */
+	gd->parameter_reloc_buf = gd->start_addr_sp;
+	gd->parameter_reloc_size = parameter_size; /* align size */
+	debug("Reserving %ldk for SYS_CONFIG at: %08lx\n", parameter_size >> 10,
+	      gd->relocaddr);
+#endif
+	return 0;
+}
 
 static int reserve_fdt(void)
 {
@@ -844,6 +877,20 @@ static int reloc_sysconfig(void)
 	return 0;
 }
 
+static int reloc_parameter(void)
+{
+#ifdef CONFIG_RELOCATE_PARAMETER
+	/*
+	 * copy parameter data to reloc address
+	 */
+	ulong parameter_size = BOOT_PARAMETER_SIZE;
+	memcpy((void *)(gd->parameter_reloc_buf),
+	       (void *)(CONFIG_SUNXI_PARAMETER_ADDR), parameter_size);
+
+#endif
+	return 0;
+}
+
 static int setup_reloc(void)
 {
 	//set code relocaddr to start of the code section
@@ -931,6 +978,10 @@ static init_fnc_t init_sequence_f[] = {
 	init_baud_rate,		/* initialze baudrate settings */
 	serial_init,		/* serial communications setup */
 	console_init_f,		/* stage 1 init of console */
+#ifdef CONFIG_SUNXI_UBOOT_WATCHDOG
+	/* watchdog_dump, */
+	watchdog_feed,
+#endif
 	script_init,
 
 	setup_mon_len,
@@ -1030,6 +1081,9 @@ static init_fnc_t init_sequence_f[] = {
 	smc_init,
 	init_func_pmubus,
 	power_source_init,
+#ifdef CONFIG_BOOT_TONE
+	codec_play_audio_prepare_step1,
+#endif
 	check_update_key,
 
 	announce_dram_init,
@@ -1067,6 +1121,9 @@ static init_fnc_t init_sequence_f[] = {
 	 */
 	setup_dest_addr,
 
+#ifdef CONFIG_READ_LOGO_FOR_KERNEL
+	reserve_logobuffer,
+#endif
 #if defined(CONFIG_SUNXI_LOGBUFFER)
 	reserve_logbuffer,
 #endif
@@ -1099,6 +1156,7 @@ static init_fnc_t init_sequence_f[] = {
 	reserve_global_data,
 	reserve_fdt,
 	reserve_sysconfig,
+	reserve_parameter,
 	reserve_stacks,
 	setup_dram_config,
 	//show_dram_config,
@@ -1114,7 +1172,12 @@ static init_fnc_t init_sequence_f[] = {
 	INIT_FUNC_WATCHDOG_RESET
 	reloc_fdt,
 	reloc_sysconfig,
+	reloc_parameter,
 	setup_reloc,
+#ifdef CONFIG_SUNXI_UBOOT_WATCHDOG
+	watchdog_feed,
+#endif
+
 #if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX)
 	jump_to_copy,
 #endif
@@ -1124,6 +1187,11 @@ extern int sunxi_board_run_fel_eraly(void);
 
 void board_init_f(ulong boot_flags)
 {
+
+#if defined(CONFIG_ARCH_SUN8IW6P1)|defined(CONFIG_ARCH_SUN8IW11P1)
+	memset((void *)CONFIG_SYS_SRAM_BASE, 0, 4*1024);
+#endif
+
 #ifdef CONFIG_SYS_GENERIC_GLOBAL_DATA
 	/*
 	 * For some archtectures, global data is initialized and used before

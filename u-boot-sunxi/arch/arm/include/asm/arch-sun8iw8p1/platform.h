@@ -67,6 +67,7 @@
 #define SUNXI_LRADC_BASE            0X01C22800
 #define SUNXI_CODEC_BASE            0X01C22C00
 
+#define SUNXI_SID_BASE              0x01c23800
 
 #define SUNXI_TP_BASE               0X01C25000
 #define SUNXI_DMIC_BASE             0X01C25400

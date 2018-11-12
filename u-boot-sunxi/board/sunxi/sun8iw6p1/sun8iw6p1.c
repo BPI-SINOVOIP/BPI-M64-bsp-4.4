@@ -93,6 +93,7 @@ extern int axp81_probe(void);
 
 int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 {
+#ifdef CONFIG_SUNXI_MODULE_AXP
 	int pmu_id;
 
 	/* axp has been probe by boot0 */
@@ -113,7 +114,9 @@ int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 	tick_printf("PMU: AXP81X found\n");
 
 	sunxi_axp_dev_pt[0] = &sunxi_axp_81;
-
+#else
+	sunxi_axp_dev_pt[0] = &sunxi_axp_null;
+#endif
 	/* find one axp */
 	return 1;
 

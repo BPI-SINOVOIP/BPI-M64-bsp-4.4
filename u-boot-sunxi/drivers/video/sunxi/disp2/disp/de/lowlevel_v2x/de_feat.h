@@ -77,7 +77,7 @@
 #define SUPPORT_LVDS
 #define DE_WB_RESET_SHARE
 /* #define LVDS_REVERT */
-
+#define TCON_POL_CORRECT
 #elif defined(CONFIG_ARCH_SUN8IW12P1)
 
 /* features for sun8iw12 */

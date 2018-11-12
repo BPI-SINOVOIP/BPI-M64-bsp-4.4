@@ -44,5 +44,10 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host,
 void mmc_remove_sys_fs(struct sunxi_mmc_host *host,
 		       struct platform_device *pdev);
 void sunxi_dump_reg(struct mmc_host *mmc);
+ssize_t
+sunxi_mmc_panic_rtest(struct device *dev, struct device_attribute *attr, char *buf);
+ssize_t
+sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count);
 
 #endif

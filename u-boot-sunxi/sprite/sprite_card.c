@@ -30,6 +30,7 @@
 #include <sys_partition.h>
 #include <private_boot0.h>
 #include <private_uboot.h>
+#include <private_toc.h>
 #include "encrypt/encrypt.h"
 #include "sprite_queue.h"
 #include "sprite_download.h"
@@ -1022,6 +1023,82 @@ int sunxi_sprite_deal_recorvery_boot(int production_media)
 *
 ************************************************************************************************************
 */
+int card_verify_uboot(uint start_block, uint length)
+{
+	int ret = 0;
+	char *buffer = NULL;
+	buffer = (char *)malloc(length);
+	if (!buffer) {
+		printf("%s: malloc %d byte memory fail\n",  __func__, length);
+		return -1;
+	}
+	memset(buffer, 0, length);
+
+	ret = sunxi_sprite_phyread(start_block, length/512, buffer);
+	if (!ret) {
+		printf("%s: write boot0 from %d fail\n", __func__, start_block);
+		goto ERR_OUT;
+	}
+	if (gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL) {
+		struct spare_boot_head_t    *uboot  = (struct spare_boot_head_t *)buffer;
+		printf("uboot magic %.*s\n", MAGIC_SIZE, uboot->boot_head.magic);
+		if (strncmp((const char *)uboot->boot_head.magic, UBOOT_MAGIC, MAGIC_SIZE)) {
+			printf("sunxi sprite: uboot magic is error\n");
+			return -1;
+		}
+		length = uboot->boot_head.length;
+		if (sunxi_sprite_verify_checksum(buffer, uboot->boot_head.length, uboot->boot_head.check_sum)) {
+			printf("sunxi sprite: boot0 checksum is error flash_sum=0x%x\n", uboot->boot_head.check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	} else {
+		sbrom_toc1_head_info_t *toc1 = (sbrom_toc1_head_info_t *)buffer;
+		if (gd->bootfile_mode  == SUNXI_BOOT_FILE_PKG) {
+			printf("uboot_pkg magic 0x%x\n", toc1->magic);
+		} else {
+			printf("toc magic 0x%x\n", toc1->magic);
+		}
+
+		if (toc1->magic != TOC_MAIN_INFO_MAGIC) {
+			printf("sunxi sprite: toc magic is error\n");
+			return -1;
+		}
+		length = toc1->valid_len;
+
+		if (sunxi_sprite_verify_checksum(buffer, toc1->valid_len, toc1->add_sum)) {
+			printf("sunxi sprite: toc1 checksum is error flash_sum=0x%x\n", toc1->add_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	}
+
+ERR_OUT:
+	if (buffer != NULL)
+		free(buffer);
+
+	if (!ret)
+		return -1;
+	else
+		return 0;
+}
+
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    name          :
+*
+*    parmeters     :
+*
+*    return        :
+*
+*    note          :
+*
+*
+************************************************************************************************************
+*/
 int card_download_uboot(uint length, void *buffer)
 {
 	int ret;
@@ -1029,16 +1106,92 @@ int card_download_uboot(uint length, void *buffer)
 	ret = sunxi_sprite_phywrite(UBOOT_START_SECTOR_IN_SDMMC, length/512, buffer);
 	if(!ret)
 	{
+	    printf("%s: write uboot from %d fail\n", __func__, UBOOT_START_SECTOR_IN_SDMMC);
+		return -1;
+	}
+	ret = card_verify_uboot(UBOOT_START_SECTOR_IN_SDMMC, length);
+	if (ret < 0) {
+		printf("%s: verify uboot checksum from %d fail\n", __func__, UBOOT_START_SECTOR_IN_SDMMC);
 		return -1;
 	}
 	ret = sunxi_sprite_phywrite(UBOOT_BACKUP_START_SECTOR_IN_SDMMC, length/512, buffer);
 	if(!ret)
 	{
+		printf("%s: write uboot from %d fail\n", __func__, UBOOT_BACKUP_START_SECTOR_IN_SDMMC);
 		return -1;
 	}
 
 	return 0;
 }
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    name          :
+*
+*    parmeters     :
+*
+*    return        :
+*
+*    note          :
+*
+*
+************************************************************************************************************
+*/
+int card_verify_boot0(uint start_block, uint length)
+{
+	int ret = 0;
+	char *buffer = NULL;
+	buffer = (char *)malloc(length);
+	if (!buffer) {
+		printf("%s: malloc %d byte memory fail\n",  __func__, length);
+		return -1;
+	}
+	memset(buffer, 0, length);
+
+	ret = sunxi_sprite_phyread(start_block, length/512, buffer);
+	if (!ret) {
+		printf("%s: write boot0 from %d fail\n", __func__, start_block);
+		goto ERR_OUT;
+	}
+
+	if (gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL || gd->bootfile_mode  == SUNXI_BOOT_FILE_PKG) {
+		boot0_file_head_t    *boot0  = (boot0_file_head_t *)buffer;
+		debug("%.*s\n", MAGIC_SIZE, boot0->boot_head.magic);
+		if (strncmp((const char *)boot0->boot_head.magic, BOOT0_MAGIC, MAGIC_SIZE)) {
+			printf("sunxi sprite: boot0 magic is error\n");
+			goto ERR_OUT;
+		}
+		if (sunxi_sprite_verify_checksum(buffer, boot0->boot_head.length, boot0->boot_head.check_sum)) {
+			printf("sunxi sprite: boot0 checksum is error flash_check_sum=0x%x\n", boot0->boot_head.check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	} else {
+		toc0_private_head_t  *toc0   = (toc0_private_head_t *)buffer;
+		debug("%s\n", (char *)toc0->name);
+		if (strncmp((const char *)toc0->name, TOC0_MAGIC, MAGIC_SIZE)) {
+			printf("sunxi sprite: toc0 magic is error\n");
+			goto ERR_OUT;
+		}
+		if (sunxi_sprite_verify_checksum(buffer, toc0->length, toc0->check_sum)) {
+			printf("sunxi sprite: toc0 checksum is error flash_check_sum=0x%x\n", toc0->check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	}
+
+ERR_OUT:
+	if (buffer != NULL)
+		free(buffer);
+
+	if (!ret)
+		return -1;
+	else
+		return 0;
+}
+
 /*
 ************************************************************************************************************
 *
@@ -1071,7 +1224,43 @@ int card_download_boot0(uint length, void *buffer, uint storage_type)
 	//for card2
 	if (storage_type == STORAGE_EMMC)
 	{
-		printf("card2 download boot0 \n");
+		printf("card2 download boot0\n");
+		//write boot0 bankup copy firstly
+		ret = sunxi_sprite_phywrite(BOOT0_SDMMC_BACKUP_START_ADDR, length/512, buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_SDMMC_BACKUP_START_ADDR);
+			goto ERR_OUT;
+		}
+		ret = sunxi_sprite_phywrite(BOOT0_SDMMC_START_ADDR, length/512, buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_SDMMC_START_ADDR);
+			goto ERR_OUT;
+		}
+		if (card_verify_boot0(BOOT0_SDMMC_START_ADDR, length) < 0) {
+			printf("%s: verify boot0 checksum from %d fail\n", __func__, BOOT0_SDMMC_START_ADDR);
+			goto ERR_OUT;
+		}
+
+#ifdef PLATFORM_SUPPORT_EMMC3
+		ret = sunxi_sprite_phywrite(BOOT0_EMMC3_START_ADDR, length/512, erase_buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_EMMC3_START_ADDR);
+			goto ERR_OUT;
+		}
+		ret = sunxi_sprite_phywrite(BOOT0_EMMC3_BACKUP_START_ADDR, length/512, erase_buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_EMMC3_BACKUP_START_ADDR);
+			goto ERR_OUT;
+		}
+#endif
+	}
+	else if (storage_type == STORAGE_SD1)
+	{
+		printf("card1 download boot0\n");
 		//write boot0 bankup copy firstly
 		ret = sunxi_sprite_phywrite(BOOT0_SDMMC_BACKUP_START_ADDR, length/512, buffer);
 		if(!ret)
@@ -1104,7 +1293,7 @@ int card_download_boot0(uint length, void *buffer, uint storage_type)
 	else //for card3
 	{
 #ifdef PLATFORM_SUPPORT_EMMC3
-		printf("card3 download boot0 \n");
+		printf("card3 download boot0\n");
 		//write boot0 bankup copy firstly
 		ret = sunxi_sprite_phywrite(BOOT0_EMMC3_BACKUP_START_ADDR, length/512, buffer);
 		if(!ret)
@@ -1331,7 +1520,7 @@ int card_erase(int erase, void *mbr_buffer)
 			erase_tail_addr = mbr->array[i].addrlo;
 		}
 		else {
-			//printf("don't deal prat's length is 0 (%s) \n", mbr->array[i].name);
+			//printf("don't deal prat's length is 0 (%s)\n", mbr->array[i].name);
 			//break;
 			erase_head_sectors = CARD_ERASE_BLOCK_SECTORS;
 			erase_head_addr = mbr->array[i].addrlo;
@@ -1435,11 +1624,11 @@ int sunxi_card_fill_boot0_magic(void)
 	boot0_head = (boot0_file_head_t *)buffer;
 	//fill boot0 magic
 	memcpy((char *)boot0_head->boot_head.magic, BOOT0_MAGIC,8);
-	printf("boot0_head->boot_head.magic   == %s \n",(char*)boot0_head->boot_head.magic);
+	printf("boot0_head->boot_head.magic   == %.*s\n", MAGIC_SIZE, (char*)boot0_head->boot_head.magic);
 	src_sum = boot0_head->boot_head.check_sum;
-	printf("src_sum = %x \n" ,src_sum);
+	printf("src_sum = %x\n" ,src_sum);
 	//boot0_head->boot_head.check_sum = STAMP_VALUE;
-	printf("boot0_head->boot_head.length  =  %d \n",boot0_head->boot_head.length);
+	printf("boot0_head->boot_head.length  =  %d\n",boot0_head->boot_head.length);
 	boot0_head->boot_head.check_sum = STAMP_VALUE;
 	cal_sum = add_sum(buffer, boot0_head->boot_head.length);
 	if(src_sum != cal_sum)

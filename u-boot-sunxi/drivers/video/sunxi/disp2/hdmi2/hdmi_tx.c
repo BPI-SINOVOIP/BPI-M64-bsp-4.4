@@ -16,6 +16,9 @@
 #include <linux/clkdev.h>
 #include <linux/switch.h>
 #include <linux/kthread.h>
+
+#else
+#include <libfdt.h>
 #endif
 
 #include "hdmi_tx.h"
@@ -298,7 +301,7 @@ static s32 hdmi_enable(void)
 
 static s32 hdmi_disable(void)
 {
-	s32 ret;
+	s32 ret = 0;
 
 	LOG_TRACE();
 
@@ -705,6 +708,7 @@ s32 hdmi_init(void)
 	int node_offset = 0;
 	char io_name[32];
 	disp_gpio_set_t  gpio_info;
+	int power_io_ctrl = 0;
 
 	node_offset = disp_fdt_nodeoffset("hdmi");
 	of_periph_clk_config_setup(node_offset);
@@ -790,6 +794,28 @@ s32 hdmi_init(void)
 		pr_info("hmid cec pin not config\n");
 	}
 	hdmi_clk_enable_mask = 1;
+
+	/*hdmi power enable/disable io*/
+	/*get ddc control gpio enable config*/
+	if (fdt_getprop_u32(working_fdt, node_offset, "power_io_ctrl",
+					(uint32_t *)&power_io_ctrl) < 0)
+		pr_info("ERROR: can not get power_io_ctrl\n");
+
+	if (power_io_ctrl) {
+		memset(io_name, 0, 32);
+		memset(&gpio_info, 0, sizeof(gpio_info));
+		sprintf(io_name, "power_en_io");
+		ret = disp_sys_script_get_item("hdmi",
+			io_name,
+			(int *)&gpio_info,
+			sizeof(disp_gpio_set_t)/sizeof(int));
+		if (ret == 3) {
+			disp_sys_gpio_request_simple(&gpio_info, 1);
+			pr_info("enable hdmi power en pin\n");
+		} else {
+			pr_info("hmid power en pin not config\n");
+		}
+	}
 
 #endif
 	/*Init hdmi core and core params*/

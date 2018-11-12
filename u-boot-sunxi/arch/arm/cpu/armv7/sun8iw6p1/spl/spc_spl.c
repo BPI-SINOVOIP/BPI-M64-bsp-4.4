@@ -49,6 +49,7 @@ void sunxi_spc_set_to_ns(uint type)
 	writel(0xbe, SPC_SET_REG(0));
 	writel(0x7f, SPC_SET_REG(1));
 	writel(0x10, SPC_SET_REG(2));
+	writel(0x1, CCI400_BASE + 0x8);
 }
 /*
 ************************************************************************************************************

@@ -62,11 +62,17 @@ static struct sunxi_rsb_slave_set rsb_slave[SUNXI_RSB_SLAVE_MAX] = \
 	{0x745,       0x2d,         0x14},
 	{0,           0,            0,}
     #elif defined(CONFIG_ARCH_SUN8IW15P1)
-    /*AXP858_CHIP_ID*/
+	#ifdef CONFIG_SUNXI_AXP22
+       /*AXP223_CHIP_ID*/
+	/*slave_addr, runtime_addr, ID */
+	{0x3a3,       0x2d,         0x34},
+	{0,           0,            0,}
+	#else
 	/*slave_addr, runtime_addr, ID */
 	{0x745,       0x2d,         0x14},
 	{0x3a3,       0x3a,         0x56}
 	#endif
+    #endif
 };
 
 
@@ -507,6 +513,7 @@ static int rsb_get_rtaaddr(u32 slave_id)
 		tmp_slave_id = rsb_slave[i].chip_id;
 		if(tmp_slave_id == slave_id)
 		{
+			return rsb_slave[i].m_rtaddr;
 			break;
 		}
 		else if(!tmp_slave_id)
@@ -516,8 +523,9 @@ static int rsb_get_rtaaddr(u32 slave_id)
 		}
 
 	}
+	printf("not match id chip id != slave_id\n");
+	return 0;
 
-	return rsb_slave[i].m_rtaddr;
 }
 
 /* for cpux config*/

@@ -37,6 +37,14 @@
 #include <power/sunxi/pmu.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+void enable_smp(void)
+{
+    //SMP status is controlled by bit 6 of the CP15 Aux Ctrl Reg
+    asm volatile("MRC     p15, 0, r0, c1, c0, 1");  // Read ACTLR
+    asm volatile("ORR     r0, r0, #0x040");         // Set bit 6
+    asm volatile("MCR     p15, 0, r0, c1, c0, 1");  // Write ACTLR
+}
 /*
 ************************************************************************************************************
 *
@@ -59,6 +67,9 @@ int board_init(void)
     gd->bd->bi_arch_number = LINUX_MACHINE_ID;
     gd->bd->bi_boot_params = (PHYS_SDRAM_1 + 0x100);
 
+    ///we should open this bit before cache&mmu enable.
+    //the cache is useless if smp bit is not set,although cache has been enabled.
+    enable_smp();
     return 0;
 }
 
@@ -80,32 +91,9 @@ int board_init(void)
 */
 void dram_init_banksize(void)
 {
-    /*
-     * We should init the Dram options, and kernel get it by tag.
-     */
-    int dram_size;
-    int ret;
-    //gd->ram_size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
-    ret = script_parser_fetch("dram_para", "dram_para1", &dram_size, 1);
-    if(!ret)
-    {
-        dram_size &= 0xffff;
-        if(dram_size)
-        {
-            gd->bd->bi_dram[0].size = dram_size * 1024 * 1024;
-        }
-        else
-        {
-            gd->bd->bi_dram[0].size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
-        }
-    }
-    else
-    {
-        gd->bd->bi_dram[0].size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
-    }
     gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+    gd->bd->bi_dram[0].size = gd->ram_size;
 }
-
 /*
 ************************************************************************************************************
 *
@@ -124,58 +112,21 @@ void dram_init_banksize(void)
 */
 int dram_init(void)
 {
-    uint *addr;
+	uint dram_size = 0;
+	dram_size = uboot_spare_head.boot_data.dram_scan_size;
+	if(dram_size)
+	{
+		gd->ram_size = dram_size * 1024 * 1024;
+	}
+	else
+	{
+		gd->ram_size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
+	}
 
-    //gd->ram_size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
+	print_size(gd->ram_size, "");
+	putc('\n');
 
-    //memcpy((void *)BOOT_STANDBY_DRAM_PARA_ADDR, uboot_spare_head.boot_data.dram_para, 32 * 4);  //add by jerry
-    addr = (uint *)uboot_spare_head.boot_data.dram_para;
-#if defined CONFIG_FPGA
-        gd->ram_size = 512 * 1024 * 1024;
-#else
-    if(addr[4])
-    {
-
-        gd->ram_size = (addr[4] & 0xffff) * 1024 * 1024;
-    }
-     else
-    {
-        gd->ram_size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
-    }
-#endif
-#if 0
-    puts("dram_para_set start\n");  
-    script_parser_patch("dram_para", "dram_clk", &addr[0], 1);
-    script_parser_patch("dram_para", "dram_type", &addr[1], 1);
-    script_parser_patch("dram_para", "dram_zq", &addr[2], 1);
-    script_parser_patch("dram_para", "dram_odt_en", &addr[3], 1);
-
-    script_parser_patch("dram_para", "dram_para1", &addr[4], 1);
-    script_parser_patch("dram_para", "dram_para2", &addr[5], 1);
-
-    script_parser_patch("dram_para", "dram_mr0", &addr[6], 1);
-    script_parser_patch("dram_para", "dram_mr1", &addr[7], 1);
-    script_parser_patch("dram_para", "dram_mr2", &addr[8], 1);
-    script_parser_patch("dram_para", "dram_mr3", &addr[9], 1);
-
-    script_parser_patch("dram_para", "dram_tpr0", &addr[10], 1);
-    script_parser_patch("dram_para", "dram_tpr1", &addr[11], 1);
-    script_parser_patch("dram_para", "dram_tpr2", &addr[12], 1);
-    script_parser_patch("dram_para", "dram_tpr3", &addr[13], 1);
-    script_parser_patch("dram_para", "dram_tpr4", &addr[14], 1);
-    script_parser_patch("dram_para", "dram_tpr5", &addr[15], 1);
-    script_parser_patch("dram_para", "dram_tpr6", &addr[16], 1);
-    script_parser_patch("dram_para", "dram_tpr7", &addr[17], 1);
-    script_parser_patch("dram_para", "dram_tpr8", &addr[18], 1);
-    script_parser_patch("dram_para", "dram_tpr9", &addr[19], 1);
-    script_parser_patch("dram_para", "dram_tpr10", &addr[20], 1);
-    script_parser_patch("dram_para", "dram_tpr11", &addr[21], 1);
-    script_parser_patch("dram_para", "dram_tpr12", &addr[22], 1);
-    script_parser_patch("dram_para", "dram_tpr13", &addr[23], 1);
-    puts("dram_para_set end\n");
-#endif  
-
-    return 0;
+	return 0;
 }
 
 #ifdef CONFIG_GENERIC_MMC
@@ -245,10 +196,10 @@ int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 
     if(!axp20_probe())
     {
-        /* pmu type AXP15X */
-        tick_printf("PMU: AXP15X found\n");
+        /* pmu type AXP20X */
+        tick_printf("PMU: AXP20X found\n");
         sunxi_axp_dev_pt[0] = &sunxi_axp_20;
-        return 0;
+        return 1;
     }
 
     printf("probe axp failed\n");

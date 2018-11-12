@@ -25,6 +25,11 @@
 #include <malloc.h>
 #include "nand_bsp.h"
 #include <sunxi_mbr.h>
+#include <private_boot0.h>
+#include <private_uboot.h>
+#include <private_toc.h>
+#include <asm/arch/nand_boot0.h>
+#include "../../sprite/sprite_verify.h"
 
 extern int NAND_UbootInit(int boot_mode);
 extern int NAND_UbootToPhy(void);
@@ -46,6 +51,8 @@ extern PARTITION_MBR nand_mbr;
 extern int  mbr_burned_flag;
 
 static int  nand_open_times;
+
+DECLARE_GLOBAL_DATA_PTR;
 
  int nand_get_mbr(char* buffer, uint len)
 {
@@ -160,6 +167,71 @@ uint nand_uboot_write(uint start, uint sectors, void *buffer)
 		return sectors;
 }
 
+/*read boot0 at boot stage*/
+int nand_read_boot0(void *buffer, uint length)
+{
+	return NAND_ReadBoot0(length, buffer);
+}
+
+int nand_verify_boot0(uint length)
+{
+	int ret = 0;
+	char *buffer = NULL;
+
+	debug("%s\n",  __func__);
+	buffer = (char *)malloc(length);
+	if (!buffer) {
+		printf("%s: malloc %d byte memory fail\n",  __func__, length);
+		return -1;
+	}
+	memset(buffer, 0, length);
+
+	ret = nand_read_boot0(buffer, length);
+	if (ret < 0) {
+		printf("%s: read boot0 from nand fail\n", __func__);
+		ret = 0;
+		goto ERR_OUT;
+	}
+
+	if (gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL || gd->bootfile_mode  == SUNXI_BOOT_FILE_PKG) {
+		boot0_file_head_t    *boot0  = (boot0_file_head_t *)buffer;
+		printf("%.*s\n", MAGIC_SIZE, boot0->boot_head.magic);
+		if (strncmp((const char *)boot0->boot_head.magic, BOOT0_MAGIC, MAGIC_SIZE)) {
+			printf("%s : boot0 magic is error\n", __func__);
+			goto ERR_OUT;
+		}
+
+		if (sunxi_sprite_verify_checksum(buffer, boot0->boot_head.length, boot0->boot_head.check_sum)) {
+			printf("%s: boot0 checksum is error flash_check_sum=0x%x\n", __func__,  boot0->boot_head.check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	} else {
+		toc0_private_head_t  *toc0   = (toc0_private_head_t *)buffer;
+		printf("%.*s\n", MAGIC_SIZE, (char *)toc0->name);
+		if (strncmp((const char *)toc0->name, TOC0_MAGIC, MAGIC_SIZE)) {
+			printf("%s : toc0 magic is error\n", __func__);
+			goto ERR_OUT;
+		}
+
+		if (sunxi_sprite_verify_checksum(buffer, toc0->length, toc0->check_sum)) {
+			printf("%s : toc0 checksum is error flash_check_sum=0x%x\n", __func__,  toc0->check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	}
+
+ERR_OUT:
+	if (buffer != NULL)
+		free(buffer);
+
+	if (!ret)
+		return -1;
+	else
+		return 0;
+
+}
+
 int nand_download_boot0(uint length, void *buffer)
 {
 	int ret;
@@ -167,6 +239,15 @@ int nand_download_boot0(uint length, void *buffer)
 	if(!NAND_PhyInit())
 	{
 		ret = NAND_BurnBoot0(length, buffer);
+		if (ret != 0) {
+			printf("NAND_BurnBoot0 fail\n");
+			return -1;
+		}
+		ret = nand_verify_boot0(length);
+		if (ret != 0) {
+			printf("nand_verify_boot0 fail\n");
+			return -1;
+		}
 	}
 	else
 	{
@@ -175,12 +256,6 @@ int nand_download_boot0(uint length, void *buffer)
 	NAND_PhyExit();
 	return ret;
 
-}
-
-//read boot0 at boot stage
-int nand_read_boot0(void *buffer,uint length)
-{
-	return NAND_ReadBoot0(length,buffer);
 }
 
 //write boot0 at boot stage
@@ -197,6 +272,71 @@ int nand_write_boot0(void *buffer,uint length)
 	return ret;
 }
 
+int nand_verify_uboot(uint length)
+{
+	int ret = 0;
+	char *buffer = NULL;
+
+	debug("%s\n",  __func__);
+	buffer = (char *)malloc(length);
+	if (!buffer) {
+		printf("%s: malloc %d byte memory fail\n",  __func__, length);
+		return -1;
+	}
+	memset(buffer, 0, length);
+
+	ret = nand_read_uboot_data((void *)buffer, length);
+	if (ret < 0) {
+		printf("%s: read uboot from %d fail\n", __func__, BOOT1_START_BLK_NUM);
+		ret = 0;
+		goto ERR_OUT;
+	}
+
+	if (gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL) {
+		struct spare_boot_head_t    *uboot  = (struct spare_boot_head_t *)buffer;
+		printf("uboot magic %.*s\n", MAGIC_SIZE, uboot->boot_head.magic);
+		if (strncmp((const char *)uboot->boot_head.magic, UBOOT_MAGIC, MAGIC_SIZE)) {
+			printf("%s : uboot magic is error\n", __func__);
+			return -1;
+		}
+		length = uboot->boot_head.length;
+		if (sunxi_sprite_verify_checksum(buffer, uboot->boot_head.length, uboot->boot_head.check_sum)) {
+			printf("%s : uboot checksum is error flash_sum=0x%x\n", __func__,  uboot->boot_head.check_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	} else {
+		sbrom_toc1_head_info_t *toc1 = (sbrom_toc1_head_info_t *)buffer;
+		if (gd->bootfile_mode  == SUNXI_BOOT_FILE_PKG) {
+			printf("uboot_pkg magic 0x%x\n", toc1->magic);
+		} else {
+			printf("toc magic 0x%x\n", toc1->magic);
+		}
+
+		if (toc1->magic != TOC_MAIN_INFO_MAGIC) {
+			printf("sunxi sprite: toc magic is error\n");
+			return -1;
+		}
+		length = toc1->valid_len;
+
+		if (sunxi_sprite_verify_checksum(buffer, toc1->valid_len, toc1->add_sum)) {
+			printf("%s : toc1 checksum is error flash_sum=0x%x\n", __func__, toc1->add_sum);
+			goto ERR_OUT;
+		}
+		ret = 1;
+	}
+
+ERR_OUT:
+	if (buffer != NULL)
+		free(buffer);
+
+	if (!ret)
+		return -1;
+	else
+		return 0;
+
+}
+
 
 int nand_download_uboot(uint length, void *buffer)
 {
@@ -205,7 +345,16 @@ int nand_download_uboot(uint length, void *buffer)
 	if(!NAND_PhyInit())
 	{
 		ret = NAND_BurnUboot(length, buffer);
-		debug("nand burn uboot error ret = %d\n", ret);
+		if (ret != 0) {
+			printf("nand burn uboot error ret = %d\n", ret);
+			return -1;
+		}
+		ret = nand_verify_uboot(length);
+		if (ret != 0) {
+			printf("nand_verify_uboot fail\n");
+			return -1;
+		}
+
 	}
 	else
 	{

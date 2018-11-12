@@ -54,10 +54,14 @@ int get_serial_num_from_chipid(char* serial)
 	u32 sunxi_soc_chipid[4];
 	u32 sunxi_serial[3];
 
+#ifdef CONFIG_ARCH_SUN8IW8P1
+	memset((void *)sunxi_soc_chipid, 0, sizeof(sunxi_soc_chipid));
+#else
 	sunxi_soc_chipid[0] = smc_readl(SUNXI_SID_BASE + 0x200);
 	sunxi_soc_chipid[1] = smc_readl(SUNXI_SID_BASE + 0x200 + 0x4);
 	sunxi_soc_chipid[2] = smc_readl(SUNXI_SID_BASE + 0x200 + 0x8);
 	sunxi_soc_chipid[3] = smc_readl(SUNXI_SID_BASE + 0x200 + 0xc);
+#endif
 
 	/* high 76bits  for serialno */
 	sunxi_serial[0] = (sunxi_soc_chipid[1] >> 20) & 0xFFF;

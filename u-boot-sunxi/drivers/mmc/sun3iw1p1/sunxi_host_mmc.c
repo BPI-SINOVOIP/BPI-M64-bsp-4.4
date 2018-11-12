@@ -518,17 +518,183 @@ static void mmc_get_para_from_fex(int sdc_no)
             }
         }
 
-    }    else if (sdc_no == 2){
+    }
+	else if (sdc_no == 1)
+    {
+        nodeoffset =  fdt_path_offset(working_fdt,FDT_PATH_CARD1_BOOT_PARA);
+        if(nodeoffset < 0 )
+        {
+            MMCINFO("get card1 para fail\n");
+            return ;
+        }
+        if(fdt_set_all_pin(FDT_PATH_CARD1_BOOT_PARA,"pinctrl-0"))
+        {
+            MMCINFO("set card1 pin fail\n");
+            return ;
+        }
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_wipe", (uint32_t*)(&rval));
+        if (ret < 0)
+            MMCDBG("get sdc_wipe fail.\n");
+        else {
+            if (rval & DRV_PARA_DISABLE_SECURE_WIPE) {
+                MMCINFO("disable driver secure wipe operation.\n");
+                cfg->platform_caps.drv_wipe_feature |= DRV_PARA_DISABLE_SECURE_WIPE;
+            }
+            if (rval & DRV_PARA_DISABLE_EMMC_SANITIZE) {
+                MMCINFO("disable emmc sanitize feature.\n");
+                cfg->platform_caps.drv_wipe_feature |= DRV_PARA_DISABLE_EMMC_SANITIZE;
+            }
+            if (rval & DRV_PARA_DISABLE_EMMC_SECURE_PURGE) {
+                MMCINFO("disable emmc secure purge feature.\n");
+                cfg->platform_caps.drv_wipe_feature |= DRV_PARA_DISABLE_EMMC_SECURE_PURGE;
+            }
+            if (rval & DRV_PARA_DISABLE_EMMC_TRIM) {
+                MMCINFO("disable emmc trim feature.\n");
+                cfg->platform_caps.drv_wipe_feature |= DRV_PARA_DISABLE_EMMC_TRIM;
+            }
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_erase", (uint32_t*)(&rval));
+        if (ret < 0)
+            MMCDBG("get sdc1 sdc_erase fail.\n");
+        else {
+            if (rval & DRV_PARA_DISABLE_EMMC_ERASE) {
+                MMCINFO("disable emmc erase.\n");
+                cfg->platform_caps.drv_erase_feature |= DRV_PARA_DISABLE_EMMC_ERASE;
+            }
+            if (rval & DRV_PARA_ENABLE_EMMC_SANITIZE_WHEN_ERASE) {
+                MMCINFO("enable emmc sanitize when erase.\n");
+                cfg->platform_caps.drv_erase_feature |= DRV_PARA_ENABLE_EMMC_SANITIZE_WHEN_ERASE;
+            }
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_boot", (uint32_t*)(&rval));
+        if (ret<0)
+            MMCDBG("get sdc1 sdc_boot fail.\n");
+        else {
+            if (rval & DRV_PARA_NOT_BURN_USER_PART) {
+                MMCINFO("don't burn boot0 to user part.\n");
+                cfg->platform_caps.drv_burn_boot_pos |= DRV_PARA_NOT_BURN_USER_PART;
+            }
+            if (rval & DRV_PARA_BURN_EMMC_BOOT_PART) {
+                MMCINFO("burn boot0 to emmc boot part.\n");
+                cfg->platform_caps.drv_burn_boot_pos |= DRV_PARA_BURN_EMMC_BOOT_PART;
+            }
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_odly_50M", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_odly_50M fail.\n");
+            cfg->platform_caps.boot_odly_50M = 0xff;
+        } else {
+            MMCINFO("get sdc1 sdc_odly_50M %d.\n", rval);
+            cfg->platform_caps.boot_odly_50M = rval;
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_sdly_50M", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_sdly_50M fail.\n");
+            cfg->platform_caps.boot_sdly_50M = 0xff;
+        } else {
+            MMCINFO("get sdc1 sdc_sdly_50M %d.\n", rval);
+            cfg->platform_caps.boot_sdly_50M = rval;
+
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_odly_50M_ddr", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_odly_50M_ddr fail.\n");
+            cfg->platform_caps.boot_odly_50M_ddr = 0xff;
+        } else {
+            MMCINFO("get sdc1 sdc_odly_50M_ddr %d.\n", rval);
+            cfg->platform_caps.boot_odly_50M_ddr = rval;
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_sdly_50M_ddr", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_sdly_50M_ddr fail.\n");
+            cfg->platform_caps.boot_sdly_50M_ddr = 0xff;
+        } else {
+            MMCINFO("get sdc1 sdc_sdly_50M_ddr %d.\n", rval);
+            cfg->platform_caps.boot_sdly_50M_ddr = rval;
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_freq", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_freq fail.\n");
+            cfg->platform_caps.boot_hs_f_max = 0x0;
+        } else {
+            if (rval >= 50)
+                cfg->platform_caps.boot_hs_f_max = 50;
+            else
+                cfg->platform_caps.boot_hs_f_max = rval;
+            MMCINFO("get sdc1 sdc_freq %d.%d\n", rval, cfg->platform_caps.boot_hs_f_max);
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_b0p", (uint32_t*)(&rval));
+        if (ret<0) {
+            MMCDBG("get sdc1 sdc_b0p fail.\n");
+            cfg->platform_caps.boot0_para = 0x0;
+        } else {
+            MMCINFO("get sdc1 sdc_b0p %d.\n", rval);
+            cfg->platform_caps.boot0_para = rval;
+        }
+
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_ex_dly_used", (uint32_t*)(&rval));
+        if (ret < 0) {
+            MMCDBG("get card0_boot_para:sdc_ex_dly_used fail\n");
+        } else {
+            if (rval == 1) {  /* maual sample point from fex */
+                cfg->platform_caps.sample_mode = MAUNAL_SAMPLE_MODE;
+                MMCINFO("get sdc_ex_dly_used %d, use manual sdly in fex\n", rval);
+            } else {
+                cfg->platform_caps.sample_mode = 0x0;
+                MMCINFO("undefined value %d, use default dly\n", rval);
+            }
+        }
+
+        if (cfg->platform_caps.sample_mode == MAUNAL_SAMPLE_MODE)
+        {
+            for (imd=0; imd<MAX_SPD_MD_NUM; imd++)
+            {
+                for (ifreq=0; ifreq<MAX_CLK_FREQ_NUM; ifreq++)
+                {
+                    sprintf(ctmp, "sdc_odly_%d_%d", imd, ifreq);
+                    ret = fdt_getprop_u32(working_fdt, nodeoffset, ctmp, (uint32_t*)(&rval));
+                    if (ret<0) {
+                        MMCDBG("get sdc1 %s fail.\n", ctmp);
+                        cfg->platform_caps.odly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq] = 0x0;
+                    } else {
+                        cfg->platform_caps.odly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq] = rval&0x1;
+                        MMCINFO("get sdc1 %s 0x%x for %d-%s %d.\n", ctmp,
+                            cfg->platform_caps.odly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq], imd, spd_name[imd], ifreq);
+                    }
+
+                    sprintf(ctmp, "sdc_sdly_%d_%d", imd, ifreq);
+                    ret = fdt_getprop_u32(working_fdt, nodeoffset, ctmp, (uint32_t*)(&rval));
+                    if (ret<0) {
+                        MMCDBG("get sdc1 %s fail.\n", ctmp);
+                        cfg->platform_caps.sdly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq] = 0xff;
+                    } else {
+                        cfg->platform_caps.sdly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq] = rval&0xff;
+                        MMCINFO("get sdc1 %s 0x%x for %d-%s %d.\n", ctmp,
+                            cfg->platform_caps.sdly_spd_freq[imd*MAX_CLK_FREQ_NUM + ifreq], imd, spd_name[imd], ifreq);
+                    }
+                }
+            }
+        }
+    }
+	else if(sdc_no == 2){
 
         nodeoffset =  fdt_path_offset(working_fdt,FDT_PATH_CARD2_BOOT_PARA);
         if(nodeoffset < 0 )
         {
-            MMCINFO("get card0 para fail\n");
+            MMCINFO("get card2 para fail\n");
             return ;
         }
         if(fdt_set_all_pin(FDT_PATH_CARD2_BOOT_PARA,"pinctrl-0"))
         {
-            MMCINFO("set card0 pin fail\n");
+            MMCINFO("set card2 pin fail\n");
             return ;
         }
         ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_wipe", (uint32_t*)(&rval));

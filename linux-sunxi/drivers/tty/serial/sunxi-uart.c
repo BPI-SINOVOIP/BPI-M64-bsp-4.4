@@ -1469,7 +1469,7 @@ static ssize_t sunxi_uart_dev_info_show(struct device *dev,
 		"id     = %d \n"
 		"name   = %s \n"
 		"irq    = %d \n"
-		"io_num = %d \n"
+		"io_num = %u \n"
 		"port->mapbase = %pa \n"
 		"port->membase = 0x%p \n"
 		"port->iobase  = 0x%08lx \n"
@@ -1885,7 +1885,7 @@ static int sw_uart_probe(struct platform_device *pdev)
 		sw_uport->dma->use_timer = UART_USE_TIMER;
 		sw_uport->dma->rx_timer.function = sw_uart_report_dma_rx;
 		sw_uport->dma->rx_timer.data = (unsigned long)sw_uport;
-		sw_uport->dma->rx_timeout = 5;
+		sw_uport->dma->rx_timeout = 4;
 		sw_uport->dma->rx_timer.expires =
 			jiffies + msecs_to_jiffies(sw_uport->dma->rx_timeout);
 		init_timer(&sw_uport->dma->rx_timer);

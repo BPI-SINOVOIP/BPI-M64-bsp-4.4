@@ -26,7 +26,8 @@
 #define _SUNXI_TIMER_H_
 
 #include <asm/arch/platform.h>
-
+#include <common.h>
+#define  SUNXI_WATCHDOG_CTRL   (SUNXI_TIMER_BASE + 0xB0)
 #define  SUNXI_WATCHDOG_CFG    (SUNXI_TIMER_BASE + 0xB4)
 #define  SUNXI_WATCHDOG_MODE   (SUNXI_TIMER_BASE + 0xB8)
 /* General purpose timer */
@@ -109,6 +110,23 @@ static __inline void watchdog_enable(void)
 	return ;
 }
 
+static __inline int watchdog_feed(void)
+{
+	/* restart watchdog */
+	writel((0xa57<<1)|0x1, SUNXI_WATCHDOG_CTRL);
+
+	return 0;
+}
+
+static __inline int watchdog_dump(void)
+{
+	printf("ctrl:%x %x\n", (unsigned int)SUNXI_WATCHDOG_CTRL, *(unsigned int*)SUNXI_WATCHDOG_CTRL);
+	printf("mode:%x %x\n", (unsigned int)SUNXI_WATCHDOG_MODE, *(unsigned int*)SUNXI_WATCHDOG_MODE);
+	printf("cfg:%x %x\n", (unsigned int)SUNXI_WATCHDOG_CFG, *(unsigned int*)SUNXI_WATCHDOG_CFG);
+
+	return 0;
+}
+
 extern int  timer_init(void);
 
 extern void timer_exit(void);
@@ -116,6 +134,8 @@ extern void timer_exit(void);
 extern void watchdog_disable(void);
 
 extern void watchdog_enable(void);
+
+extern int watchdog_feed(void);
 
 extern void init_timer(struct timer_list *timer);
 

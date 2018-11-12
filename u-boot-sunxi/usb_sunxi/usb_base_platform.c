@@ -82,7 +82,11 @@ __weak void set_usb_burn_boot_init_flag(int flag )
 
 }
 
-
+/* for usb config */
+__weak void otg_phy_config(void)
+{
+	printf("weak:otg_phy_config\n");
+}
 /*
 ************************************************************************************************************
 *
@@ -362,6 +366,7 @@ int sunxi_usb_init(int delaytime)
 	reg_val |= 0x01<<USBC_PHY_CTL_VBUSVLDEXT;
 	writel(reg_val, SUNXI_USBOTG_BASE+USBC_REG_o_PHYCTL);
 #endif
+	otg_phy_config();
 
 	return 0;
 

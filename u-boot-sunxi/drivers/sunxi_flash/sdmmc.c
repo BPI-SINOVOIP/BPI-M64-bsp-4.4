@@ -5,6 +5,7 @@
 #include <sunxi_board.h>
 #include <mmc.h>
 #include <malloc.h>
+#include <securestorage.h>
 
 #include "flash_interface.h"
 
@@ -135,8 +136,12 @@ int sunxi_sprite_mmc_phywipe(unsigned int start_block, unsigned int nblock, void
 	return mmc_sprite->block_dev.block_secure_wipe(mmc_sprite->block_dev.dev, start_block, nblock, skip);
 }
 
-int sunxi_sprite_mmc_force_erase(void)
+int sunxi_sprite_mmc_force_erase(int erase, void *mbr_buffer)
 {
+    if (mbr_buffer == NULL)
+		return 0;
+
+	card_erase(1, mbr_buffer);
     return 0;
 }
 
@@ -222,9 +227,9 @@ int mmc_secure_storage_write(int item, unsigned char *buf, unsigned int len)
 
 int sdmmc_init_for_boot(int workmode, int card_no)
 {
-	
+
 	tick_printf("MMC:	 %d\n", card_no);
-	
+
 	board_mmc_set_num(card_no);
 	debug("set card number\n");
 	board_mmc_pre_init(card_no);
@@ -248,7 +253,7 @@ int sdmmc_init_for_boot(int workmode, int card_no)
 	sunxi_flash_exit_pt  = sunxi_flash_mmc_exit;
 	sunxi_flash_phyread_pt  = sunxi_flash_mmc_phyread;
 	sunxi_flash_phywrite_pt = sunxi_flash_mmc_phywrite;
-	
+
 	//for fastboot
 	sunxi_sprite_phyread_pt  = sunxi_flash_mmc_phyread;
 	sunxi_sprite_phywrite_pt = sunxi_flash_mmc_phywrite;
@@ -260,22 +265,31 @@ int sdmmc_init_for_boot(int workmode, int card_no)
 	sunxi_secstorage_write_pt = mmc_secure_storage_write;
 
 	return 0;
-	
+
 }
 
 int sdmmc_init_for_sprite(int workmode)
 {
-	printf("try card 2\n");
-	board_mmc_pre_init(2);
-	mmc_sprite = find_mmc_device(2);
-	mmc_no = 2;
+	printf("try card 1\n");
+	board_mmc_pre_init(1);
+	mmc_sprite = find_mmc_device(1);
+	mmc_no = 1;
+	set_boot_storage_type(STORAGE_SD1);
+
+	if(!mmc_sprite){
+		printf("try card 2\n");
+		board_mmc_pre_init(2);
+		mmc_sprite = find_mmc_device(2);
+		mmc_no = 2;
+		set_boot_storage_type(STORAGE_EMMC);
+	}
 	if(!mmc_sprite){
 		printf("fail to find one useful mmc card2\n");
 #ifdef CONFIG_MMC3_SUPPORT
                 printf("try to find card3 \n");
                 board_mmc_pre_init(3);
                 mmc_sprite = find_mmc_device(3);
-		mmc_no = 3;
+				mmc_no = 3;
                 if(!mmc_sprite)
                 {
                         printf("try card3 fail \n");
@@ -289,10 +303,6 @@ int sdmmc_init_for_sprite(int workmode)
                 return -1;
 #endif
 	}
-        else
-        {
-	       set_boot_storage_type(STORAGE_EMMC);
-        }
 	if (mmc_init(mmc_sprite)) {
 		printf("MMC init failed\n");
 		return  -1;
@@ -311,7 +321,7 @@ int sdmmc_init_for_sprite(int workmode)
 	sunxi_secstorage_read_pt  = mmc_secure_storage_read;
 	sunxi_secstorage_write_pt = mmc_secure_storage_write;
 	debug("sunxi sprite has installed sdcard2 function\n");
-	
+
 	return 0;
 }
 
@@ -325,7 +335,7 @@ int sdmmc_init_card0_for_sprite(void)
 		printf("fail to find one useful mmc card\n");
 		return -1;
 	}
-	
+
 	if (mmc_init(mmc_boot))
 	{
 		printf("MMC sprite init failed\n");
@@ -335,7 +345,7 @@ int sdmmc_init_card0_for_sprite(void)
 	{
 		printf("mmc init ok\n");
 	}
-	
+
 	sunxi_flash_init_pt  = sunxi_flash_mmc_init;
 	sunxi_flash_read_pt  = sunxi_flash_mmc_read;
 	sunxi_flash_write_pt = sunxi_flash_mmc_write;
@@ -343,7 +353,7 @@ int sdmmc_init_card0_for_sprite(void)
 	sunxi_flash_phyread_pt  = sunxi_flash_mmc_phyread;
 	sunxi_flash_phywrite_pt = sunxi_flash_mmc_phywrite;
 	sunxi_flash_exit_pt  = sunxi_flash_mmc_exit;
-	
+
 	return 0;
 }
 
@@ -369,6 +379,10 @@ int card_read_boot0( void *buffer, uint length )
 	int storage_type;
 	storage_type = get_boot_storage_type();
 	if(STORAGE_EMMC == storage_type)
+	{
+		ret = sunxi_sprite_phyread(BOOT0_SDMMC_START_ADDR, (length+511)/512, buffer);
+	}
+	else if(STORAGE_SD1 == storage_type)
 	{
 		ret = sunxi_sprite_phyread(BOOT0_SDMMC_START_ADDR, (length+511)/512, buffer);
 	}
@@ -529,6 +543,7 @@ static int mmc_secure_storage_read_map(int item, unsigned char *buf, unsigned in
 	else
 	{
 		printf("workmode=%d is err\n", workmode);
+		free(map_copy0_buf);
 		return -1;
 	}
 	if (!ret)
@@ -561,6 +576,7 @@ static int mmc_secure_storage_read_map(int item, unsigned char *buf, unsigned in
 	else
 	{
 		printf("workmode=%d is err\n", workmode);
+		free(map_copy0_buf);
 		return -1;
 	}
 	if (!ret)

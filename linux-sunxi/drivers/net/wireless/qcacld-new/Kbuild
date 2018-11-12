@@ -2,6 +2,9 @@
 # an external module.  Determine which mechanism is being used
 ifeq ($(MODNAME),)
 	KERNEL_BUILD := 1
+	CONFIG_FEATURE_COEX_PTA_CONFIG_ENABLE := y
+	CONFIG_QCA_LL_TX_FLOW_CT := 1
+	SAP_AUTH_OFFLOAD := 1
     CONFIG_QCA_WIFI_ISOC := 0
     CONFIG_QCA_WIFI_2_0 := 1
     CONFIG_CLD_HL_SDIO_CORE := y

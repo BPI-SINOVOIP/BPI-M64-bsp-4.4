@@ -53,7 +53,7 @@ sunxi_flash_nand_flush(void)
 }
 
 static int
-sunxi_flash_nand_force_erase(void)
+sunxi_flash_nand_force_erase(int erase, void *mbr_buffer)
 {
     return NAND_Uboot_Force_Erase();
 }
@@ -62,7 +62,7 @@ sunxi_flash_nand_force_erase(void)
 int  nand_init_for_boot(int workmode)
 {
 	int bootmode=0;
-	
+
 	tick_printf("NAND: ");
 	bootmode = workmode == WORK_MODE_SPRITE_RECOVERY? 0:1;
 	if(nand_uboot_init(bootmode))
@@ -78,7 +78,7 @@ int  nand_init_for_boot(int workmode)
 
 	sunxi_secstorage_read_pt  = nand_secure_storage_read;
 	sunxi_secstorage_write_pt = nand_secure_storage_write;
-	
+
 	sunxi_sprite_read_pt  = sunxi_flash_read_pt;
 	sunxi_sprite_write_pt = sunxi_flash_write_pt;
 

@@ -11,6 +11,7 @@
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
 
+#include "sunxi_drm_drv.h"
 #include "sunxi_drm_core.h"
 #include "sunxi_drm_crtc.h"
 #include "sunxi_drm_encoder.h"
@@ -118,8 +119,9 @@ void sunxi_hwres_destroy(struct sunxi_hardware_res *hw_res)
 /* same with display driver */
 int sunxi_display_init(struct disp_bsp_init_para *para)
 {
-    struct device_node *node;
-    int i = 0, counter = 0;
+	struct device_node *node;
+	int i = 0, counter = 0;
+	unsigned int value = 0, output_type = 0, output_mode = 0;
 
     memset(para, 0, sizeof(struct disp_bsp_init_para));
     node = sunxi_drm_get_name_node("sun50i-disp");
@@ -269,7 +271,25 @@ int sunxi_display_init(struct disp_bsp_init_para *para)
 	}
 	counter++;
 #endif
-    return 0;
+
+	/*parse boot_disp*/
+	if (of_property_read_u32(node, "boot_disp", &value) < 0)
+		pr_err("of_property_read boot_disp fail\n");
+	output_type = (value >> 8) & 0xff;
+	output_mode = (value) & 0xff;
+	if (output_type != (int)DISP_OUTPUT_TYPE_NONE) {
+		para->boot_info.sync = 1;
+		para->boot_info.disp = 0;
+		para->boot_info.type = output_type;
+		para->boot_info.mode = output_mode;
+	}
+	pr_info("dts parse: sync:%d type:%d\n", para->boot_info.sync, para->boot_info.type);
+	/*parse bootlogo*/
+	if (of_property_read_u32(node, "fb_base", &value) < 0)
+		pr_err("of_property_read fb_base fail\n");
+	para->bootlogo.fb_base = (unsigned long)value;
+
+	return 0;
 
 err_iomap:
 	for (i = 0; i < DISP_DEVICE_NUM; i++) {
@@ -287,17 +307,20 @@ int sunxi_drm_init(struct drm_device *dev)
 	int lcd_id = 0, hdmi_id = 0;
 	struct sunxi_panel *sunxi_panel;
 	struct sunxi_hardware_res *hw_res;
-	struct disp_bsp_init_para para;
+	struct disp_bsp_init_para *para;
 	enum disp_mod_id id;
 	enum disp_output_type disp_out_type;
 	struct resource *res_irq;
+	struct sunxi_drm_private *drm_private
+			= (struct sunxi_drm_private *)dev->dev_private;
 
-	if (sunxi_display_init(&para)) {
+	para = &drm_private->init_para;
+	if (sunxi_display_init(para)) {
 		goto err;
 	}
 	dev->vblank_disable_allowed = 1;
 	dev->irq_enabled = 1;
-	sunxi_drm_init_al(&para);
+	sunxi_drm_init_al(para);
 	max_crtc = sunxi_drm_get_max_crtc();
 	max_enc = sunxi_drm_get_max_encoder();
 	max_connector = sunxi_drm_get_max_connector();
@@ -314,7 +337,7 @@ int sunxi_drm_init(struct drm_device *dev)
 			goto err;
 		}
 
-		ret = sunxi_drm_get_res_info(&para, hw_res, has_res[id]);
+		ret = sunxi_drm_get_res_info(para, hw_res, has_res[id]);
 		if (ret) {
 			sunxi_hwres_destroy(hw_res);
 			goto err;
@@ -348,7 +371,7 @@ int sunxi_drm_init(struct drm_device *dev)
 		fix_up = i;
 		if (fix_up >= max_crtc)
 			fix_up = -1;
-		ret = sunxi_drm_get_res_info(&para, hw_res, has_res[id]);
+		ret = sunxi_drm_get_res_info(para, hw_res, has_res[id]);
 		if (ret) {
 			sunxi_hwres_destroy(hw_res);
 			goto err;
@@ -395,7 +418,7 @@ int sunxi_drm_init(struct drm_device *dev)
 			sunxi_hwres_destroy(hw_res);
 			continue;
 			}
-			ret = sunxi_drm_get_res_info(&para, hw_res,
+			ret = sunxi_drm_get_res_info(para, hw_res,
 				has_res[id]);
 			if (ret) {
 				sunxi_hwres_destroy(hw_res);

@@ -806,6 +806,10 @@ enum disp_mod_id {
 	DISP_MOD_NUM,
 };
 
+struct bootlogo_info {
+	unsigned long fb_base; /*physical address of bootlogo*/
+};
+
 struct disp_bootloader_info {
 	int sync;		/* 1: sync width bootloader */
 	int disp;		/* output disp at bootloader period */
@@ -840,6 +844,7 @@ struct disp_bsp_init_para {
 	s32 (*capture_event)(u32 sel);
 	s32 (*shadow_protect)(u32 sel, bool protect);
 	struct disp_bootloader_info boot_info;
+	struct bootlogo_info bootlogo;
 };
 
 typedef void (*LCD_FUNC) (unsigned int sel);

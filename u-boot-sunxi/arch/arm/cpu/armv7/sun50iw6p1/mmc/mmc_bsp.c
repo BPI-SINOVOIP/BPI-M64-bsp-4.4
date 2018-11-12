@@ -323,7 +323,7 @@ static int mmc_get_timing_cfg_tm4(u32 sdc_no, u32 spd_md_id, u32 freq_id, u8 *od
 			spd_md_sdly = tune_sdly->tm4_smx_fx[spd_md_id*2 + freq_id/4];
 			dly = ((spd_md_sdly>>((freq_id%4)*8)) & 0xff);
 
-			if (dly == 0xff)
+			if ((dly == 0xff) || (dly == 0)) /*0 is also considered as invalid delay config*/
 			{
 				if (spd_md_id == DS26_SDR12)
 				{
@@ -433,7 +433,7 @@ static int mmc_set_mclk(struct sunxi_mmc_host* mmchost, u32 clk_hz)
 	if (div > 128) {
 		m = 1;
 		n = 0;
-		mmcinfo("%s: source clock is too high, clk %d, src %d!!!\n",
+		mmcinfo("%s: source clock is too high, clk %d, src %u!!!\n",
 			__FUNCTION__, clk_hz, sclk_hz);
 	} else if (div > 64) {
 		n = 3;
@@ -472,7 +472,7 @@ static unsigned mmc_get_mclk(struct sunxi_mmc_host* mmchost)
 	else if (src == 2) {
 		/*todo*/
 	} else {
-		mmcinfo("%s: wrong clock source %d\n",__func__, src);
+		mmcinfo("%s: wrong clock source %u\n", __func__, src);
 	}
 
 	return (sclk_hz / (1<<n) / (m+1) );
@@ -576,7 +576,7 @@ static unsigned mmc_config_delay(struct sunxi_mmc_host* mmchost, u32 spd_md_id, 
 			#endif
 			writel(rval, &mmchost->reg->ds_dl);
 		}
-		mmcdbg("%s: spd_md:%d, freq:%d, odly: %d; sdly: %d; dsdly: %d\n", __FUNCTION__, spd_md, freq, odly, sdly, dsdly);
+		mmcdbg("%s: spd_md:%u, freq:%u, odly: %d; sdly: %d; dsdly: %d\n", __FUNCTION__, spd_md, freq, odly, sdly, dsdly);
 	}
 
 OUT:
@@ -634,7 +634,7 @@ static int mmc_config_clock_modex(struct sunxi_mmc_host* mmchost, unsigned clk)
 			mmc->clock = mmc_get_mclk(mmchost) / 2;
 	}
 	mmchost->clock = mmc->clock; /* bankup current clock frequency at host */
-	mmcdbg("get round card clk %d, mod_clk %d\n", mmc->clock, mmchost->mod_clk);
+	mmcdbg("get round card clk %u, mod_clk %d\n", mmc->clock, mmchost->mod_clk);
 
 	/* re-enable mclk */
 	writel(readl(mmchost->mclkbase)|(1<<31),mmchost->mclkbase);
@@ -830,7 +830,7 @@ static void mmc_set_ios(struct mmc *mmc)
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 
 
-	mmcdbg("mmc %d ios: bus: %d, clock: %d\n",mmchost ->mmc_no, mmc->bus_width, mmc->clock);
+	mmcdbg("mmc %d ios: bus: %u, clock: %u\n", mmchost->mmc_no, mmc->bus_width, mmc->clock);
 
 	if (mmc->clock && mmc_config_clock(mmc, mmc->clock)) {
 	    mmcinfo("[mmc]: " "*** update clock failed\n");
@@ -995,8 +995,8 @@ static int mmc_trans_data_by_dma(struct mmc *mmc, struct mmc_data *data)
 		} else {
 			pdes[des_idx].buf_addr_ptr2 = (u32)&pdes[des_idx+1];
 		}
-		mmcdbg("mmc %d frag %d, remain %d, des[%d](%x): "
-			"[0] = %x, [1] = %x, [2] = %x, [3] = %x\n",mmchost ->mmc_no,
+		mmcdbg("mmc %d frag %u, remain %u, des[%u](%x): "
+			"[0] = %x, [1] = %x, [2] = %x, [3] = %x\n", mmchost->mmc_no,
 			i, remain, des_idx, (u32)&pdes[des_idx],
 			(u32)((u32*)&pdes[des_idx])[0], (u32)((u32*)&pdes[des_idx])[1],
 			(u32)((u32*)&pdes[des_idx])[2], (u32)((u32*)&pdes[des_idx])[3]);
@@ -1051,7 +1051,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		return -1;
 	}
 	if (cmd->resp_type & MMC_RSP_BUSY)
-		mmcdbg("mmc %d cmd %d check rsp busy\n",mmchost ->mmc_no, cmd->cmdidx);
+		mmcdbg("mmc %d cmd %u check rsp busy\n", mmchost->mmc_no, cmd->cmdidx);
 	if (cmd->cmdidx == 12)
 		return 0;
 	/*
@@ -1094,7 +1094,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		writel(data->blocks * data->blocksize, &mmchost->reg->bytecnt);
 	}
 
-	mmcdbg("mmc %d, cmd %d(0x%x), arg 0x%x\n", mmchost->mmc_no, cmd->cmdidx, cmdval|cmd->cmdidx, cmd->cmdarg);
+	mmcdbg("mmc %d, cmd %u(0x%x), arg 0x%x\n", mmchost->mmc_no, cmd->cmdidx, cmdval|cmd->cmdidx, cmd->cmdarg);
 	writel(cmd->cmdarg, &mmchost->reg->arg);
 	if (!data)
 		writel(cmdval|cmd->cmdidx, &mmchost->reg->cmd);
@@ -1107,7 +1107,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (data) {
 		int ret = 0;
 		bytecnt = data->blocksize * data->blocks;
-		mmcdbg("mmc %d trans data %d bytes\n",mmchost ->mmc_no, bytecnt);
+		mmcdbg("mmc %d trans data %2 bytes\n", mmchost->mmc_no, bytecnt);
 #ifdef MMC_TRANS_BY_DMA
 		if (bytecnt > 512) {
 #else
@@ -1136,9 +1136,9 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		status = readl(&mmchost->reg->rint);
 		if (!timeout-- || (status & 0xbbc2)) {
 			error = status & 0xbbc2;
-			if(!error)
-				error = 0xffffffff;//represet software timeout
-			mmcinfo("mmc %d cmd %d timeout, err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
+			if (!error)
+				error = 0xffffffff;/*represet software timeout*/
+			mmcinfo("mmc %d cmd %u timeout, err %x\n", mmchost->mmc_no, cmd->cmdidx, error);
 			goto out;
 		}
 	} while (!(status&0x4));
@@ -1229,7 +1229,7 @@ out:
 		writel(0x7, &mmchost->reg->gctrl);
 		while(readl(&mmchost->reg->gctrl)&0x7);
 		mmc_update_clk(mmc);
-		mmcinfo("mmc %d cmd %d err %x\n",mmchost ->mmc_no, cmd->cmdidx, error);
+		mmcinfo("mmc %d cmd %u err %x\n", mmchost->mmc_no, cmd->cmdidx, error);
 	}
 	writel(0xffffffff, &mmchost->reg->rint);
 

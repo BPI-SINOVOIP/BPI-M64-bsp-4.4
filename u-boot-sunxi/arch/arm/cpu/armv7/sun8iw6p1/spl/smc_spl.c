@@ -28,6 +28,7 @@
 #include <asm/io.h>
 #include <asm/arch/smc.h>
 
+#if 0
 /*
 ************************************************************************************************************
 *
@@ -55,6 +56,7 @@ static uint __tzasc_calc_2_power(uint data)
 
 	return (ret - 1);
 }
+#endif
 /*
 ************************************************************************************************************
 *
@@ -73,6 +75,7 @@ static uint __tzasc_calc_2_power(uint data)
 */
 int sunxi_smc_config(uint dram_size, uint secure_region_size)
 {
+#if 0
 	uint region_size, permission, region_start;
 
 	/* 清除所有Master的bypass属性 */
@@ -117,7 +120,7 @@ int sunxi_smc_config(uint dram_size, uint secure_region_size)
 	region_start = 0x8000000/1024/1024;
 	writel((region_start * 1024 * 1024) & 0xffff8000, SMC_REGIN_SETUP_LOW_REG(3));
 	writel(permission | region_size | 1 , SMC_REGIN_ATTRIBUTE_REG(3));
-
+#endif
 	return 0;
 }
 /*
@@ -138,6 +141,7 @@ int sunxi_smc_config(uint dram_size, uint secure_region_size)
 */
 int sunxi_drm_config(u32 dram_end, u32 secure_region_size)
 {
+#if 0
 	if (dram_end < secure_region_size) {
 		writel(0, SMC_LOW_SADDR_REG);
 		writel(0, SMC_LOW_EADDR_REG);
@@ -147,6 +151,6 @@ int sunxi_drm_config(u32 dram_end, u32 secure_region_size)
 
 	writel(dram_end - secure_region_size, SMC_LOW_SADDR_REG);
 	writel(dram_end, SMC_LOW_EADDR_REG);
-
+#endif
 	return 0;
 }

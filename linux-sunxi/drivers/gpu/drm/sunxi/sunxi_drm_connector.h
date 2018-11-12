@@ -52,5 +52,5 @@ void sunxi_chain_enable(struct drm_connector *connector,
 void sunxi_drm_connector_reset(struct drm_connector *connector);
 
 void sunxi_drm_display_power(struct drm_connector *connector, int mode);
-
+void sunxi_drm_display_power_soft(struct drm_connector *connector);
 #endif
