@@ -330,6 +330,7 @@ static struct disp_hdmi_mode hdmi_mode_tbl[] = {
 	{DISP_TV_MOD_1024_768P_60HZ,      HDMI1024_768,      },
 	{DISP_TV_MOD_900_540P_60HZ,       HDMI900_540,       },
 	{DISP_TV_MOD_1920_720P_60HZ,      HDMI1920_720,      },
+	{DISP_TV_MOD_1024_600P,      	  HDMI1024_600,      },
 	{DISP_HDMI_MOD_DT0,               HDMI_DT0,          },
 	{DISP_HDMI_MOD_DT1,               HDMI_DT1,          },
 	{DISP_HDMI_MOD_DT2,               HDMI_DT2,          },
