@@ -150,6 +150,9 @@ static s32 edid_parse_dtd_block(u8 *pbuf)
 		if ((sizex== 1024) && (sizey == 600)) {
 			Device_Support_VIC[HDMI1024_600] = 1;
 		}
+		if ((sizex== 1280) && (sizey == 800)) {
+			Device_Support_VIC[HDMI1280_800] = 1;
+		}
 	}
 	else if ((frame_rate == 49) || (frame_rate == 50)) {
 		if ((sizex== 720) && (sizey == 288)) {
@@ -169,6 +172,9 @@ static s32 edid_parse_dtd_block(u8 *pbuf)
 		}
 		if ((sizex== 1024) && (sizey == 600)) {
 			Device_Support_VIC[HDMI1024_600] = 1;
+		}
+		if ((sizex== 1280) && (sizey == 800)) {
+			Device_Support_VIC[HDMI1280_800] = 1;
 		}
 	}
 	else if ((frame_rate == 23) || (frame_rate == 24)) {
