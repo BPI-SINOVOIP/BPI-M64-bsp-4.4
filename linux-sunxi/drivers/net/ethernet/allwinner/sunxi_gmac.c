@@ -1560,7 +1560,8 @@ static const struct net_device_ops geth_netdev_ops = {
 static int geth_check_if_running(struct net_device *ndev)
 {
 	if (!netif_running(ndev))
-		return -EBUSY;
+		//return -EBUSY;
+		return 0;
 	return 0;
 }
 
