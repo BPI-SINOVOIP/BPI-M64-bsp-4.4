@@ -711,7 +711,7 @@ int board_display_device_open(void)
 			/* getproc eotf, indicate output range */
 			if (fdt_getprop_u32(working_fdt, node, "output_eotf",
 					    (uint32_t *)&config.eotf) < 0) {
-				pr_msg("fetch script boot_disp.output_eotf "
+				pr_error("fetch script boot_disp.output_eotf "
 				       "fail\n");
 			} else {
 				using_device_config = 1;
@@ -752,7 +752,7 @@ int board_display_device_open(void)
 			config.mode = disp_ioctl(NULL, DISP_HDMI_GET_SUPPORT_MODE, (void *)arg);
 	}
 
-	pr_notice("disp%d device type(%d) enable\n", screen_id, config.type);
+	printf("disp%d device type(%d) enable\n", screen_id, config.type);
 
 	arg[0] = screen_id;
 	arg[1] = config.type;
@@ -760,7 +760,10 @@ int board_display_device_open(void)
 
 	disp_ioctl(NULL, DISP_DEVICE_SWITCH, (void *)arg);
 
+	/* bpi, disable smooth display for hdmi hotplug
 	disp_para = ((config.type << 8) | (config.mode)) << (screen_id*16);
+	*/
+	disp_para = 0;
 	board_display_update_para_for_kernel("boot_disp", disp_para);
 	if (using_device_config == 1) {
 		arg[0] = screen_id;
