@@ -26,6 +26,7 @@ obj-$(CONFIG_WLAN)		+= realtek/
 obj-$(CONFIG_RTL8723CS) 	+= rtl8723cs/
 obj-$(CONFIG_RTL8723BS_VQ0) += rtl8723bs_vq0/
 obj-$(CONFIG_RTL8723BU)		+= rtl8723bu/
+obj-$(CONFIG_RTL8192EU)         += rtl8192eu/
 
 # 16-bit wireless PCMCIA client drivers
 obj-$(CONFIG_PCMCIA_RAYCS)	+= ray_cs.o
