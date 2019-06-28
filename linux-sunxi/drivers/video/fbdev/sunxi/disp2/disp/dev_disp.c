@@ -435,8 +435,7 @@ static s32 parser_disp_init_para(const struct device_node *np,
 	}
 
 	if (init_para->output_type[0] != DISP_OUTPUT_TYPE_NONE &&
-	    (init_para->output_type[0] != DISP_OUTPUT_TYPE_LCD ||
-	     init_para->output_type[0] == DISP_OUTPUT_TYPE_HDMI ))
+	    init_para->output_type[0] != DISP_OUTPUT_TYPE_LCD)
 		init_para->output_mode[0] = value;
 
 #if DISP_SCREEN_NUM > 1
@@ -471,8 +470,7 @@ static s32 parser_disp_init_para(const struct device_node *np,
 			__inf
 			    ("of_property_read screen1_output_mode fail\n");
 		if (init_para->output_type[1] != DISP_OUTPUT_TYPE_NONE &&
-		    (init_para->output_type[1] != DISP_OUTPUT_TYPE_LCD ||
-		     init_para->output_type[1] == DISP_OUTPUT_TYPE_HDMI))
+		    init_para->output_type[1] != DISP_OUTPUT_TYPE_LCD)
 			init_para->output_mode[1] = value;
 #endif
 

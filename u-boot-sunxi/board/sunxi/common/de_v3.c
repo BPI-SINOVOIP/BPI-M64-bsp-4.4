@@ -760,10 +760,12 @@ int board_display_device_open(void)
 
 	disp_ioctl(NULL, DISP_DEVICE_SWITCH, (void *)arg);
 
-	/* bpi, disable smooth display for hdmi hotplug
-	disp_para = ((config.type << 8) | (config.mode)) << (screen_id*16);
-	*/
-	disp_para = 0;
+	/* bpi, disable smooth display for hdmi hotplug */
+	if(config.type == 1)
+		disp_para = ((config.type << 8) | (config.mode)) << (screen_id*16);
+	else
+		disp_para = 0;
+
 	board_display_update_para_for_kernel("boot_disp", disp_para);
 	if (using_device_config == 1) {
 		arg[0] = screen_id;
