@@ -31,6 +31,16 @@ struct sunxi_drm_crtc {
 	/* crtc_id 0 start, make it careful for possible_crtcs from 1 start */
 	int crtc_id;
 	int dpms;
+
+	/*For write back capture*/
+	uint32_t __user *wb_usr_ptr;
+	void *wb_buf_vir;
+	unsigned int wb_buf_cnt;
+	unsigned char *wb_data;
+	bool wbcap_enable;
+	wait_queue_head_t crtc_wait;
+	bool wbcap_finish;
+
 	/* Channel has zOrder,
 	* and the layers in same channel must check zOrder
 	* with other channel.we adjust zpos to the zOder of
@@ -47,6 +57,13 @@ struct sunxi_drm_crtc {
 	*/
 	struct drm_property *plane_id_chn_property;
 	struct drm_property *_3d_property;
+	struct drm_property *video_channel_property;
+
+	/* Create alpha-blending mode(0-pixel_alpha, 1-global_alpha, 2-global_pixel_alpha)
+	 * and alpha-blending value(0x00~0xff) properties
+	 */
+	struct drm_property *alpha_mode;
+	struct drm_property *alpha_value;
 
 	int chn_count;
 	int plane_of_de;
@@ -100,6 +117,18 @@ int sunxi_drm_flip_ioctl(struct drm_device *dev, void *data,
 
 int sunxi_drm_info_fb_ioctl(struct drm_device *dev, void *data,
 				struct drm_file *file_priv);
+
+int sunxi_drm_get_crtcinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv);
+
+int sunxi_drm_get_planeinfo_ioctl(struct drm_device *dev, void *data,
+		      struct drm_file *file_priv);
+
+int sunxi_drm_get_fbinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv);
+
+int sunxi_drm_get_wbinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv);
 
 void sunxi_drm_crtc_soft_set_mode(struct drm_device *dev);
 #endif

@@ -52,10 +52,10 @@ int __mac80211_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
 			"is in progress. Suspend aborted.\n");
 		return -EBUSY;
 	}
-
+/*
 	if (!local->open_count)
 		goto suspend;
-
+*/
 	mac80211_scan_cancel(local);
 
 	if (hw->flags & IEEE80211_HW_AMPDU_AGGREGATION) {
@@ -93,27 +93,29 @@ int __mac80211_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
 		del_timer_sync(&sdata->dynamic_ps_timer);
 	}
 
-	local->wowlan = wowlan && local->open_count;
-	if (local->wowlan) {
-		int err = drv_suspend(local, wowlan);
-		if (err < 0) {
-			local->quiescing = false;
-			mac80211_wake_queues_by_reason(hw,
-					IEEE80211_QUEUE_STOP_REASON_SUSPEND);
-			return err;
-		} else if (err > 0) {
-			WARN_ON(err != 1);
-			local->wowlan = false;
-		} else {
-			list_for_each_entry(sdata, &local->interfaces, list) {
-				cancel_work_sync(&sdata->work);
-				ieee80211_quiesce(sdata);
-			}
-			goto suspend;
-		}
+//	local->wowlan = local->open_count;
+//	if (local->wowlan) {
+	local->wowlan = 1;
+	int err = drv_suspend(local, wowlan);
+	if (err < 0) {
+		local->quiescing = false;
+		mac80211_wake_queues_by_reason(hw,
+				IEEE80211_QUEUE_STOP_REASON_SUSPEND);
+		return err;
+	} else if (err > 0) {
+		WARN_ON(err != 1);
+		local->wowlan = false;
+	} else {
 		list_for_each_entry(sdata, &local->interfaces, list) {
 			cancel_work_sync(&sdata->work);
+			ieee80211_quiesce(sdata);
 		}
+		goto suspend;
+	}
+	list_for_each_entry(sdata, &local->interfaces, list) {
+		cancel_work_sync(&sdata->work);
+	}
+#if 0
 		goto suspend;
 	}
 
@@ -158,7 +160,7 @@ int __mac80211_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
 	/* stop hardware - this must stop RX */
 	if (local->open_count)
 		mac80211_stop_device(local);
-
+#endif
  suspend:
 	local->suspended = true;
 	/* need suspended to be visible before quiescing is false */

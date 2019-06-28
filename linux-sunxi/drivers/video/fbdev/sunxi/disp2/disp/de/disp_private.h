@@ -27,7 +27,7 @@
 #elif defined(CONFIG_ARCH_SUN8IW6)
 #include "./lowlevel_v2x/disp_al.h"
 #elif defined(CONFIG_ARCH_SUN8IW7)
-#include "./lowlevel_v2x/disp_al.h"
+#include "./lowlevel_sun8iw7/disp_al.h"
 #elif defined(CONFIG_ARCH_SUN50IW3)
 #include "./lowlevel_v3x/disp_al.h"
 #else

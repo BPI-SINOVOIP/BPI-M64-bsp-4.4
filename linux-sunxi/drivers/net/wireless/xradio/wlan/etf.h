@@ -176,7 +176,7 @@ struct drv_download {
 };
 
 #ifdef USE_VFS_FIRMWARE
-#define XR819_ETF_FIRMWARE   ("/system/etc/firmware/etf_xr819.bin")
+#define XR819_ETF_FIRMWARE   ("/lib/firmware/etf_xr819.bin")
 #else
 #define XR819_ETF_FIRMWARE   ("etf_xr819.bin")
 #endif

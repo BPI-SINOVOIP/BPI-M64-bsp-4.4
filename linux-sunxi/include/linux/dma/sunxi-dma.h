@@ -42,6 +42,8 @@
 #include "sunxi/dma-sun8iw12.h"
 #elif defined(CONFIG_ARCH_SUN8IW15)
 #include "sunxi/dma-sun8iw15.h"
+#elif defined(CONFIG_ARCH_SUN8IW7)
+#include "sunxi/dma-sun8iw7.h"
 #else
 
 #define DRQSRC_SRAM		0

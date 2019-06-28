@@ -407,7 +407,7 @@ static void keyring_describe(const struct key *keyring, struct seq_file *m)
 	else
 		seq_puts(m, "[anon]");
 
-	if (key_is_instantiated(keyring)) {
+	if (key_is_positive(keyring)) {
 		if (keyring->keys.nr_leaves_on_tree != 0)
 			seq_printf(m, ": %lu", keyring->keys.nr_leaves_on_tree);
 		else
@@ -526,7 +526,8 @@ static int keyring_search_iterator(const void *object, void *iterator_data)
 {
 	struct keyring_search_context *ctx = iterator_data;
 	const struct key *key = keyring_ptr_to_key(object);
-	unsigned long kflags = key->flags;
+	unsigned long kflags = READ_ONCE(key->flags);
+	short state = READ_ONCE(key->state);
 
 	kenter("{%d}", key->serial);
 
@@ -570,9 +571,8 @@ static int keyring_search_iterator(const void *object, void *iterator_data)
 
 	if (ctx->flags & KEYRING_SEARCH_DO_STATE_CHECK) {
 		/* we set a different error code if we pass a negative key */
-		if (kflags & (1 << KEY_FLAG_NEGATIVE)) {
-			smp_rmb();
-			ctx->result = ERR_PTR(key->reject_error);
+		if (state < 0) {
+			ctx->result = ERR_PTR(state);
 			kleave(" = %d [neg]", ctx->skipped_ret);
 			goto skipped;
 		}
@@ -965,15 +965,15 @@ found:
 /*
  * Find a keyring with the specified name.
  *
- * All named keyrings in the current user namespace are searched, provided they
- * grant Search permission directly to the caller (unless this check is
- * skipped).  Keyrings whose usage points have reached zero or who have been
- * revoked are skipped.
+ * Only keyrings that have nonzero refcount, are not revoked, and are owned by a
+ * user in the current user namespace are considered.  If @uid_keyring is %true,
+ * the keyring additionally must have been allocated as a user or user session
+ * keyring; otherwise, it must grant Search permission directly to the caller.
  *
  * Returns a pointer to the keyring with the keyring's refcount having being
  * incremented on success.  -ENOKEY is returned if a key could not be found.
  */
-struct key *find_keyring_by_name(const char *name, bool skip_perm_check)
+struct key *find_keyring_by_name(const char *name, bool uid_keyring)
 {
 	struct key *keyring;
 	int bucket;
@@ -1001,10 +1001,15 @@ struct key *find_keyring_by_name(const char *name, bool skip_perm_check)
 			if (strcmp(keyring->description, name) != 0)
 				continue;
 
-			if (!skip_perm_check &&
-			    key_permission(make_key_ref(keyring, 0),
-					   KEY_NEED_SEARCH) < 0)
-				continue;
+			if (uid_keyring) {
+				if (!test_bit(KEY_FLAG_UID_KEYRING,
+					      &keyring->flags))
+					continue;
+			} else {
+				if (key_permission(make_key_ref(keyring, 0),
+						   KEY_NEED_SEARCH) < 0)
+					continue;
+			}
 
 			/* we've got a match but we might end up racing with
 			 * key_cleanup() if the keyring is currently 'dead'

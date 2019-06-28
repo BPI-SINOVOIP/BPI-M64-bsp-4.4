@@ -188,7 +188,7 @@ void sunxi_drm_display_power(struct drm_connector *connector, int mode)
 	struct sunxi_drm_connector *sunxi_connector;
 	sunxi_connector = to_sunxi_connector(connector);
 
-	DRM_DEBUG_KMS("[%d]id:%d  mode:%d pre:(%d)\n", __LINE__,
+	DRM_INFO("sunxi_drm_display_power connector id:%d  mode:%d pre:(%d)\n",
 	    connector->base.id, mode, sunxi_connector->dmps);
 	switch (mode) {
 	case DRM_MODE_DPMS_ON:
@@ -237,13 +237,14 @@ static int sunxi_drm_connector_dpms(struct drm_connector *connector,
 
 	/* drm_helper_connector_dpms:connector->dpms = mode */
 	/* fix for the lcd power up flow */
-	if (mode >= sunxi_connector->dmps)
+	if (mode >= sunxi_connector->dmps) {
 		sunxi_drm_display_power(connector, mode);
-
-	drm_helper_connector_dpms(connector, mode);
-
-	if (mode < sunxi_connector->dmps)
+		drm_helper_connector_dpms(connector, mode);
+	} else if (mode < sunxi_connector->dmps) {
+		drm_helper_connector_dpms(connector, mode);
 		sunxi_drm_display_power(connector, mode);
+	}
+
 	return 0;
 
 }
@@ -374,6 +375,7 @@ void sunxi_drm_connector_reset(struct drm_connector *connector)
 		sunxi_connector->hw_res->ops->disable(connector);
 		return;
 	}
+
 	sunxi_connector->hw_res->ops->reset(connector);
 }
 

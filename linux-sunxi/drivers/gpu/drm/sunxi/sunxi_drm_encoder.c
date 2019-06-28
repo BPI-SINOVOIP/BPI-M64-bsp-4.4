@@ -20,6 +20,8 @@
 #include "subdev/sunxi_common.h"
 #include "drm_de/drm_al.h"
 
+static int sunxi_tcon_dsi_set_timing(void *data, struct drm_display_mode *mode);
+
 void sunxi_encoder_info_dump(struct drm_encoder *encoder)
 {
 	struct sunxi_drm_encoder *sunxi_enc = NULL;
@@ -88,6 +90,19 @@ void sunxi_drm_encoder_enable(struct drm_encoder *encoder)
 	}
 }
 
+void sunxi_drm_encoder_module_enable(struct drm_encoder *encoder)
+{
+	struct sunxi_drm_encoder *sunxi_enc = to_sunxi_encoder(encoder);
+	struct sunxi_hardware_res *hw_res;
+
+	hw_res = sunxi_enc->hw_res;
+	if (hw_res && hw_res->ops &&
+		hw_res->ops->module_enable && !hw_res->en_ctl_by) {
+		hw_res->ops->module_enable(encoder);
+	}
+}
+
+
 /* disable encoder when not in use - more explicit than dpms off */
 void sunxi_drm_encoder_disable(struct drm_encoder *encoder)
 {
@@ -114,10 +129,18 @@ static void sunxi_drm_encoder_dpms(struct drm_encoder *encoder, int mode)
 	*/
 
 	bool inused = drm_helper_encoder_in_use(encoder);
+
 	switch (mode) {
 	case  DRM_MODE_DPMS_ON:
 		if (inused) {
-			sunxi_drm_encoder_enable(encoder);
+			sunxi_clk_set(hw_res);
+			sunxi_clk_enable(hw_res);
+			if (encoder->crtc)
+				sunxi_tcon_dsi_set_timing(encoder,
+							&encoder->crtc->mode);
+			sunxi_set_global_cfg(encoder->crtc,
+				MANAGER_TCON_DIRTY, &sunxi_enc->enc_id);
+			sunxi_drm_encoder_module_enable(encoder);
 		}
 		break;
 	case DRM_MODE_DPMS_OFF:
@@ -393,6 +416,26 @@ bool sunxi_tcon_dsi_enable(void *data)
 	return true;
 }
 
+static bool sunxi_tcon_dsi_module_enable(void *data)
+{
+	struct sunxi_drm_encoder *sunxi_encoder =
+			to_sunxi_encoder(data);
+	struct sunxi_hardware_res *hw_res;
+	struct sunxi_lcd_private *lcd_private;
+
+	hw_res = sunxi_encoder->hw_res;
+	lcd_private = (struct sunxi_lcd_private *)hw_res->private;
+
+	tcon_init(sunxi_encoder->enc_id);
+	tcon0_open(sunxi_encoder->enc_id, lcd_private->panel);
+	dsi_open(sunxi_encoder->enc_id, lcd_private->panel);
+
+	DRM_DEBUG_KMS("[%d]\n", __LINE__);
+
+	return true;
+}
+
+
 bool sunxi_tcon_dsi_disable(void *data)
 {
 	struct sunxi_drm_encoder *sunxi_encoder =
@@ -418,7 +461,7 @@ bool sunxi_tcon_dsi_disable(void *data)
 	return true;
 }
 
-int sunxi_tcon_dsi_set_timing(void *data, struct drm_display_mode *mode)
+static int sunxi_tcon_dsi_set_timing(void *data, struct drm_display_mode *mode)
 {
 	struct sunxi_drm_encoder *sunxi_encoder =
 	to_sunxi_encoder(data);
@@ -676,6 +719,7 @@ struct sunxi_hardware_ops tcon_dsi_ops = {
 	.init = sunxi_tcon_common_init,
 	.reset = sunxi_tcon_dsi_reset,
 	.enable = sunxi_tcon_dsi_enable,
+	.module_enable = sunxi_tcon_dsi_module_enable,
 	.disable = sunxi_tcon_dsi_disable,
 	.updata_reg = sunxi_tcon_updata_reg,
 	.vsync_proc = sunxi_tcon_vsync_proc,

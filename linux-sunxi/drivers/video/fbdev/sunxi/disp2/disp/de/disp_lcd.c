@@ -12,6 +12,14 @@
 #include "disp_lcd.h"
 #include "../dev_disp.h"
 
+#ifndef CLK_DSI_NUM
+#define CLK_DSI_NUM 1
+#endif
+
+#ifndef CLK_NUM_PER_DSI
+#define CLK_NUM_PER_DSI 1
+#endif
+
 struct disp_lcd_private_data {
 	struct disp_lcd_flow open_flow;
 	struct disp_lcd_flow close_flow;

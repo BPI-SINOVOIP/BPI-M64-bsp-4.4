@@ -257,7 +257,7 @@ int xradio_request_gpio_irq(struct device *dev, void *sbus_priv)
 		gpio_irq_handle = sunxi_wlan_get_oob_irq();
 		ret = devm_request_irq(dev, gpio_irq_handle,
 				      (irq_handler_t)xradio_gpio_irq_handler,
-				       IRQF_TRIGGER_RISING, "xradio_irq", sbus_priv);
+				       IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, "xradio_irq", sbus_priv);
 		if (IS_ERR_VALUE(ret)) {
 			gpio_irq_handle = 0;
 		}
@@ -398,7 +398,7 @@ int xradio_wlan_power(int on)
 #endif
 
 	sunxi_wlan_set_power(on);
-
+	msleep(100);
 	return ret;
 }
 

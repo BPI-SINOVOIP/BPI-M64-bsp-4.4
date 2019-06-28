@@ -63,4 +63,8 @@ int sunxi_drm_sys_pwm_config(struct pwm_device *pwm_dev,
 bool sunxi_irq_query(struct sunxi_hardware_res *hw_res,
 	void *irq_data, int need_irq);
 
+void *sunxi_drm_dma_malloc(struct device *dev, u32 num_bytes,
+						void *phys_addr);
+void sunxi_drm_dma_free(struct device *dev, void *virt_addr,
+				void *phys_addr, u32 num_bytes);
 #endif

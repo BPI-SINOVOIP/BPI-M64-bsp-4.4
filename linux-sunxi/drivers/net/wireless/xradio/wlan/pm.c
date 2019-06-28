@@ -415,7 +415,7 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 			   "because of bh_error occurs.\n");
 		return -EBUSY;
 	}
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+//	WARN_ON(!atomic_read(&hw_priv->num_vifs));
 
 #ifdef HW_RESTART
 	if (work_pending(&hw_priv->hw_restart_work)) {
@@ -497,10 +497,23 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 
 #ifdef CONFIG_XRADIO_SUSPEND_POWER_OFF
 #ifdef CONFIG_XRADIO_EXTEND_SUSPEND
-	if (check_scene_locked(SCENE_SUPER_STANDBY) == 0)
-		return xradio_poweroff_suspend(hw_priv);
+	if (check_scene_locked(SCENE_SUPER_STANDBY) == 0) {
+		if (xradio_poweroff_suspend(hw_priv)) {
+			pm_printk(XRADIO_DBG_WARN, "Don't suspend "
+				"because of xradio_poweroff_suspend failed.\n");
+			goto revert3;
+		}
+		return 0;
+	}
+
 #else
-	return xradio_poweroff_suspend(hw_priv);
+	if (xradio_poweroff_suspend(hw_priv)) {
+		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
+			"because of xradio_poweroff_suspend failed.\n");
+		goto revert3;
+	}
+	return 0;
+
 #endif
 #endif
 
@@ -730,7 +743,7 @@ int xradio_wow_resume(struct ieee80211_hw *hw)
 	pm_printk(XRADIO_DBG_NIY, "%s, Sleeptime=%dms\n", __func__,
 			  xradio_realtime_interval(&suspend_time, &resume_time));
 
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+	//WARN_ON(!atomic_read(&hw_priv->num_vifs));
 	if (hw_priv->bh_error) {
 		pm_printk(XRADIO_DBG_ERROR, "%s bh_error(%d) occurs already.\n",
 				__func__, hw_priv->bh_error);
@@ -885,18 +898,18 @@ static int xradio_poweroff_suspend(struct xradio_common *hw_priv)
 	cancel_work_sync(&hw_priv->query_work);
 	flush_workqueue(hw_priv->workqueue);
 
-	/* Schedule hardware restart, ensure no cmds in progress.*/
-	down(&hw_priv->wsm_cmd_sema);
-	atomic_set(&hw_priv->suspend_state, XRADIO_POWEROFF_SUSP);
-	hw_priv->hw_restart = true;
-	up(&hw_priv->wsm_cmd_sema);
-
 	/* Stop serving thread */
 	if (xradio_bh_suspend(hw_priv)) {
 		pm_printk(XRADIO_DBG_WARN, "%s, xradio_bh_suspend failed!\n",
 			  __func__);
 		return -EBUSY;
 	}
+
+	/* Schedule hardware restart, ensure no cmds in progress.*/
+	down(&hw_priv->wsm_cmd_sema);
+	atomic_set(&hw_priv->suspend_state, XRADIO_POWEROFF_SUSP);
+	hw_priv->hw_restart = true;
+	up(&hw_priv->wsm_cmd_sema);
 
 	/* Going to sleep with wifi power down. */
 	xradio_wlan_power(0);

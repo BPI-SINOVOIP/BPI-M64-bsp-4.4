@@ -43,7 +43,7 @@
 #endif
 
 /* //test enable config */
-#define AC108_DAPM_TEST_EN			0
+#define AC108_DAPM_TEST_EN			1
 #define AC108_CODEC_RW_TEST_EN		0
 
 #define AC108_NUM_MAX 			4
@@ -939,7 +939,6 @@ static void ac108_hw_init(struct i2c_client *i2c)
 	}
 #endif
 #if !AC108_DMIC_EN
-	ac108_set_vol(i2c);
 	/*** enable AAF/ADC/PGA  and UnMute Config ***/
 	ac108_write(ANA_ADC1_CTRL1, 0x07, i2c);
 	/*0xA0=0x07: ADC1 AAF & ADC enable, ADC1 PGA enable,
@@ -1280,7 +1279,7 @@ static int ac108_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* //AC108 set channels */
-	channels = params_channels(params);
+	channels = ac108_pub_cfg.ac108_nums * 4;
 #ifdef BPI
 	if (channels != ac108_pub_cfg.ac108_nums * 4)
 		return -EINVAL;
@@ -1388,7 +1387,7 @@ static int ac108_hw_free(struct snd_pcm_substream *substream,
 	AC108_DEBUG("\n--->%s\n", __func__);
 
 	AC108_DEBUG("AC108 reset all register to their default value\n\n");
-	ac108_multi_chips_write(CHIP_AUDIO_RST, 0x12);
+	/*ac108_multi_chips_write(CHIP_AUDIO_RST, 0x12); */
 	/* //if config TX Encoding mode, also disable BCLK */
 
 	return 0;
@@ -1569,10 +1568,8 @@ static const struct snd_soc_codec_driver ac108_soc_codec_driver = {
 	.suspend = ac108_suspend,
 	.resume = ac108_resume,
 
-#if AC108_CODEC_RW_TEST_EN
 	.read = ac108_codec_read,
 	.write = ac108_codec_write,
-#endif
 
 #if AC108_DAPM_TEST_EN
 	.controls = ac108_controls,
@@ -1803,7 +1800,7 @@ static int ac108_i2c_probe(struct i2c_client *i2c,
 		pr_err("The wrong i2c_id"
 			"number :%d\n", (int)(i2c_id->driver_data));
 	}
-
+	ac108_set_vol(i2c);
 	ret = sysfs_create_group(&i2c->dev.kobj, &ac108_debug_attr_group);
 	if (ret)
 		pr_err("failed to create attr group\n");

@@ -151,6 +151,11 @@ int xradio_bh_suspend(struct xradio_common *hw_priv)
 #endif
 
 	bh_printk(XRADIO_DBG_MSG, "%s\n", __func__);
+
+	if (hw_priv->bh_thread == NULL) {
+		return 0;
+	}
+
 	if (hw_priv->bh_error) {
 		return -EINVAL;
 	}
@@ -202,7 +207,7 @@ int xradio_bh_resume(struct xradio_common *hw_priv)
 
 #ifdef MCAST_FWDING
 	ret = wait_event_timeout(hw_priv->bh_evt_wq, (hw_priv->bh_error ||
-	     XRADIO_BH_RESUMED == atomic_read(&hw_priv->bh_suspend)), 1 * HZ) ?
+	     XRADIO_BH_RESUMED == atomic_read(&hw_priv->bh_suspend)), 10 * HZ) ?
 	     0 : -ETIMEDOUT;
 
 	xradio_for_each_vif(hw_priv, priv, i) {
@@ -221,7 +226,7 @@ int xradio_bh_resume(struct xradio_common *hw_priv)
 #else
 	return wait_event_timeout(hw_priv->bh_evt_wq, hw_priv->bh_error ||
 		(XRADIO_BH_RESUMED == atomic_read(&hw_priv->bh_suspend)),
-		1 * HZ) ? 0 : -ETIMEDOUT;
+		10 * HZ) ? 0 : -ETIMEDOUT;
 #endif
 
 }

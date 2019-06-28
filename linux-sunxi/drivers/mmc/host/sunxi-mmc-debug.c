@@ -492,7 +492,7 @@ sunxi_mmc_set_perf(struct device *dev, struct device_attribute *attr,
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
 	int64_t value;
 
-	sscanf(buf, "%lld", &value);
+	sscanf(buf, "%lld", (signed long long *)(&value));
 	printk("set perf value %lld\n", value);
 
 	mmc_claim_host(mmc);
@@ -566,7 +566,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 
 	host->host_mwr.show = sunxi_mmc_panic_rtest;
 	host->host_mwr.store = sunxi_mmc_pancic_wrtest;
-	sysfs_attr_init(&(host->host_mwr.attr));
+	sysfs_attr_init(host->host_mwr.attr);
 	host->host_mwr.attr.name = "sunxi_host_panic_wr";
 	host->host_mwr.attr.mode = S_IRUGO | S_IWUSR;
 	ret = device_create_file(&pdev->dev, &host->host_mwr);

@@ -170,11 +170,14 @@ static void sunxi_drm_crtc_dpms(struct drm_crtc *crtc, int mode)
 				enable = 1;
 				sunxi_set_global_cfg(crtc,
 					MANAGER_ENABLE_DIRTY, &enable);
+				sunxi_set_global_cfg(crtc, MANAGER_SIZE_DIRTY,
+											&crtc->mode);
 				spin_lock(&sunxi_crtc->update_reg_lock);
 				sunxi_crtc->update_frame_user_cnt++;
 				spin_unlock(&sunxi_crtc->update_reg_lock);
 			}
 			sunxi_drm_crtc_enable(&sunxi_crtc->drm_crtc);
+			sunxi_drm_apply_cache(sunxi_crtc->crtc_id, sunxi_crtc->global_cfgs);
 		}
 		break;
 	case DRM_MODE_DPMS_STANDBY:
@@ -398,7 +401,7 @@ static int sunxi_manage_filp_data(struct drm_crtc *crtc,
 {
 	struct sunxi_flip_user_date flip_data;
 	__u32  plane_id = 0;
-	int zoder = 0;
+	__u32 zorder = 0;
 	struct sunxi_drm_crtc *sunxi_crtc;
 
 	DRM_DEBUG_KMS("[%d] \n", __LINE__);
@@ -412,13 +415,13 @@ static int sunxi_manage_filp_data(struct drm_crtc *crtc,
 		}
 
 		plane_id = flip_data.plane_id;
-		zoder = flip_data.zpos;
+		zorder = flip_data.zorder;
 	} else {
 		if (sunxi_crtc->fb_plane != NULL)
 			return 0;
 	}
 
-	return sunxi_set_fb_plane(crtc, plane_id, zoder);
+	return sunxi_set_fb_plane(crtc, plane_id, zorder);
 }
 
 static int sunxi_drm_crtc_page_flip(struct drm_crtc *crtc,
@@ -428,6 +431,9 @@ static int sunxi_drm_crtc_page_flip(struct drm_crtc *crtc,
 	struct drm_device *dev = crtc->dev;
 	struct sunxi_drm_crtc *sunxi_crtc = to_sunxi_crtc(crtc);
 	struct drm_framebuffer *old_fb = crtc->primary->fb;
+	struct sunxi_flip_user_date flip_data;
+	int  plane_id = 0;
+	unsigned int zorder = 0;
 
 	int ret = -EINVAL;
 	(void)flags;
@@ -449,18 +455,38 @@ static int sunxi_drm_crtc_page_flip(struct drm_crtc *crtc,
 	}
 
 	crtc->primary->fb = fb;
+#if 0
 	ret = sunxi_manage_filp_data(crtc, event);
 	if (ret < 0) {
 		DRM_ERROR("failed manage the page flip event.\n");
 		goto out;
 	}
+#else
 
-	ret = sunxi_drm_crtc_mode_set_base(crtc, crtc->x, crtc->y, NULL);
-	if (ret) {
-		crtc->primary->fb = old_fb;
-		drm_vblank_put(dev, sunxi_crtc->crtc_id);
-		goto out;
+	if (event && event->event.user_data) {
+		if (copy_from_user(&flip_data,
+			(void __user *)event->event.user_data,
+			sizeof(struct sunxi_flip_user_date)) != 0) {
+			return -EINVAL;
+		}
+
+		plane_id = flip_data.plane_id;
+		zorder = flip_data.zorder;
+
 	}
+	sunxi_set_fb_plane(crtc, plane_id, zorder);
+#endif
+	if (plane_id >= 0) {
+		ret = sunxi_drm_crtc_mode_set_base(crtc, crtc->x, crtc->y, NULL);
+		if (ret) {
+			crtc->primary->fb = old_fb;
+			drm_vblank_put(dev, sunxi_crtc->crtc_id);
+			goto out;
+		}
+	} else {
+		sunxi_drm_crtc_commit(crtc);
+	}
+
 	if (event) {
 		/* make sure the list are the updata list in irq handle */
 		spin_lock_irq(&dev->event_lock);
@@ -556,6 +582,349 @@ int sunxi_drm_flip_ioctl(struct drm_device *dev, void *data,
 out:
 	return ret;
 }
+
+int sunxi_drm_get_crtcinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv)
+{
+	struct sunxi_drm_get_crtc_info *crtc_info = data;
+	struct drm_crtc *crtc;
+	struct sunxi_drm_crtc *sunxi_crtc;
+	uint32_t __user *plane_ptr;
+	int copied = 0, i;
+	unsigned int id;
+	unsigned int num_planes = 0;
+
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		return -EINVAL;
+
+	crtc = drm_crtc_find(dev, crtc_info->crtc_base_id);
+
+	sunxi_crtc = to_sunxi_crtc(crtc);
+	crtc_info->crtc_id = sunxi_crtc->crtc_id;
+	num_planes += sunxi_crtc->plane_of_de;
+
+	if (crtc->primary)
+		num_planes++;
+	if (crtc->cursor)
+		num_planes++;
+
+	/*
+	 * This ioctl is called twice, once to determine how much space is
+	 * needed, and the 2nd time to fill it.
+	 */
+	if (num_planes &&
+	    (crtc_info->plane_count >= num_planes)) {
+		plane_ptr = (uint32_t __user *)(unsigned long)crtc_info->plane_id_ptr;
+
+		for (i = 0; i < sunxi_crtc->plane_of_de; i++) {
+			id = sunxi_crtc->plane_array[i]->base.id;
+			if (put_user(id, plane_ptr + copied)) {
+				DRM_ERROR("put_user failed\n");
+				return -EFAULT;
+			}
+			copied++;
+		}
+
+		if (crtc->primary) {
+			id = crtc->primary->base.id;
+			if (put_user(id, plane_ptr + copied)) {
+				DRM_ERROR("put_user failed\n");
+				return -EFAULT;
+			}
+			copied++;
+		}
+
+		if (crtc->cursor) {
+			id = crtc->cursor->base.id;
+			if (put_user(id, plane_ptr + copied)) {
+				DRM_ERROR("put_user failed\n");
+				return -EFAULT;
+			}
+			copied++;
+		}
+	}
+
+	crtc_info->plane_count = num_planes;
+
+	return 0;
+
+}
+
+int sunxi_drm_get_planeinfo_ioctl(struct drm_device *dev, void *data,
+		      struct drm_file *file_priv)
+{
+	struct sunxi_drm_get_plane_info *plane_info = data;
+	struct drm_plane *plane = NULL;
+	struct sunxi_drm_plane *sunxi_plane = NULL;
+	struct sunxi_drm_plane *sunxi_overlayer_plane = NULL;
+	struct drm_crtc *crtc = NULL;
+	struct sunxi_drm_crtc *sunxi_crtc = NULL;
+
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		return -EINVAL;
+
+	plane = drm_plane_find(dev, plane_info->base_id);
+	if (!plane) {
+		DRM_INFO("can NOT find drm plane, base_id:%u\n",
+				plane_info->base_id);
+		return -ENOENT;
+	}
+
+	drm_modeset_lock(&plane->mutex, NULL);
+	plane_info->type = plane->type;
+	drm_modeset_unlock(&plane->mutex);
+
+	if (plane_info->type != DRM_PLANE_TYPE_PRIMARY) {
+		sunxi_plane = to_sunxi_plane(plane);
+		plane_info->plane_id = sunxi_plane->plane_id;
+		plane_info->isvideo = sunxi_plane->isvideo;
+		plane_info->chn_id = sunxi_plane->chn_id;
+	} else {
+		if (!plane->crtc) {
+			/*DRM_ERROR("PLANE has no CRTC\n");*/
+			goto out;
+		}
+
+		crtc = plane->crtc;
+		if (!crtc) {
+			/*DRM_ERROR("get sunxi crtc of this plane failed\n");*/
+			goto out;
+		}
+		sunxi_crtc = to_sunxi_crtc(crtc);
+
+		if (!sunxi_crtc->fb_plane) {
+			/*DRM_ERROR("No overlayer plane is set to crtc\n");*/
+			goto out;
+		}
+
+		sunxi_overlayer_plane = to_sunxi_plane(sunxi_crtc->fb_plane);
+		if (!sunxi_overlayer_plane) {
+			DRM_ERROR("get sunxi plane of this sunxi crtc plane failed\n");
+			goto out;
+		}
+
+		plane_info->plane_id = sunxi_overlayer_plane->plane_id;
+		plane_info->isvideo = sunxi_overlayer_plane->isvideo;
+		plane_info->chn_id = sunxi_overlayer_plane->chn_id;
+	}
+
+out:
+	if (plane->fb)
+		plane_info->fb_base_id = plane->fb->base.id;
+
+	return 0;
+}
+
+int sunxi_drm_get_fbinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv)
+{
+	struct sunxi_drm_get_fb_info *fb_info = data;
+	struct drm_framebuffer *fb = NULL;
+	struct sunxi_drm_framebuffer *sunxi_fb;
+	struct sunxi_drm_gem_buf *sunxi_gem_buf;
+	uint32_t __user *data_ptr;
+	unsigned int num_data = 0;
+
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		return -EINVAL;
+
+	fb = drm_framebuffer_lookup(dev, fb_info->base_id);
+	if (!fb)
+		return -EINVAL;
+
+	sunxi_fb = to_sunxi_fb(fb);
+	fb_info->isfbdev = (sunxi_fb->fb_flag
+			& SUNXI_FBDEV_FLAGS) ? 1 : 0;
+
+	fb_info->bpp = fb->bits_per_pixel;
+	fb_info->depth = fb->depth;
+	fb_info->pixel_format = fb->pixel_format;
+
+	num_data = fb->height * fb->pitches[0];
+
+	/*
+	 * This ioctl is called twice, once to determine how much space is
+	 * needed, and the 2nd time to fill it.
+	 */
+	if (num_data &&
+	    ((fb_info->height * fb_info->pitch) >= num_data)) {
+	    if (!sunxi_fb->gem_obj[0]) {
+			DRM_ERROR("gem is abnormal\n");
+			return -EFAULT;
+		}
+
+		sunxi_gem_buf = container_of(sunxi_fb->gem_obj[0],
+					struct sunxi_drm_gem_buf, obj);
+		if (!sunxi_gem_buf) {
+			DRM_ERROR("can NOT get sunxi_gem_buf\n");
+			return -EFAULT;
+		}
+
+		data_ptr = (uint32_t __user *)(unsigned long)fb_info->data_ptr;
+		if (copy_to_user((void __user *)data_ptr, sunxi_gem_buf->kvaddr,
+				 num_data) != 0) {
+				DRM_ERROR("copy_to_user failed\n");
+				return -EFAULT;
+		}
+	}
+
+	fb_info->width = fb->width;
+	fb_info->height = fb->height;
+	fb_info->pitch = fb->pitches[0];
+	if (fb)
+		drm_framebuffer_unreference(fb);
+
+	return 0;
+}
+
+int sunxi_drm_get_wbinfo_ioctl(struct drm_device *dev,
+		void *data, struct drm_file *file_priv)
+{
+	struct sunxi_drm_get_wb_info *wb_info = data;
+
+	struct drm_crtc *crtc;
+	struct sunxi_drm_crtc *sunxi_crtc;
+
+	struct drm_framebuffer *fb = NULL;
+	struct sunxi_drm_framebuffer *sunxi_fb;
+
+	struct disp_capture_config cfg;
+	struct pixel_info_t pixel;
+	dma_addr_t phy_addr = 0;
+	void *buf_addr_vir = NULL;
+	int ret = 0, left_time = -1;
+	unsigned int data_num = 0;
+
+	memset(&cfg, 0, sizeof(struct disp_capture_config));
+	/*find coresponsible crtc and framebuffer*/
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		return -EINVAL;
+
+	crtc = drm_crtc_find(dev, wb_info->crtc_base_id);
+	if (!crtc) {
+		DRM_ERROR("can NOT find crtc\n");
+		return -EFAULT;
+	}
+	sunxi_crtc = to_sunxi_crtc(crtc);
+
+	fb = drm_framebuffer_lookup(dev, wb_info->fb_base_id);
+	if (!fb) {
+		DRM_ERROR("can NOT find fb\n");
+		return -EFAULT;
+	}
+	sunxi_fb = to_sunxi_fb(fb);
+	/**********************************/
+
+	/*initial coresponsible value of wb*/
+	sunxi_crtc->wb_usr_ptr = 0;
+	sunxi_crtc->wb_buf_vir = NULL;
+	sunxi_crtc->wb_buf_cnt = 0;
+	sunxi_crtc->wbcap_enable = false;
+	sunxi_crtc->wbcap_finish = false;
+	sunxi_crtc->wb_data = NULL;
+	/**********************************/
+
+	/*create bufffer for reading wb data*/
+	data_num = fb->height * fb->pitches[0];
+	sunxi_crtc->wb_buf_cnt = data_num;
+	if (data_num > wb_info->data_count)
+		goto out;
+	/**********************************/
+
+	/*create and fill sunxi disp capture*/
+	cfg.disp = sunxi_crtc->crtc_id;
+	if (!drm_to_disp_format(&pixel, fb->pixel_format)) {
+		DRM_ERROR("wrong fb format\n");
+		ret = -EFAULT;
+		goto out;
+	}
+	cfg.in_frame.format = pixel.format;
+
+	cfg.in_frame.size[0].width = fb->width;
+	cfg.in_frame.size[1].width = fb->width;
+	cfg.in_frame.size[2].width = fb->width;
+	cfg.in_frame.size[0].height = fb->height;
+	cfg.in_frame.size[1].height = fb->height;
+	cfg.in_frame.size[2].height = fb->height;
+	cfg.in_frame.crop.width = fb->width;
+	cfg.in_frame.crop.height = fb->height;
+
+
+	cfg.out_frame.size[0].width = fb->width;
+	cfg.out_frame.size[1].width = fb->width;
+	cfg.out_frame.size[2].width = fb->width;
+	cfg.out_frame.size[0].height = fb->height;
+	cfg.out_frame.size[1].height = fb->height;
+	cfg.out_frame.size[2].height = fb->height;
+	cfg.out_frame.crop.width = fb->width;
+	cfg.out_frame.crop.height = fb->height;
+
+	if (!crtc->dev || !crtc->dev->dev)
+		goto out;
+
+	buf_addr_vir = sunxi_drm_dma_malloc(crtc->dev->dev,
+				fb->height * fb->pitches[0], &phy_addr);
+	if (!phy_addr || !buf_addr_vir) {
+		DRM_ERROR("sunxi_drm_dma_malloc failed\n");
+		ret = -EFAULT;
+		goto out;
+	}
+	cfg.out_frame.addr[0] = (unsigned long)phy_addr;
+	cfg.out_frame.addr[1] = cfg.in_frame.addr[0]
+					+ fb->width * fb->height;
+	cfg.out_frame.addr[2] = cfg.in_frame.addr[1]
+					+ fb->width * fb->height / 4;
+	sunxi_crtc->wb_buf_vir = buf_addr_vir;
+
+	sunxi_drm_al_wbcapture_init(sunxi_crtc->crtc_id);
+	sunxi_drm_al_wbcapture_apply(sunxi_crtc->crtc_id, &cfg);
+	sunxi_drm_al_wbcapture_sync(sunxi_crtc->crtc_id);
+	msleep(200);
+	sunxi_crtc->wb_usr_ptr = (uint32_t __user *)(unsigned long)wb_info->data_ptr;
+	sunxi_crtc->wbcap_finish = false;
+	sunxi_crtc->wbcap_enable = true;
+	sunxi_crtc->wb_data = kzalloc(sunxi_crtc->wb_buf_cnt, GFP_KERNEL);
+	if (!sunxi_crtc->wb_data) {
+		DRM_ERROR("zkmalloc wb data failed\n");
+		goto out;
+	}
+
+	left_time = wait_event_interruptible_timeout(sunxi_crtc->crtc_wait,
+			sunxi_crtc->wbcap_finish, msecs_to_jiffies(3000));
+	if (left_time <= 0) {
+		DRM_ERROR("writeback captrue timeout!\n");
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (copy_to_user((void __user *)sunxi_crtc->wb_usr_ptr,
+							sunxi_crtc->wb_data,
+							sunxi_crtc->wb_buf_cnt) != 0)
+		DRM_ERROR("copy_to_user failed\n");
+
+	sunxi_drm_al_wbcapture_exit(sunxi_crtc->crtc_id);
+
+out:
+	wb_info->height = fb->height;
+	wb_info->width = fb->width;
+	wb_info->pitch = fb->pitches[0];
+	wb_info->out_format = fb->pixel_format;
+	wb_info->data_count = data_num;
+
+	sunxi_crtc->wbcap_enable = false;
+
+	if (sunxi_crtc->wb_data)
+		kfree(sunxi_crtc->wb_data);
+	if (buf_addr_vir || phy_addr)
+		sunxi_drm_dma_free(sunxi_crtc->drm_crtc.dev->dev,
+					buf_addr_vir, (void *)phy_addr,
+					fb->height * fb->pitches[0]);
+	if (fb)
+		drm_framebuffer_unreference(fb);
+
+	return ret;
+}
+
 
 static void sunxi_drm_crtc_destroy(struct drm_crtc *crtc)
 {
@@ -779,6 +1148,25 @@ bool sunxi_de_disable(void *data)
 	return true;
 }
 
+static void sunxi_de_capture_sync(struct sunxi_drm_crtc *sunxi_crtc)
+{
+	if (!sunxi_crtc->wbcap_enable || sunxi_crtc->wbcap_finish)
+			return;
+
+	if (!sunxi_crtc->wb_usr_ptr || !sunxi_crtc->wb_buf_vir
+				|| !sunxi_crtc->wb_buf_cnt
+				|| !sunxi_crtc->wb_data) {
+		DRM_INFO("NULL wb_usr_ptr wb_buf_vir or wb_buf_vir\n");
+		return;
+	}
+
+	/*sunxi_drm_al_wbcapture_sync(sunxi_crtc->crtc_id);*/
+	memcpy(sunxi_crtc->wb_data, sunxi_crtc->wb_buf_vir,
+				sunxi_crtc->wb_buf_cnt);
+	sunxi_crtc->wbcap_finish = true;
+	wake_up(&sunxi_crtc->crtc_wait);
+}
+
 void sunxi_de_vsync_proc(void *data)
 {
 	struct sunxi_drm_crtc *sunxi_crtc = to_sunxi_crtc(data);
@@ -794,7 +1182,7 @@ void sunxi_de_vsync_proc(void *data)
 	if (current_delayed < 0) {
 		DRM_DEBUG_KMS("crtc_id:%d no more time :%d.\n",
 			sunxi_crtc->crtc_id, current_delayed);
-		goto false;
+		goto out;
 	}
 
 	/* move it to the delayed work? THK a lot. in here */
@@ -807,7 +1195,7 @@ void sunxi_de_vsync_proc(void *data)
 
 	if (sunxi_crtc->update_frame_ker_cnt ==
 		sunxi_crtc->update_frame_user_cnt)
-		return ;
+		goto out;
 
 	try_count = current_delayed * 20;
 
@@ -818,14 +1206,14 @@ void sunxi_de_vsync_proc(void *data)
 	if (try_count <= 0) {
 		DRM_DEBUG_KMS("crtc_id:%d  no more time :%d.\n",
 			sunxi_crtc->crtc_id, current_delayed);
-		goto false;
+		goto out;
 	}
 
 	while (try_count-- && !spin_trylock(&sunxi_crtc->update_reg_lock)) {
 		if (!try_count) {
 			DRM_DEBUG_KMS("crtc_id:%d   lose the lock.\n",
 				sunxi_crtc->crtc_id);
-			goto false;
+			goto out;
 		}
 	}
 	/*
@@ -848,12 +1236,12 @@ void sunxi_de_vsync_proc(void *data)
 
 	spin_unlock(&sunxi_crtc->update_reg_lock);
 
-#if 0
-	schedule_work(&sunxi_crtc->delayed_work);
-#endif
-	return ;
+	sunxi_de_capture_sync(sunxi_crtc);
 
-false:
+	return;
+
+out:
+	sunxi_de_capture_sync(sunxi_crtc);
 	if (sunxi_crtc->update_frame_ker_cnt !=
 		sunxi_crtc->update_frame_user_cnt) {
 		sunxi_crtc->ker_skip_cnt++;
@@ -1047,6 +1435,7 @@ int sunxi_drm_crtc_create(struct drm_device *dev,
 	struct drm_plane *drm_plane = NULL;
 	struct disp_layer_config_data *plane_cfg;
 	int i = 0, j = 0, z = 0, v = 0;
+	int vi_chn;
 
 	DRM_DEBUG_KMS("[%d]\n", __LINE__);
 
@@ -1095,6 +1484,31 @@ int sunxi_drm_crtc_create(struct drm_device *dev,
 
 	sunxi_crtc->plane_id_chn_property = prop;
 
+
+	vi_chn = sunxi_drm_get_vi_pipe_by_crtc(sunxi_crtc->crtc_id);
+	prop = drm_property_create_range(dev, DRM_MODE_PROP_IMMUTABLE, "video_channel", 0,
+					vi_chn); /*what's the plane_id channel*/
+	if (!prop)
+		goto prop_err;
+	sunxi_crtc->video_channel_property = prop;
+
+
+
+	/* Create alpha-blending mode(0-pixel_alpha, 1-global_alpha, 2-global_pixel_alpha)
+	 * and alpha-blending value(0x00~0xff) properties
+	 */
+	prop = drm_property_create_range(dev, 0, "alpha_mode", 0,
+					2);
+	if (!prop)
+		goto prop_err;
+	sunxi_crtc->alpha_mode = prop;
+
+	prop = drm_property_create_range(dev, 0, "alpha_value", 0,
+					0xff);
+	if (!prop)
+		goto prop_err;
+	sunxi_crtc->alpha_value = prop;
+
 	sunxi_crtc->plane_array =
 		kzalloc(sizeof(struct drm_plane *) *
 		sunxi_crtc->plane_of_de, GFP_KERNEL);
@@ -1118,7 +1532,7 @@ int sunxi_drm_crtc_create(struct drm_device *dev,
 			drm_plane =
 				sunxi_plane_init(dev,
 				&sunxi_crtc->drm_crtc,
-				plane_cfg, j, i, false);
+				plane_cfg, v, j, i, false);
 			if (!drm_plane) {
 				DRM_ERROR("failed to allocate \
 					sunxi plane.\n");
@@ -1149,10 +1563,17 @@ int sunxi_drm_crtc_create(struct drm_device *dev,
 
 	INIT_LIST_HEAD(&sunxi_crtc->pageflip_event_list);
 	INIT_WORK(&sunxi_crtc->delayed_work, sunxi_crtc_delay_work);
+	init_waitqueue_head(&sunxi_crtc->crtc_wait);
 
 	spin_lock_init(&sunxi_crtc->update_reg_lock);
 	drm_crtc_init(dev, crtc, &sunxi_crtc_funcs);
 	drm_crtc_helper_add(crtc, &sunxi_crtc_helper_funcs);
+	drm_object_attach_property(&crtc->base,
+		sunxi_crtc->channel_id_property, sunxi_crtc->chn_count);
+	drm_object_attach_property(&crtc->base,
+		sunxi_crtc->plane_id_chn_property, z);
+	drm_object_attach_property(&crtc->base,
+		sunxi_crtc->video_channel_property, vi_chn);
 
 	sunxi_drm_crtc_attach_mode_property(crtc);
 	crtc_array[nr] = &sunxi_crtc->drm_crtc;
@@ -1188,6 +1609,18 @@ prop_err:
 	if (sunxi_crtc->plane_zpos_property)
 		drm_property_destroy(sunxi_crtc->drm_crtc.dev,
 			sunxi_crtc->plane_zpos_property);
+
+	if (sunxi_crtc->alpha_mode)
+		drm_property_destroy(sunxi_crtc->drm_crtc.dev,
+			sunxi_crtc->alpha_mode);
+
+	if (sunxi_crtc->alpha_value)
+		drm_property_destroy(sunxi_crtc->drm_crtc.dev,
+			sunxi_crtc->alpha_value);
+
+	if (sunxi_crtc->video_channel_property)
+		drm_property_destroy(sunxi_crtc->drm_crtc.dev,
+			sunxi_crtc->video_channel_property);
 
 	kfree(sunxi_crtc);
 

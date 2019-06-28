@@ -473,3 +473,38 @@ int sunxi_drm_sys_pwm_config(struct pwm_device *pwm_dev,
 	}
 	return pwm_config(pwm_dev, duty_ns, period_ns);
 }
+
+void *sunxi_drm_dma_malloc(struct device *dev, u32 num_bytes, void *phys_addr)
+{
+	u32 actual_bytes;
+	void *address = NULL;
+
+	if (num_bytes != 0) {
+		actual_bytes = PAGE_ALIGN(num_bytes);
+
+		address =
+		    dma_alloc_coherent(dev, actual_bytes,
+				       (dma_addr_t *) phys_addr, GFP_KERNEL);
+		if (address) {
+			memset(address, 0, actual_bytes);
+			return address;
+		}
+
+		DRM_ERROR("dma_alloc_coherent fail, size=0x%x\n", num_bytes);
+		return NULL;
+	}
+
+	return NULL;
+}
+
+void sunxi_drm_dma_free(struct device *dev, void *virt_addr,
+				void *phys_addr, u32 num_bytes)
+{
+	u32 actual_bytes;
+
+	actual_bytes = PAGE_ALIGN(num_bytes);
+	if (phys_addr && virt_addr)
+		dma_free_coherent(dev, actual_bytes, virt_addr,
+				  (dma_addr_t)phys_addr);
+}
+

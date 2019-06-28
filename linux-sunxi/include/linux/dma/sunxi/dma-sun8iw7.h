@@ -14,7 +14,7 @@
 #define DRQSRC_DAI1_RX		DRQSRC_DAUDIO_1_RX
 /*#define DRQSRC_AC97		5*/
 /*#define DRQSRC_DAUDIO_2_RX	6*/
-#define DRQSRC_DAI2_RX		DRQSRC_DAUDIO_2_RX
+#define DRQSRC_DAUDIO_2_RX	27
 #define DRQSRC_NAND0		5
 #define DRQSRC_UART0RX		6
 #define DRQSRC_UART1RX		7
@@ -31,13 +31,14 @@
 #define DRQSRC_EMAC		22
 #define DRQSRC_TP		23
 #define DRQSRC_TPRX		DRQSRC_TP*/
-#define DRQSRC_SPI0RX		23
-#define DRQSRC_SPI1RX		24
+#define DRQSRC_SPI0_RX		23
+#define DRQSRC_SPI1_RX		24
 /*#define DRQSRC_SPI2_RX	26*/
 /*#define DRQSRC_SPI3_RX	27*/
 #define DRQSRC_OTG_EP2		18
 #define DRQSRC_OTG_EP3		19
 #define DRQSRC_OTG_EP4		20
+
 /*#define DRQSRC_OTG_EP5	21*/
 
 /*
@@ -54,6 +55,7 @@
 #define DRQDST_DAI1_TX		DRQDST_DAUDIO_1_TX
 /*#define DRQDST_AC97		5*/
 /*#define DRQDST_DAUDIO_2_TX	6*/
+#define DRQDST_DAUDIO_2_TX	27
 #define DRQDST_DAI2_TX		DRQDST_DAUDIO_2_TX
 #define DRQDST_NAND0		5
 #define DRQDST_UART0TX		6
@@ -71,13 +73,14 @@
 #define DRQDST_EMAC		22
 #define DRQDST_TP		23
 #define DRQDST_TPRX		DRQDST_TP*/
-#define DRQDST_SPI0TX		23
-#define DRQDST_SPI1TX		24
+#define DRQDST_SPI0_TX		23
+#define DRQDST_SPI1_TX		24
 /*#define DRQDST_SPI2_RX	26*/
 /*#define DRQDST_SPI3_RX	27*/
 #define DRQDST_OTG_EP2		18
 #define DRQDST_OTG_EP3		19
 #define DRQDST_OTG_EP4		20
+
 /*#define DRQSRC_OTG_EP5	21*/
 #endif /*__DMA_SUN8IW7__  */
 

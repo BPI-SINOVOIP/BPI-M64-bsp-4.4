@@ -22,11 +22,14 @@
 #include <linux/init.h>
 #include <linux/dmaengine.h>
 #include <linux/slab.h>
+#include <linux/kernel.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
 #include <sound/dmaengine_pcm.h>
+
+#include "../soc/sunxi/sunxi-pcm.h"
 
 struct dmaengine_pcm_runtime_data {
 	struct dma_chan *dma_chan;
@@ -34,6 +37,16 @@ struct dmaengine_pcm_runtime_data {
 
 	unsigned int pos;
 };
+
+static bool pcm_pos_debug;
+module_param(pcm_pos_debug, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(pcm_pos_debug,
+			"SUNXI pcm_pointer_en debug(Y=enable, N=disable)");
+
+static bool pcm_pos_no_res_debug;
+module_param(pcm_pos_no_res_debug, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(pcm_pos_no_res_debug,
+			"SUNXI pcm_pointer_no_res_en debug(Y=enable, N=disable)");
 
 static inline struct dmaengine_pcm_runtime_data *substream_to_prtd(
 	const struct snd_pcm_substream *substream)
@@ -247,7 +260,33 @@ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_trigger);
 snd_pcm_uframes_t snd_dmaengine_pcm_pointer_no_residue(struct snd_pcm_substream *substream)
 {
 	struct dmaengine_pcm_runtime_data *prtd = substream_to_prtd(substream);
-	return bytes_to_frames(substream->runtime, prtd->pos);
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct sunxi_hdmi_priv *sunxi_hdmi = snd_soc_card_get_drvdata(card);
+	int raw_flag = sunxi_hdmi->hdmi_format;
+	struct dma_tx_state state;
+	enum dma_status status;
+	unsigned int buf_size;
+	unsigned int pos = 0;
+
+	status = dmaengine_tx_status(prtd->dma_chan, prtd->cookie, &state);
+	if (status == DMA_IN_PROGRESS || status == DMA_PAUSED) {
+		buf_size = snd_pcm_lib_buffer_bytes(substream);
+		if (state.residue > 0 && state.residue <= buf_size)
+			pos = buf_size - state.residue;
+	}
+
+	if (pcm_pos_no_res_debug)
+		pr_warn("pcm_pointer_no_res ptrd->pos=%-10d,ptrd_pos_to_frames=%-10ld,pos=%-10d,pos_to_frames=%-10ld,buf_size=%-10d,state.residue=%d\n",
+			prtd->pos,
+			bytes_to_frames(substream->runtime, prtd->pos),
+			pos, bytes_to_frames(substream->runtime, pos),
+			buf_size, state.residue);
+
+	if (raw_flag > 1)
+		return bytes_to_frames(substream->runtime, prtd->pos);
+	else
+		return bytes_to_frames(substream->runtime, pos);
 }
 EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_pointer_no_residue);
 
@@ -272,6 +311,13 @@ snd_pcm_uframes_t snd_dmaengine_pcm_pointer(struct snd_pcm_substream *substream)
 		if (state.residue > 0 && state.residue <= buf_size)
 			pos = buf_size - state.residue;
 	}
+
+	if (pcm_pos_debug)
+		pr_warn("pcm_pointer prtd->pos=%-10d,ptrd_pos_to_frames=%-10ld,pos=%-10d,pos_to_frames=%-10ld,buf_size=%-10d,state.residue=%d\n",
+			prtd->pos,
+			bytes_to_frames(substream->runtime, prtd->pos),
+			pos, bytes_to_frames(substream->runtime, pos),
+			buf_size, state.residue);
 
 	return bytes_to_frames(substream->runtime, pos);
 }

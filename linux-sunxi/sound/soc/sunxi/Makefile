@@ -28,12 +28,14 @@ obj-$(CONFIG_SND_SUN8IW6_VIRBB_DAI) += snd-soc-sunxi-bb-dai.o
 obj-$(CONFIG_SND_SUN8IW6_SOC_TDM) += snd-soc-sun8iw6-soc-tdm.o
 
 # SUNXI Codec Embedded Support
+obj-$(CONFIG_SND_SUN8IW7_CODEC) += sun8iw7-codec.o
 obj-$(CONFIG_SND_SUN8IW11_CODEC) += sun8iw11-codec.o
 obj-$(CONFIG_SND_SUN8IW12_CODEC) += sun8iw12-codec.o
 obj-$(CONFIG_SND_SUN50IW1_CODEC) += sun50iw1-codec.o
 obj-$(CONFIG_SND_SUN50IW3_CODEC) += sun50iw3-codec.o
 
 # SUNXI Machine Support
+obj-$(CONFIG_SND_SUNXI_SOC_SUN8IW7_CODEC) += sun8iw7-sndcodec.o
 obj-$(CONFIG_SND_SUNXI_SOC_SUN8IW11_CODEC) += sun8iw11-sndcodec.o
 obj-$(CONFIG_SND_SUNXI_SOC_SUN8IW12_CODEC) += sun8iw12-sndcodec.o
 obj-$(CONFIG_SND_SUNXI_SOC_SUN50IW1_CODEC) += sun50iw1-sndcodec.o

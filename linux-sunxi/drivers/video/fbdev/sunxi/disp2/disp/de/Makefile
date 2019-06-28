@@ -23,7 +23,7 @@ MIPI_DSI_IP_VERSION := 28
 endif
 
 ifeq ($(CONFIG_ARCH_SUN8IW7),y)
-sub_dir = lowlevel_v2x
+sub_dir = lowlevel_sun8iw7
 -include $(obj)/de/$(sub_dir)/Makefile
 endif
 

@@ -872,6 +872,7 @@ static const struct of_device_id sunxi_spdif_of_match[] = {
 	{},
 };
 
+
 static struct platform_driver sunxi_spdif_driver = {
 	.probe = sunxi_spdif_dev_probe,
 	.remove = __exit_p(sunxi_spdif_dev_remove),

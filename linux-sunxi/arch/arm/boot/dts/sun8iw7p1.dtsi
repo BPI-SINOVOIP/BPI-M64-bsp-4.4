@@ -6,7 +6,10 @@
 /*/memreserve/ 0x43000000 0x00000800; /* super standby range        : [0x43000000~0x43000800], size = 2K  */
 
 /memreserve/ 0x43080000 0x00010000; /* arisc dram code space range */
-/memreserve/ 0x48000000 0x01000000; /* optee code space range */
+/memreserve/ 0x48000000 0x01000000; /* secure os  space range */
+
+/* tf used */
+/memreserve/ 0x43080000 0x00010000; /* arisc dram code space range */
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/ion/ion_sunxi.h>
@@ -281,12 +284,12 @@
 	};
 
 	wdt: watchdog@01c20ca0 {
-		 compatible = "allwinner,sun4i-wdt";
-		 reg = <0x0 0x01c20c90 0 0x18>;
+		 compatible = "allwinner,sun6i-a31-wdt";
+		 reg = <0x0 0x01c20ca0 0 0x18>;
 	};
 
 	pmu {
-		compatible = "arm,armv8-pmuv3";
+		compatible = "arm,cortex-a7-pmu";
 		interrupts = <GIC_SPI 120 4>,
 			     <GIC_SPI 121 4>,
 			     <GIC_SPI 122 4>,
@@ -513,9 +516,10 @@
 			compatible = "allwinner,sun8i-rtc";
 			device_type = "rtc";
 			reg = <0x0 0x01f00000 0x0 0x1FC>;
-			interrupts = <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
 			gpr_offset = <0x100>;
 			gpr_len	   = <4>;
+			gpr_cur_pos = <0>;
 		};
 
 		ve: ve@01c0e000 {
@@ -553,7 +557,7 @@
 			pinctrl-0 = <&uart1_pins_a>;
 			pinctrl-1 = <&uart1_pins_b>;
 			uart1_port = <1>;
-			uart1_type = <8>;
+			uart1_type = <4>;
 			status = "okay";
 		};
 
@@ -810,20 +814,20 @@
 		codec:codec@0x01c22c00 {
 			compatible = "allwinner,sunxi-internal-codec";
 			reg = <0x0 0x01c22c00 0x0 0x2bc>,/*digital baseadress*/
-			      <0x0 0x01c22f00 0x0 0x4>;/*analog baseadress*/
-			clocks = <&clk_pll_audio>,<&clk_adda_com>;
+			      <0x0 0x01f015c0 0x0 0x4>;/*analog baseadress*/
+			clocks = <&clk_pll_audio>,<&clk_adda>;
 			headphonevol =  <0x3b>;
 			spkervol =  <0x1b>;
 			maingain =  <0x4>;
 			hp_dirused = <0x0>;
 			pa_sleep_time = <0x15e>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		cpudai:cpudai0-controller@0x01c22c00 {
 			compatible = "allwinner,sunxi-internal-cpudai";
 			reg = <0x0 0x01c22c00 0x0 0x2bc>;/*digital baseadress*/
-			status = "disabled";
+			status = "okay";
 		};
 
 		daudio0:daudio@0x01c22000 {
@@ -842,7 +846,7 @@
 			tdm_config =  <0x01>;
 			mclk_div = <0x0>;
 			tdm_num = <0x0>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		daudio1:daudio@0x01c22400 {
@@ -861,49 +865,60 @@
 			tdm_config =  <0x01>;
 			mclk_div = <0x0>;
 			tdm_num = <0x1>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		audiohdmi:daudio@0x01c22800{
 			compatible = "allwinner,sunxi-tdmhdmi";
 			reg = <0x0 0x01c22800 0x0 0x58>;
 			clocks = <&clk_pll_audio>,<&clk_i2s2>;
-			status = "disabled";
+			status = "okay";
+		};
+
+		spdif:spdif-controller@0x01c21000{
+			compatible = "allwinner,sunxi-spdif";
+			reg = <0x0 0x01c21000 0x0 0x38>;
+			clocks = <&clk_pll_audio>,<&clk_owa>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&spdif_pins_a>;
+			pinctrl-1 = <&spdif_pins_b>;
+			status = "okay";
 		};
 
 		sndcodec:sound@0 {
 			compatible = "allwinner,sunxi-codec-machine";
-			interrupts = <GIC_SPI 28 4>;
+			interrupts = <GIC_SPI 29 4>;
 			sunxi,cpudai-controller = <&cpudai>;
 			sunxi,audio-codec = <&codec>;
 			hp_detect_case = <0x00>;
 			/* jack_det_gpio = <&pio PH 12 1 0 1 0>; */
 			/* invert: 0->high is plug_in, 1->high is plug_out */
 			jack_invert = <1>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		snddaudio0:sound@1{
 			compatible = "allwinner,sunxi-daudio0-machine";
 			sunxi,daudio0-controller = <&daudio0>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		snddaudio1:sound@2{
 			compatible = "allwinner,sunxi-daudio1-machine";
 			sunxi,daudio1-controller = <&daudio1>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		sndhdmi:sound@3{
 			compatible = "allwinner,sunxi-hdmi-machine";
 			sunxi,hdmi-controller = <&audiohdmi>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		sndspdif:sound@4{
 			compatible = "allwinner,sunxi-spdif-machine";
-			status = "disabled";
+			sunxi,spdif-controller = <&spdif>;
+			status = "okay";
 		};
 
 		sdc2: sdmmc@01C11000 {
@@ -1016,7 +1031,7 @@
 
 
 		sdc1: sdmmc@1C10000 {
-			compatible = "allwinner,sunxi-mmc-v4p00x";
+			compatible = "allwinner,sunxi-mmc-v4p10x";
 			device_type = "sdc1";
 			reg = <0x0 0x1C10000 0x0 0x1000>;
 			interrupts = <GIC_SPI 61 0x0104>;  /*  */
@@ -1059,8 +1074,7 @@
 			/*sunxi-dly-104M-ddr  = <1 0 0 0 0>;*/
 			/*sunxi-dly-208M-ddr  = <1 0 0 0 0>;*/
 
-			/*status = "okay";*/
-			status = "disabled";
+			status = "okay";
 		};
 
 		disp: disp@01000000 {

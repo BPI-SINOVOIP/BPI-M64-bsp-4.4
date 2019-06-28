@@ -193,6 +193,7 @@ static int sunxi_sndhdmi_dev_probe(struct platform_device *pdev)
 	return ret;
 }
 
+
 static int __exit sunxi_sndhdmi_dev_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);

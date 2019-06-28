@@ -36,6 +36,9 @@ config SND_SUNXI_SOC
         bool
 
 # SUNXI Codec Embedded
+config SND_SUN8IW7_CODEC
+        bool
+
 config SND_SUN8IW11_CODEC
 	tristate
 
@@ -62,6 +65,19 @@ config SND_SUN8IW6_DAUDIO0_MACHINE
 	depends on ARCH_SUN8IW6
 	help
 	  Say Y or M if you want to add sun8iw6 ac100 machine.
+
+config SND_SUNXI_SOC_SUN8IW7_CODEC
+        tristate "Allwinner Sun8iw7 Codec Support"
+        select SND_SUNXI_SOC
+        select SND_SOC_GENERIC_DMAENGINE_PCM
+        select REGMAP_MMIO
+        select SND_SUN8IW7_CODEC
+        select SND_SUNXI_SOC_CPUDAI
+        select SND_SUNXI_SOC_RWFUNC
+	depends on ARCH_SUN8IW7
+        help
+          Select Y or M to add support for the Codec embedded in the Allwinner
+          SUN8IW7 and affiliated SoCs.
 
 config SND_SUNXI_SOC_SUN8IW11_CODEC
         tristate "Allwinner Sun8iw11 Codec Support"
@@ -147,7 +163,7 @@ config SND_SUNXI_SOC_SUNXI_SPDIF
         select SND_SOC_GENERIC_DMAENGINE_PCM
         select SND_SUNXI_SOC_SPDIF
 	select REGMAP_MMIO
-	depends on ARCH_SUN8IW11 || ARCH_SUN50IW1 || ARCH_SUN8IW6
+	depends on ARCH_SUN8IW11 || ARCH_SUN50IW1 || ARCH_SUN8IW6 || ARCH_SUN8IW7
         help
           Select Y or M to add support SPDIF Module in Allwinner
           SoCs.

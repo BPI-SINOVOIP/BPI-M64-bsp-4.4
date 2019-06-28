@@ -32,6 +32,10 @@
 #include "sun8iw11-codec.h"
 #endif
 
+#if defined(CONFIG_ARCH_SUN8IW7)
+#include "sun8iw7-codec.h"
+#endif
+
 #define DRV_NAME "sunxi-internal-cpudai"
 
 struct sunxi_cpudai_info {

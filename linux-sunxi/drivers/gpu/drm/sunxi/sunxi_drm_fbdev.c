@@ -60,6 +60,7 @@ int sunxi_drm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct fb_dmabuf_export dma_arg;
 	struct dma_buf *buf;
 	int fd;
+
 	if (copy_from_user(&dma_arg, argp, sizeof(dma_arg))) {
 		return -EFAULT;
 	}
@@ -98,8 +99,6 @@ int sunxi_drm_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	struct sunxi_drm_gem_buf *buffer = to_sunxi_gem(sunxi_gem_obj);
 	unsigned long vm_size;
 	int ret;
-
-	DRM_DEBUG_KMS("### %s:%s() ###\n", __FILE__, __func__);
 
 	vma->vm_flags |= VM_IO | VM_DONTEXPAND | VM_DONTDUMP;
 

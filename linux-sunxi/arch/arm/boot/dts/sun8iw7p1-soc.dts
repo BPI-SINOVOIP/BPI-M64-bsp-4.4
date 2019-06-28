@@ -11,4 +11,31 @@
 
 	soc@01c00000 {
 	};
+
+	wlan:wlan {
+		compatible = "allwinner,sunxi-wlan";
+		wlan_busnum = <1>;
+		wlan_usbnum = <3>;
+		wlan_power;
+		wlan_io_regulator;
+		wlan_en;
+		wlan_regon;
+		wlan_hostwake;
+		status = "disabled";
+	};
+
+	bt:bt {
+		compatible = "allwinner,sunxi-bt";
+		clocks = <&clk_losc_out>;
+		bt_rst_n;
+		status = "okay";
+	};
+
+	btlpm:btlpm {
+		compatible = "allwinner,sunxi-btlpm";
+		uart_index = <1>;
+		bt_wake;
+		bt_hostwake;
+		status = "okay";
+	};
 };

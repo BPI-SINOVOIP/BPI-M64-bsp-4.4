@@ -876,17 +876,18 @@ int mac80211_register_hw(struct ieee80211_hw *hw)
 	     local->hw.offchannel_tx_hw_queue >= local->hw.queues))
 		return -EINVAL;
 
+#ifdef CONFIG_PM
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 		if ((hw->wiphy->wowlan->flags || hw->wiphy->wowlan->n_patterns)
 #else
 		if ((hw->wiphy->wowlan.flags || hw->wiphy->wowlan.n_patterns)
 #endif
 
-#ifdef CONFIG_PM
 	    && (!local->ops->suspend || !local->ops->resume)
-#endif
 	    )
 		return -EINVAL;
+#endif
 
 	if (hw->max_report_rates == 0)
 		hw->max_report_rates = hw->max_rates;

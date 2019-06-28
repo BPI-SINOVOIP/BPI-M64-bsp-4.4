@@ -24,7 +24,9 @@
 #define SPI_FIFO_DEPTH		(128)
 #define MAX_FIFU		64
 #define BULK_DATA_BOUNDARY	64	 /* can modify to adapt the application */
-#define SPI_MAX_FREQUENCY	100000000 /* spi controller just support 80Mhz */
+#define SPI_MAX_FREQUENCY	100000000 /* spi controller just support 100Mhz */
+#define SPI_HIGH_FREQUENCY	60000000 /* sample mode threshold frequency  */
+#define SPI_LOW_FREQUENCY	24000000 /* sample mode threshold frequency  */
 
 /* SPI Registers offsets from peripheral base address */
 #define SPI_VER_REG		(0x00)	/* version number register */
@@ -61,6 +63,7 @@
 #define SPI_TC_DHB		(0x1 <<  8) /* Discard Hash Burst,default 0:receiving all spi burst in BC period 1:discard unused,fectch WTC bursts */
 #define SPI_TC_DDB		(0x1 <<  9) /* Dummy burst Type,default 0: dummy spi burst is zero;1:dummy spi burst is one */
 #define SPI_TC_RPSM		(0x1 << 10) /* select mode for high speed write,0:normal write mode,1:rapids write mode,default 0 */
+#define SPI_TC_SDM		(0x1 << 13) /* master sample data mode, 1: normal sample mode;0:delay sample mode. */
 #define SPI_TC_SDC		(0x1 << 11) /* master sample data control, 1: delay--high speed operation;0:no delay. */
 #define SPI_TC_FBS		(0x1 << 12) /* LSB/MSB transfer first select 0:MSB,1:LSB,default 0:MSB first */
 #define SPI_TC_XCH		(0x1 << 31) /* Exchange burst default 0:idle,1:start exchange;when BC is zero,this bit cleared by SPI controller*/
@@ -190,6 +193,17 @@ struct sunxi_dual_mode_dev_data {
 	int dual_mode;	/* dual SPI mode, 0-single mode, 1-dual mode */
 	int single_cnt;	/* single mode transmit counter */
 	int dummy_cnt;	/* dummy counter should be sent before receive in dual mode */
+};
+
+enum {
+	DEBUG_INIT    = 1U << 0,
+	DEBUG_SUSPEND = 1U << 1,
+	DEBUG_DATA    = 1U << 2,
+	DEBUG_INFO    = 1U << 3,
+	DEBUG_INFO1   = 1U << 4,
+	DEBUG_INFO2   = 1U << 5,
+	DEBUG_INFO3   = 1U << 6,
+	DEBUG_INFO4   = 1U << 7,
 };
 
 #endif

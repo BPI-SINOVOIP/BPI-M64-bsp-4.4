@@ -80,6 +80,9 @@ clocks {
 		clk_pll_audio: pll_audio {
 			#clock-cells = <0>;
 			compatible = "allwinner,pll-clock";
+			assigned-clocks = <&clk_pll_audio>;
+			assigned-clock-rates = <24576000>;
+			lock-mode = "new";
 			clock-output-names = "pll_audio";
 		};
 
@@ -409,6 +412,11 @@ clocks {
 			#clock-cells = <0>;
 			compatible = "allwinner,periph-clock";
 			clock-output-names = "ve";
+		};
+		clk_adda: adda {
+			#clock-cells = <0>;
+			compatible = "allwinner,periph-clock";
+			clock-output-names = "adda";
 		};
 		clk_avs: avs {
 			#clock-cells = <0>;

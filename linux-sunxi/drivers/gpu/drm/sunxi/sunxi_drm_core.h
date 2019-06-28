@@ -25,6 +25,7 @@ struct sunxi_hardware_ops {
 	bool    (*reset)(void *init_data);
 	bool    (*enable)(void *enable_data);
 	bool    (*soft_enable)(void *enable_data);
+	bool    (*module_enable)(void *enable_data);
 	bool    (*disable)(void *disable_data);
 	bool    (*updata_reg)(void *commit_data);
 	void    (*vsync_proc)(void *irq_data);

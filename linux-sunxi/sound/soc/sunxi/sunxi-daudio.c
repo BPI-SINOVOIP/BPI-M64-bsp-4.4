@@ -390,8 +390,8 @@ static int sunxi_daudio_set_hub_mode(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static const char * const daudio_format_function[] = {"null",
-		"hub_disable", "hub_enable"};
+static const char *daudio_format_function[] = {"null",
+			"hub_disable", "hub_enable"};
 static const struct soc_enum daudio_format_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(daudio_format_function),
 			daudio_format_function),
@@ -1602,6 +1602,14 @@ static int sunxi_daudio_dev_probe(struct platform_device *pdev)
 					DRQDST_HDMI_TX;
 		sunxi_daudio->playback_dma_param.src_maxburst = 8;
 		sunxi_daudio->playback_dma_param.dst_maxburst = 8;
+		sunxi_daudio->capture_dma_param.dma_addr =
+				res.start + SUNXI_DAUDIO_RXFIFO;
+#if defined(CONFIG_ARCH_SUN8IW7)
+		sunxi_daudio->capture_dma_param.dma_drq_type_num =
+					DRQSRC_HDMI_RX;
+#endif
+		sunxi_daudio->capture_dma_param.src_maxburst = 8;
+		sunxi_daudio->capture_dma_param.dst_maxburst = 8;
 		sunxi_daudio->hdmi_en = 1;
 #endif
 		break;

@@ -31,7 +31,9 @@
 #if (defined CONFIG_ARCH_SUN8IW11) || (defined CONFIG_ARCH_SUN8IW12) \
 				|| (defined CONFIG_ARCH_SUN8IW15) \
 				|| (defined CONFIG_ARCH_SUN50IW1) \
-				|| (defined CONFIG_ARCH_SUN50IW3)
+				|| (defined CONFIG_ARCH_SUN50IW3) \
+				|| (defined CONFIG_ARCH_SUN8IW7)
+
 #define SUNXI_RTC_YMD				0x0010
 
 #define SUNXI_RTC_HMS				0x0014

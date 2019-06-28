@@ -46,4 +46,24 @@ static inline void sunxi_writel(u32 val, phys_addr_t addr)
 }
 #endif
 
+#ifndef CONFIG_SUNXI_SMC
+static inline u32 sunxi_smc_readl(phys_addr_t addr)
+{
+	void __iomem *vaddr = ioremap(addr, 4);
+	u32 ret;
+	ret = readl(vaddr);
+	iounmap(vaddr);
+	return ret;
+	return readl((void __iomem *)addr);
+}
+static inline int sunxi_smc_writel(u32 val, phys_addr_t addr)
+{
+	void __iomem *vaddr = ioremap(addr, 4);
+	writel(val, vaddr);
+	iounmap(vaddr);
+	return 0;
+}
+#endif
+
+
 #endif  /* __SUNXI_SMC_H */

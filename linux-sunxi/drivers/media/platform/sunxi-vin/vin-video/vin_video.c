@@ -408,6 +408,7 @@ static int vidioc_enum_framesizes(struct file *file, void *fh,
 				enum_frame_size, NULL, &fse);
 	if (ret < 0)
 		return -1;
+	fsize->type = V4L2_FRMSIZE_TYPE_CONTINUOUS;
 	fsize->stepwise.max_width = fse.max_width;
 	fsize->stepwise.max_height = fse.max_height;
 	fsize->stepwise.min_width = fse.min_width;

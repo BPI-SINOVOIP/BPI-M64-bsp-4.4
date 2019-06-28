@@ -32,15 +32,6 @@
 #include "sunxi_drm_plane.h"
 #include "sunxi_drm_fb.h"
 
-struct pixel_info_t {
-	enum disp_pixel_format format;
-	unsigned char plane;
-	unsigned char plane_bpp[3];
-	unsigned char wscale[3];
-	unsigned char hscale[3];
-	bool    swap_uv;
-};
-
 static const uint32_t ui_formats[] = {
 	DRM_FORMAT_RGB888,
 	DRM_FORMAT_BGR888,
@@ -521,6 +512,7 @@ static int sunxi_plane_mode_set(struct disp_layer_config_data *cfg, struct drm_c
 {
 	int  i, j;
 	bool buf_packed = 0;
+	struct sunxi_drm_crtc *sunxi_crtc = to_sunxi_crtc(crtc);
 	struct sunxi_drm_framebuffer *sunxi_fb = to_sunxi_fb(fb);
 	struct sunxi_drm_gem_buf *buffer;
 	struct drm_gem_object *gem_obj;
@@ -595,15 +587,21 @@ static int sunxi_plane_mode_set(struct disp_layer_config_data *cfg, struct drm_c
 	config->info.screen_win.width = crtc_w;
 	config->info.screen_win.height = crtc_h;
 	/* 3D mode set in property */
-	config->info.alpha_mode = 1;
-	config->info.alpha_value = 0xff;
 	/* screen crop set */
 	config->info.fb.crop.x = ((long long)src_x)<<32;
 	config->info.fb.crop.y = ((long long)src_y)<<32;
 	config->info.fb.crop.height = ((long long)src_h)<<32;
 	config->info.fb.crop.width = ((long long)src_w)<<32;
 	/* set in property  TODO*/
-	config->info.fb.pre_multiply = 0;
+	config->info.fb.pre_multiply = 1;
+	for (i = 0; i < sunxi_drm_get_vi_pipe_by_crtc(sunxi_crtc->crtc_id); i++) {
+		if (config->channel == i) {
+			config->info.alpha_mode = 0;
+			config->info.fb.pre_multiply = 0;
+		}
+	}
+
+
 	/* fb stride/bpp , is pixel */
 	if (buf_packed) {
 		config->info.fb.size[0].width = fb->pitches[0] /
@@ -674,6 +672,7 @@ int sunxi_update_plane(struct drm_plane *plane, struct drm_crtc *crtc,
 	uint32_t src_x, uint32_t src_y,
 	uint32_t src_w, uint32_t src_h)
 {
+	struct sunxi_drm_crtc *sunxi_crtc = to_sunxi_crtc(crtc);
 	struct sunxi_drm_plane *sunxi_plane = to_sunxi_plane(plane);
 	struct disp_layer_config_data *cfg;
 	struct sunxi_hardware_ops *plane_ops = sunxi_plane->hw_res->ops;
@@ -689,6 +688,10 @@ int sunxi_update_plane(struct drm_plane *plane, struct drm_crtc *crtc,
 	if (ret) {
 		DRM_ERROR("updata_plane err.\n");
 		return -EINVAL;
+	}
+
+	if (sunxi_crtc->fb_plane == plane) {
+		cfg->config.info.fb.format = DISP_FORMAT_ARGB_8888;
 	}
 #if 0
 	/* protect the current layer to vsync period */
@@ -787,6 +790,15 @@ static int sunxi_plane_set_property(struct drm_plane *plane,
 		sunxi_plane->plane_cfg->config.info.zorder = val;
 		return 0;
 	}
+	if (property == sunxi_crtc->alpha_mode) {
+		sunxi_plane->plane_cfg->config.info.alpha_mode = val;
+		return 0;
+	}
+	if (property == sunxi_crtc->alpha_value) {
+		sunxi_plane->plane_cfg->config.info.alpha_value = val;
+		return 0;
+	}
+
 err:
 	return -EINVAL;
 }
@@ -887,8 +899,8 @@ void sunxi_reset_plane(struct drm_crtc *crtc)
 
 struct drm_plane *sunxi_plane_init(struct drm_device *dev,
 	struct drm_crtc *crtc,
-	struct disp_layer_config_data *cfg,
-	int chn, int plane_id, bool priv)
+	struct disp_layer_config_data *cfg, int plane_id,
+	int chn, int layer_id, bool priv)
 {
 	struct sunxi_drm_plane  *sunxi_plane;
 	struct drm_plane	    *plane;
@@ -929,12 +941,18 @@ struct drm_plane *sunxi_plane_init(struct drm_device *dev,
 	}
 
 	sunxi_plane->hw_res->ops = &plane_ops;
+	sunxi_plane->plane_id = plane_id;
 	sunxi_plane->chn_id = chn;
 	sunxi_plane->isvideo = video;
 	sunxi_plane->crtc_id = sunxi_crtc->crtc_id;
 	sunxi_plane->plane_cfg = cfg;
 	cfg->config.channel = chn;
-	cfg->config.layer_id = plane_id;
+	cfg->config.layer_id = layer_id;
+	/*
+	* Init alpha_mode is pixel alpha
+	*/
+	cfg->config.info.alpha_mode = 0x02;
+	cfg->config.info.alpha_value = 0xff;
 	mutex_init(&sunxi_plane->delayed_work_lock);
 	plane = &sunxi_plane->drm_plane;
 	if (priv) {
@@ -947,6 +965,11 @@ struct drm_plane *sunxi_plane_init(struct drm_device *dev,
 			sunxi_crtc->plane_zpos_property, 0);
 		drm_object_attach_property(&plane->base,
 			sunxi_crtc->plane_id_chn_property, plane_id);
+		drm_object_attach_property(&plane->base,
+			sunxi_crtc->alpha_mode, 0x02); /*init with pixel-alpha**/
+		drm_object_attach_property(&plane->base,
+			sunxi_crtc->alpha_value, 0xff); /*init with opaque*/
+
 	}
 
 	return &sunxi_plane->drm_plane;
@@ -959,6 +982,9 @@ int sunxi_set_fb_plane(struct drm_crtc *crtc,
 	struct drm_mode_object *obj;
 	struct drm_plane *plane = NULL;
 	struct sunxi_drm_crtc *sunxi_crtc = to_sunxi_crtc(crtc);
+
+	if (plane_id == -1)
+		return 0;
 
 	obj = drm_mode_object_find(crtc->dev, plane_id,
 		DRM_MODE_OBJECT_PLANE);

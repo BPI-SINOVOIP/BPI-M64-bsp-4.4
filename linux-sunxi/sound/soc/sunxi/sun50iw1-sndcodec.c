@@ -227,6 +227,10 @@ static void sunxi_hs_init_work(struct work_struct *work)
 			ctx->switch_status = 0;
 			snd_jack_report(ctx->jack.jack, ctx->switch_status);
 			switch_state = 0;
+		} else {
+			ctx->switch_status = SND_JACK_HEADSET;
+			snd_jack_report(ctx->jack.jack, ctx->switch_status);
+			switch_state = SND_JACK_HEADSET;
 		}
 	}
 	ctx->jack_irq_times = OTHER_IRQ;
@@ -427,6 +431,7 @@ static int sunxi_audio_init(struct snd_soc_pcm_runtime *runtime)
 		}
 	}
 	snd_soc_dapm_sync(dapm);
+
 	return 0;
 }
 static int sunxi_sndpcm_hw_params(struct snd_pcm_substream *substream,
@@ -919,7 +924,7 @@ static int sunxi_machine_probe(struct platform_device *pdev)
 	*initial the parameters for judge switch state
 	*/
 	ctx->HEADSET_DATA = 0x10;
-	ctx->detect_state = PLUG_OUT;
+	ctx->detect_state = PLUG_IN;
 	INIT_DELAYED_WORK(&ctx->hs_detect_work, sunxi_check_hs_detect_status);
 	INIT_DELAYED_WORK(&ctx->hs_button_work, sunxi_check_hs_button_status);
 	INIT_DELAYED_WORK(&ctx->hs_init_work, sunxi_hs_init_work);
@@ -929,6 +934,7 @@ static int sunxi_machine_probe(struct platform_device *pdev)
 	ret = request_irq(ctx->jackirq, jack_interrupt, 0, "audio jack irq", ctx);
 
 	sunxi_hs_reg_init(ctx);
+
 	pr_debug("%s,line:%d,0X310:%X,0X314:%X,0X318:%X,0X1C:%X,0X1D:%X\n", __func__, __LINE__,
 				snd_soc_read(ctx->codec, 0x310),
 					snd_soc_read(ctx->codec, 0x314),

@@ -1159,25 +1159,26 @@ ILI9881C_COMMAND_INSTR(0x07,0x01),
 
 static int ili9881c_switch_page(u32 sel, u8 page)
 {
+#ifdef SUPPORT_DSI
 	u8 buf[3] = { 0x98, 0x81, page };
 	int ret;
-
 	ret = dsi_dcs_wr(sel, 0xff, buf, 3);
 	if (ret < 0)
 		return ret;
-
+#endif
 	return 0;
 }
 
 static int ili9881c_send_cmd_data(u32 sel, u8 cmd, u8 data)
 {
+#ifdef SUPPORT_DSI
 	u8 buf[1] = { data };
 	int ret;
 
 	ret = dsi_dcs_wr(sel, cmd, buf, 1);
 	if (ret < 0)
 		return ret;
-
+#endif
 	return 0;
 }
 
@@ -1227,10 +1228,12 @@ static void LCD_panel_init(u32 sel)
 		else if (LCM_ILI9881C_setting[i].count == REGFLAG_DELAY)
 			sunxi_lcd_delay_ms(
 			LCM_ILI9881C_setting[i].para_list[0]);
+#ifdef SUPPORT_DSI
 		else
 			dsi_dcs_wr(sel, LCM_ILI9881C_setting[i].cmd,
 				LCM_ILI9881C_setting[i].para_list,
 				LCM_ILI9881C_setting[i].count);
+#endif
 	}
 }
 

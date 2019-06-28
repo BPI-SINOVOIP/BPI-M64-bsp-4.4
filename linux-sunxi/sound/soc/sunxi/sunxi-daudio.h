@@ -304,6 +304,10 @@ defined(CONFIG_ARCH_SUN50IW1)
 #define DRQDST_HDMI_TX		DRQDST_DAUDIO_1_TX
 #endif
 
+#if defined(CONFIG_ARCH_SUN8IW7)
+#define DRQSRC_HDMI_RX		DRQSRC_DAUDIO_2_RX
+#endif
+
 /*
  * some platform just not support four channel daudio,
  * so make the 3rd channel define as NULL for codec compile

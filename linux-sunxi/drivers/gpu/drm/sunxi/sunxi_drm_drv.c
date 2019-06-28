@@ -32,6 +32,7 @@
 #define VBLANK_OFF_DELAY	50000
 
 struct device *sunxi_drm_dev;
+static struct drm_device *s_drm_device;
 
 void sunxi_drm_set_dev(struct device *dev)
 {
@@ -49,6 +50,8 @@ static int sunxi_drm_load(struct drm_device *dev, unsigned long flags)
 	int ret;
 
 	DRM_DEBUG_DRIVER("[%d]\n", __LINE__);
+
+	s_drm_device = dev;
 
 	private = kzalloc(sizeof(struct sunxi_drm_private), GFP_KERNEL);
 	if (!private) {
@@ -193,6 +196,14 @@ static struct drm_ioctl_desc sunxi_ioctls[] = {
 		DRM_UNLOCKED | DRM_AUTH),
 	DRM_IOCTL_DEF_DRV(SUNXI_INFO_FB_PLANE, sunxi_drm_info_fb_ioctl,
 		DRM_UNLOCKED | DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(SUNXI_GET_CRTCINFO, sunxi_drm_get_crtcinfo_ioctl,
+		DRM_UNLOCKED | DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(SUNXI_GET_PLANEINFO, sunxi_drm_get_planeinfo_ioctl,
+		DRM_UNLOCKED | DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(SUNXI_GET_FBINFO, sunxi_drm_get_fbinfo_ioctl,
+		DRM_UNLOCKED | DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(SUNXI_GET_WBINFO, sunxi_drm_get_wbinfo_ioctl,
+		DRM_UNLOCKED | DRM_AUTH),
 };
 
 static const struct file_operations sunxi_drm_driver_fops = {
@@ -268,6 +279,64 @@ static const struct of_device_id sunxi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sunxi_of_match);
 
+static int sunxi_runtime_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int sunxi_runtime_resume(struct device *dev)
+{
+	return 0;
+}
+
+static int sunxi_runtime_idle(struct device *dev)
+{
+	return 0;
+}
+
+static int sunxi_drm_suspend(struct device *dev)
+{
+	struct drm_device *device = s_drm_device;
+	struct drm_connector *conct = NULL;
+
+	if ((dev != sunxi_drm_dev)
+		|| (device == NULL))
+		return 0;
+
+	drm_modeset_lock_all(device);
+	list_for_each_entry(conct, &device->mode_config.connector_list, head)
+		conct->funcs->dpms(conct, DRM_MODE_DPMS_OFF);
+	drm_modeset_unlock_all(device);
+
+	return 0;
+}
+
+static int sunxi_drm_resume(struct device *dev)
+{
+	struct drm_device *device = s_drm_device;
+	struct drm_connector *conct = NULL;
+
+	if ((dev != sunxi_drm_dev)
+		|| (device == NULL))
+		return 0;
+
+	drm_modeset_lock_all(device);
+	list_for_each_entry(conct, &device->mode_config.connector_list, head)
+		conct->funcs->dpms(conct, DRM_MODE_DPMS_ON);
+	drm_modeset_unlock_all(device);
+
+	return 0;
+}
+
+static const struct dev_pm_ops sunxi_drm_runtime_pm_ops = {
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend = sunxi_runtime_suspend,
+	.runtime_resume = sunxi_runtime_resume,
+	.runtime_idle = sunxi_runtime_idle,
+#endif
+	.suspend = sunxi_drm_suspend,
+	.resume = sunxi_drm_resume,
+};
 
 static struct platform_driver sunxi_drm_platform_driver = {
 	.probe = sunxi_drm_platform_probe,
@@ -276,6 +345,7 @@ static struct platform_driver sunxi_drm_platform_driver = {
 		.owner = THIS_MODULE,
 		.name = "sunxi-drm",
 		.of_match_table = sunxi_of_match,
+		.pm = &sunxi_drm_runtime_pm_ops,
 	},
 };
 

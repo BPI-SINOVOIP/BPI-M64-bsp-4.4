@@ -54,6 +54,14 @@ void sunxi_drm_crtc_updata_fps(int crtc, int fps);
 
 int sunxi_drm_get_crtc_pipe_plane(int crtc, int channel);
 
+/*For writeback capture*/
+int sunxi_drm_al_wbcapture_init(unsigned int crtc);
+int sunxi_drm_al_wbcapture_exit(unsigned int crtc);
+int sunxi_drm_al_wbcapture_sync(unsigned int crtc);
+int sunxi_drm_al_wbcapture_apply(unsigned int crtc,
+			struct disp_capture_config *cfg);
+int sunxi_drm_al_wbcapture_get_status(unsigned int crtc);
+
 bool sunxi_drm_init_al(struct disp_bsp_init_para *para);
 
 int sunxi_drm_updata_reg(int crtc);

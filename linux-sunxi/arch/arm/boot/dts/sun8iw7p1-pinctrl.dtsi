@@ -336,7 +336,7 @@
 
 			daudio0_pins_a: daudio0@0 {
 				allwinner,pins = "PA18", "PA19", "PA20", "PA21";
-				allwinner,function = "pcm0";
+				allwinner,function = "i2s0";
 				allwinner,muxsel = <2>;
 				allwinner,drive = <1>;
 				allwinner,pull = <0>;
@@ -352,7 +352,7 @@
 
 			daudio1_pins_a: daudio1@0 {
 				allwinner,pins = "PG10", "PG11", "PG12", "PG13";
-				allwinner,function = "pcm1";
+				allwinner,function = "i2s1";
 				allwinner,muxsel = <2>;
 				allwinner,drive = <1>;
 				allwinner,pull = <0>;
@@ -360,6 +360,22 @@
 
 			daudio1_pins_b: daudio1_sleep@0 {
 				allwinner,pins = "PG10", "PG11", "PG12", "PG13";
+				allwinner,function = "io_disabled";
+				allwinner,muxsel = <7>;
+				allwinner,drive = <1>;
+				allwinner,pull = <0>;
+			};
+
+			spdif_pins_a: spdif@0 {
+				allwinner,pins = "PA17";
+				allwinner,function = "spdif0";
+				allwinner,muxsel = <2>;
+				allwinner,drive = <1>;
+				allwinner,pull = <0>;
+			};
+
+			spdif_pins_b: spdif_sleep@0 {
+				allwinner,pins = "PA17";
 				allwinner,function = "io_disabled";
 				allwinner,muxsel = <7>;
 				allwinner,drive = <1>;

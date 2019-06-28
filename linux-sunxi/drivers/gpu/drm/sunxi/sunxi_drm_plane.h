@@ -16,6 +16,15 @@
 #include "de/include.h"
 #include "sunxi_drm_gem.h"
 
+struct pixel_info_t {
+	enum disp_pixel_format format;
+	unsigned char plane;
+	unsigned char plane_bpp[3];
+	unsigned char wscale[3];
+	unsigned char hscale[3];
+	bool    swap_uv;
+};
+
 struct sunxi_drm_plane {
 	struct drm_plane	drm_plane;
 	struct drm_framebuffer *old_fb;
@@ -33,13 +42,15 @@ struct sunxi_drm_plane {
 #define to_sunxi_plane(x)	\
 	container_of(x, struct sunxi_drm_plane, drm_plane)
 uint32_t disp_to_drm_format(enum disp_pixel_format format);
+bool drm_to_disp_format(struct pixel_info_t *pixel_info, uint32_t format);
+
 int sunxi_set_fb_plane(struct drm_crtc *crtc,
 	unsigned int plane_id, unsigned int zoder);
 
 struct drm_plane *sunxi_plane_init(struct drm_device *dev,
 	struct drm_crtc *crtc,
-	struct disp_layer_config_data *cfg,
-	int chn, int plane_id, bool priv);
+	struct disp_layer_config_data *cfg, int plane_id,
+	int chn, int layer_id, bool priv);
 
 int sunxi_update_plane(struct drm_plane *plane, struct drm_crtc *crtc,
 	struct drm_framebuffer *fb, int crtc_x, int crtc_y,

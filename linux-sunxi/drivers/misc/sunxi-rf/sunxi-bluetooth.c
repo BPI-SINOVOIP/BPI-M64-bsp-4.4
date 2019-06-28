@@ -186,7 +186,7 @@ static int sunxi_bt_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 	}
-	dev_info(dev, "bt_power_num (%d)\n", val);
+	dev_info(dev, "bt_power_num (%u)\n", val);
 
 	data->bt_power_name =
 	    devm_kzalloc(dev, (data->power_num) * sizeof(char *), GFP_KERNEL);

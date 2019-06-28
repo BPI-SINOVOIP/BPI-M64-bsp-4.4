@@ -195,6 +195,16 @@ static struct snd_soc_dai_driver sunxi_hdmi_codec_dai = {
 				| SNDRV_PCM_FMTBIT_S24_LE
 				| SNDRV_PCM_FMTBIT_S32_LE,
 	},
+	.capture	= {
+		.stream_name	= "Capture",
+		.channels_min	= 1,
+		.channels_max	= 8,
+		.rates		= SNDRV_PCM_RATE_8000_192000
+				| SNDRV_PCM_RATE_KNOT,
+		.formats	= SNDRV_PCM_FMTBIT_S16_LE
+				| SNDRV_PCM_FMTBIT_S24_LE
+				| SNDRV_PCM_FMTBIT_S32_LE,
+	},
 	.ops			= &sunxi_hdmi_dai_ops,
 };
 

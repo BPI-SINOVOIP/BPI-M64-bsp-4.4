@@ -518,8 +518,7 @@ static void sid_chipid_init(void)
 void sid_rd_soc_secure_status(void)
 {
 #if defined(CONFIG_TEE) && \
-	(defined(CONFIG_ARCH_SUN8IW7) || defined(CONFIG_ARCH_SUN50IW1) \
-	 || defined(CONFIG_ARCH_SUN8IW6))
+	(defined(CONFIG_ARCH_SUN8IW7) || defined(CONFIG_ARCH_SUN8IW6))
 	sunxi_soc_secure = 1;
 #else
 	static s32 init_flag;
@@ -529,15 +528,17 @@ void sid_rd_soc_secure_status(void)
 
 	if (init_flag == 1) {
 		SID_DBG("It's already inited.\n");
+		printk("It's already inited.\n");
 		return;
 	}
 
-	if (sid_get_base(&node, &base, reg->compatile, 0))
+	if (sid_get_base(&node, &base, reg->compatile, 1))
 		return;
 
-	sunxi_soc_secure = ((readl(base + reg->offset))>>reg->shift)&reg->mask;
+	sunxi_soc_secure = ((sunxi_smc_readl((phys_addr_t)(base + reg->offset)))
+			>> reg->shift) & reg->mask;
 
-	sid_put_base(node, base, 0);
+	sid_put_base(node, base, 1);
 	init_flag = 1;
 #endif
 }

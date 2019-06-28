@@ -18,6 +18,17 @@ static unsigned int g_de_freq;
 static unsigned char yv12_d1_en[VI_CHN_NUM][LAYER_MAX_NUM_PER_CHN] = {{0} };
 static enum disp_csc_type s_csc_type;
 static struct disp_color	 s_color;
+int hal_debug_level;
+
+#define DE_COMMON_DEBUG(fmt, args...) \
+			do { \
+				if (hal_debug_level) \
+					printk("%s  ", __func__); \
+				if (hal_debug_level) \
+					printk(fmt, ##args); \
+			} while (0)
+
+#define de_hal_debug(fmt, args...)  DE_COMMON_DEBUG(fmt, ##args)
 
 int de_update_device_fps(unsigned int sel, u32 fps)
 {
@@ -210,7 +221,44 @@ static de_color_space __cs_transform(enum disp_color_space cs)
 	return cs_inner;
 }
 
-int de_al_lyr_apply(unsigned int screen_id, struct disp_layer_config_data *data, unsigned int layer_num, u32 device_output_type)
+int de_al_dump_lyr_apply(unsigned int screen_id,
+			struct disp_layer_config_data *data,
+			unsigned int layer_num, u32 device_output_type)
+{
+	unsigned char i;
+	struct disp_fb_info_inner  *fb;
+
+	de_hal_debug("screen_id:%d  layer_num:%d  device_output_type:%d\n",
+			screen_id, layer_num, device_output_type);
+
+	for (i = 0; i < layer_num; i++) {
+		de_hal_debug("layer_no:%d dirty_flag:%d\n", i, data[i].flag);
+		de_hal_debug("layer_config: chanel:%d layer_id:%d enable:%d\n", data[i].config.channel,
+				data[i].config.layer_id, data[i].config.enable);
+
+		de_hal_debug("layer_config-info: mode;%d zorder:%d alpha_mode:%d alpha_value:%d screen.x:%d screen.y:%d screen.width:%d screen.height:%d\n",
+			data[i].config.info.mode, data[i].config.info.zorder, data[i].config.info.alpha_mode, data[i].config.info.alpha_value,
+			data[i].config.info.screen_win.x, data[i].config.info.screen_win.y, data[i].config.info.screen_win.width, data[i].config.info.screen_win.height);
+		de_hal_debug("layer_config-info: b_trd_out:%d  out_trd_mode:%d id:%d\n", data[i].config.info.b_trd_out, data[i].config.info.out_trd_mode, data[i].config.info.id);
+
+		fb = &data[i].config.info.fb;
+		if (!fb->dmabuf)
+			de_hal_debug("No dmabuf!\n");
+		de_hal_debug("addr:0x%llx  0x%llx 0x%llx\n", fb->addr[0], fb->addr[1], fb->addr[2]);
+		de_hal_debug("x-y:%d  %d   x-y:%d %d  x-y:%d %d", fb->size[0].width, fb->size[0].height, fb->size[1].width,  fb->size[1].height,
+			fb->size[2].width, fb->size[2].height);
+		de_hal_debug("framebuffer: fd:0x%x dmabuf:%ld format:%d color_space:%d pre_mul:%d crop.x:%lld crop.y:%lld crop.width:%lld crop.height:%lld\n",
+			fb->fd, (unsigned long)fb->dmabuf, fb->format, fb->color_space, fb->pre_multiply, fb->crop.x, fb->crop.y, fb->crop.width, fb->crop.height);
+		de_hal_debug("flags:%d scan:%d eotf:%d depth:%d fbd_en:%d\n", fb->flags, fb->scan, fb->eotf, fb->depth, fb->fbd_en);
+
+		de_hal_debug("\n\n\n\n");
+	}
+
+	return 0;
+}
+
+int de_al_lyr_apply(unsigned int screen_id, struct disp_layer_config_data *data,
+				unsigned int layer_num, u32 device_output_type)
 {
 	unsigned char i, j, k, chn, vi_chn, layno;
 	unsigned char haddr[LAYER_MAX_NUM_PER_CHN][3];
@@ -236,6 +284,7 @@ int de_al_lyr_apply(unsigned int screen_id, struct disp_layer_config_data *data,
 	static int tempIsStraightYuv = -1;
 	unsigned int color = 0;
 
+	de_al_dump_lyr_apply(screen_id, data, layer_num, device_output_type);
 	data1 = data;
 
 	chn = de_feat_get_num_chns(screen_id);
@@ -500,11 +549,45 @@ int de_al_lyr_apply(unsigned int screen_id, struct disp_layer_config_data *data,
 	return 0;
 }
 
+static void de_al_dump_mgr_apply(unsigned int screen_id,
+				struct disp_manager_data *data)
+{
+	de_hal_debug("screen_id:%d flag:%d\n", screen_id, data->flag);
+	de_hal_debug("back_color: alpha:%d red:%d green:%d blue:%d\n", data->config.back_color.alpha,
+									data->config.back_color.red,
+									data->config.back_color.green,
+									data->config.back_color.blue);
+	de_hal_debug("colorkey-max: alpha:%d red:%d green:%d blue:%d\n", data->config.ck.ck_max.alpha,
+									data->config.ck.ck_max.red,
+									data->config.ck.ck_max.green,
+									data->config.ck.ck_max.blue);
+	de_hal_debug("colorkey-min: alpha:%d red:%d green:%d blue:%d\n", data->config.ck.ck_min.alpha,
+									data->config.ck.ck_min.red,
+									data->config.ck.ck_min.green,
+									data->config.ck.ck_min.blue);
+
+	de_hal_debug("colorkey-match_rule: red:%d green:%d blue:%d\n", data->config.ck.red_match_rule,
+							    data->config.ck.green_match_rule,
+							    data->config.ck.blue_match_rule);
+	de_hal_debug("size: x:%d y:%d  width:%d height:%d\n", data->config.size.x,
+							data->config.size.y,
+							data->config.size.width,
+							data->config.size.height);
+	de_hal_debug("format:%d color_space:%d color_range:%d interlace:%d enable:%d\n",
+			data->config.cs, data->config.color_space, data->config.color_range, data->config.interlace, data->config.enable);
+	de_hal_debug("disp_device:%d hwdev_index:%d blank:%d de_freq:%d eotf:%d data_bits:%d\n",
+		data->config.disp_device, data->config.hwdev_index, data->config.blank, data->config.de_freq, data->config.eotf, data->config.data_bits);
+	de_hal_debug("\n\n\n\n");
+}
+
 int de_al_mgr_apply(unsigned int screen_id, struct disp_manager_data *data)
 {
 	struct disp_csc_config csc_cfg;
 	struct disp_csc_config csc_cfg_temp;
-	int color = (data->config.back_color.alpha << 24) | (data->config.back_color.red << 16)
+	int color;
+
+	de_al_dump_mgr_apply(screen_id, data);
+	color = (data->config.back_color.alpha << 24) | (data->config.back_color.red << 16)
 	| (data->config.back_color.green << 8) | (data->config.back_color.blue << 0);
 
 	s_color.alpha = data->config.back_color.alpha;
@@ -585,6 +668,7 @@ int de_al_init(struct disp_bsp_init_para *para)
 	int i;
 	int num_screens = de_feat_get_num_devices();
 
+	de_hal_debug("\n");
 	for (i = 0; i < num_screens; i++) {
 		de_rtmx_init(i, para->reg_base[DISP_MOD_DE]);
 		de_vsu_init(i, para->reg_base[DISP_MOD_DE]);

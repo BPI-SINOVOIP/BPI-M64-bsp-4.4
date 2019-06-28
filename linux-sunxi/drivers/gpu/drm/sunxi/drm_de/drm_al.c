@@ -64,6 +64,59 @@ int sunxi_drm_get_plane_by_crtc(int crtc)
 	return de_feat_get_num_layers(crtc);
 }
 
+/*For writeback capture*/
+int sunxi_drm_al_wbcapture_init(unsigned int crtc)
+{
+#ifdef CONFIG_ARCH_SUN50IW1P1
+	de_clk_enable(DE_CLK_WB);
+	WB_EBIOS_DeReset(crtc);
+#else
+	pr_info("error compile");
+#endif
+	return 0;
+}
+
+int sunxi_drm_al_wbcapture_exit(unsigned int crtc)
+{
+#ifdef CONFIG_ARCH_SUN50IW1P1
+	WB_EBIOS_Reset(crtc);
+	de_clk_disable(DE_CLK_WB);
+#else
+	pr_info("error compile");
+#endif
+	return 0;
+}
+
+int sunxi_drm_al_wbcapture_sync(unsigned int crtc)
+{
+#ifdef CONFIG_ARCH_SUN50IW1P1
+	WB_EBIOS_Update_Regs(crtc);
+	WB_EBIOS_Writeback_Enable(crtc, 1);
+#else
+	pr_info("error compile");
+#endif
+	return 0;
+}
+
+int sunxi_drm_al_wbcapture_apply(unsigned int crtc,
+			struct disp_capture_config *cfg)
+{
+#ifdef CONFIG_ARCH_SUN50IW1P1
+	return WB_EBIOS_Apply(crtc, cfg);
+#else
+	pr_info("error compile");
+#endif
+}
+
+int sunxi_drm_al_wbcapture_get_status(unsigned int crtc)
+{
+#ifdef CONFIG_ARCH_SUN50IW1P1
+	return WB_EBIOS_Get_Status(crtc);
+#else
+	pr_info("error compile");
+#endif
+}
+
 int sunxi_drm_updata_reg(int crtc)
 {
 	return de_al_mgr_update_regs(crtc);
@@ -82,6 +135,15 @@ int sunxi_drm_apply_cache(int crtc, struct disp_manager_data *data)
 void sunxi_drm_updata_crtc(struct sunxi_drm_crtc *sunxi_crtc,
 	struct sunxi_drm_connector *sunxi_connector)
 {
+	int i;
+	struct disp_layer_config_data *config = sunxi_crtc->plane_cfgs;
+	for (i = 0; i < sunxi_crtc->plane_of_de; i++) {
+		if (!config->config.enable && !(config->flag & LAYER_ATTR_DIRTY)) {
+			config->flag |= LAYER_ATTR_DIRTY;
+			}
+		config++;
+	}
+
 #ifdef CONFIG_ARCH_SUN8IW11
 	(void)sunxi_connector;
 	de_al_lyr_apply(sunxi_crtc->crtc_id, sunxi_crtc->plane_cfgs,
@@ -91,6 +153,16 @@ void sunxi_drm_updata_crtc(struct sunxi_drm_crtc *sunxi_crtc,
 	de_al_lyr_apply(sunxi_crtc->crtc_id, sunxi_crtc->plane_cfgs,
 		sunxi_crtc->plane_of_de, sunxi_connector->disp_out_type);
 #endif
+
+	config = sunxi_crtc->plane_cfgs;
+	for (i = 0; i < sunxi_crtc->plane_of_de; i++) {
+		if (config->config.enable) {
+			config->flag &= ~LAYER_ATTR_DIRTY;
+			config->config.enable = 0;
+		}
+		config++;
+	}
+
 }
 
 void sunxi_updata_crtc_freq(unsigned long rate)

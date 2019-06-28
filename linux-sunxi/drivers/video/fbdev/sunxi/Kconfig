@@ -17,7 +17,6 @@ config FB_CONSOLE_SUNXI
 config DISP2_SUNXI
 	tristate "DISP Driver Support(sunxi-disp2)"
 	depends on (ARCH_SUNXI)
-	select BACKLIGHT_CLASS_DEVICE
 	default n
 	---help---
 	  Display driver for sunxi based boards.

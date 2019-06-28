@@ -406,7 +406,7 @@ static int sunxi_mmc_mchk_r1_rdy(char *reg, int to_ns)
 {
 	int i = 0;
 	/*wait busy over*/
-	for (i = 0; i < to_ns; i++){
+	for (i = 0; i < to_ns; i++) {
 		if (!(mmc_mreadl(reg, REG_STAS) & SDXC_CARD_DATA_BUSY))
 			break;
 		ndelay(1);
@@ -421,7 +421,7 @@ static int sunxi_mmc_mchk_r1_rdy(char *reg, int to_ns)
 
 
 static int sunxi_mmc_raw_write(char *reg, u32 sec_addr,
-        u32 sec_cnt, const char *inbuf)
+			u32 sec_cnt, const char *inbuf)
 {
 	u32 cmd_val, ri;
 	u32 rval;
@@ -433,7 +433,7 @@ static int sunxi_mmc_raw_write(char *reg, u32 sec_addr,
 
 	/**cmd seting**/
 	cmd_val = SDXC_START | SDXC_RESP_EXPECT \
-				| SDXC_CHECK_RESPONSE_CRC |SDXC_DATA_EXPECT\
+				| SDXC_CHECK_RESPONSE_CRC | SDXC_DATA_EXPECT\
 				| SDXC_WRITE | SDXC_SEND_AUTO_STOP
 				| SDXC_WAIT_PRE_OVER | MMC_WRITE_MULTIPLE_BLOCK;
 	mmc_mwritel(reg, REG_CARG, sec_addr);
@@ -521,7 +521,7 @@ eout:
 
 
 static int sunxi_mmc_raw_half_write(char *reg, u32 sec_addr,
-        u32 sec_cnt, u32 stp_wd, const char *inbuf)
+				u32 sec_cnt, u32 stp_wd, const char *inbuf)
 {
 	u32 cmd_val, ri;
 	u32 rval;
@@ -532,7 +532,7 @@ static int sunxi_mmc_raw_half_write(char *reg, u32 sec_addr,
 
 	/**cmd seting**/
 	cmd_val = SDXC_START | SDXC_RESP_EXPECT \
-				| SDXC_CHECK_RESPONSE_CRC |SDXC_DATA_EXPECT\
+				| SDXC_CHECK_RESPONSE_CRC | SDXC_DATA_EXPECT\
 				| SDXC_WRITE | SDXC_SEND_AUTO_STOP
 				| SDXC_WAIT_PRE_OVER | MMC_WRITE_MULTIPLE_BLOCK;
 	mmc_mwritel(reg, REG_CARG, sec_addr);
@@ -637,20 +637,20 @@ static void sunxi_mmc_raw_stop(char *reg)
 	do {
 		ri = mmc_mreadl(reg, REG_RINTR);
 		if (ri & (SDXC_COMMAND_DONE |
-                    (SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR)))
+					(SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR)))
 			break;
 		ndelay(1);
 	} while ((i++) < MWR_TO_NS);
 
 	if (!(ri & SDXC_COMMAND_DONE) ||
-            (ri & (SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR))) {
+				(ri & (SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR))) {
 		ri = mmc_mreadl(reg, REG_RINTR);
 		if (!(ri & SDXC_COMMAND_DONE) ||
-                (ri & (SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR))) {
+					(ri & (SDXC_INTERRUPT_ERROR_BIT|SDXC_DAT_STARV_ERR))) {
 			mmcdbg("send  manual stop command failed, %x\n", ri);
 		} else {
 			mmcdbg("send manual stop command ok\n");
-        }
+			}
 	} else
 		mmcdbg("send manual stop command ok\n");
 
@@ -659,7 +659,7 @@ static void sunxi_mmc_raw_stop(char *reg)
 }
 
 static int sunxi_mmc_raw_read(char *reg, u32 sec_addr,
-        u32 sec_cnt, char *outbuf)
+			u32 sec_cnt, char *outbuf)
 {
 	u32 cmd_val, ri;
 	u32 rval;
@@ -710,7 +710,7 @@ static int sunxi_mmc_raw_read(char *reg, u32 sec_addr,
 	do {
 		/*wait data not full*/
 		for (to = 0; to < MWR_TO_NS; to++) {
-			if(!(mmc_mreadl(reg, REG_STAS)
+			if (!(mmc_mreadl(reg, REG_STAS)
 				& SDXC_FIFO_EMPTY))
 				break;
 			ri = mmc_mreadl(reg, REG_RINTR);
@@ -845,7 +845,7 @@ int sunxi_mmc_panic_read(u32 sec_addr, u32 sec_cnt, char *outbuf)
 	u32 cmd_val = 0;
 
 	BUG_ON(outbuf == NULL);
-	if (!ghost_base_reg || !gccmu_base_reg){
+	if (!ghost_base_reg || !gccmu_base_reg) {
 		mmcerr("host,ccmu reg has not init\n");
 		return MWR_RFAIL;
 	}
@@ -887,7 +887,7 @@ int sunxi_mmc_panic_write(u32 sec_addr, u32 sec_cnt, const char *inbuf)
 	}
 
 	ret = sunxi_mmc_raw_wcmd_clr(reg, &cmd_val);
-	if(ret)
+	if (ret)
 		return ret;
 
 	if (cmd_val & SDXC_DATA_EXPECT)
@@ -932,11 +932,11 @@ void sunxi_mmc_panic_exit(void)
 
 ssize_t
 sunxi_mmc_panic_rtest(struct device *dev,
-        struct device_attribute *attr, char *buf)
+			struct device_attribute *attr, char *buf)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mmc_host	*mmc = platform_get_drvdata(pdev);
-	char *rxbuf= kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
+	char *rxbuf = kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
 	int ret = 0;
 
 	printk("Start panic read test\n");
@@ -960,8 +960,8 @@ sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mmc_host	*mmc = platform_get_drvdata(pdev);
-	char *rxbuf= kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
-	char *mwr_tsdat= kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
+	char *rxbuf = kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
+	char *mwr_tsdat = kzalloc(SUNXI_TEST_SIZE, GFP_KERNEL);
 	int sc = 0;
 	int i = 0;
 	char *reg = NULL;
@@ -969,7 +969,7 @@ sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
 		goto out;
 
 	mmcinfo(KERN_INFO "Start test sec %d\n", sc);
-	for(i = 0; i < (SUNXI_TEST_SIZE/512); i++){
+	for (i = 0; i < (SUNXI_TEST_SIZE/512); i++) {
 		memcpy(mwr_tsdat+i*512, mtsdat, 512);
 	}
 
@@ -977,13 +977,13 @@ sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
 	sunxi_mmc_panic_init();
 	reg = ghost_base_reg;
 	mmcinfo("***Test normal w/r***\n");
-	buf_dumphex32("test data", mwr_tsdat,SUNXI_TEST_SIZE);
+	buf_dumphex32("test data", mwr_tsdat, SUNXI_TEST_SIZE);
 	mmcdbg("Write test data\n");
 	sunxi_mmc_panic_write(sc, SUNXI_TEST_SIZE/512, mwr_tsdat);
 	mmcdbg("Read test data\n");
 	sunxi_mmc_panic_read(sc, SUNXI_TEST_SIZE/512, rxbuf);
-	buf_dumphex32("read data from mmc after write", rxbuf,SUNXI_TEST_SIZE);
-	if(memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0){
+	buf_dumphex32("read data from mmc after write", rxbuf, SUNXI_TEST_SIZE);
+	if (memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0) {
 		mmcinfo("write read failed\n");
 		goto out;
 	}
@@ -997,7 +997,7 @@ sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
 	buf_dumphex32("half read data", rxbuf, SUNXI_TEST_SIZE);
 	sunxi_mmc_panic_read(sc, SUNXI_TEST_SIZE/512, rxbuf);
 	buf_dumphex32("read test data", rxbuf, SUNXI_TEST_SIZE);
-	if(memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0){
+	if (memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0) {
 		mmcinfo("half read compare failed\n");
 		goto out;
 	}
@@ -1005,11 +1005,11 @@ sunxi_mmc_pancic_wrtest(struct device *dev, struct device_attribute *attr,
 
 
 	mmcinfo("\n***test half write***\n");
-	memset(rxbuf,0,SUNXI_TEST_SIZE);
+	memset(rxbuf, 0, SUNXI_TEST_SIZE);
 	sunxi_mmc_raw_half_write(reg, sc, SUNXI_TEST_SIZE/512, 160, mwr_tsdat);
 	sunxi_mmc_panic_read(sc, SUNXI_TEST_SIZE/512, rxbuf);
-	buf_dumphex32("read half test data",rxbuf, SUNXI_TEST_SIZE);
-	if(memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0){
+	buf_dumphex32("read half test data", rxbuf, SUNXI_TEST_SIZE);
+	if (memcmp(mwr_tsdat, rxbuf, SUNXI_TEST_SIZE) != 0) {
 		mmcinfo("half write compare failed\n");
 		return count;
 	}

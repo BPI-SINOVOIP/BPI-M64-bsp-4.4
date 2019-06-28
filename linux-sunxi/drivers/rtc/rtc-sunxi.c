@@ -41,8 +41,8 @@ static void __iomem *global_pgregbase;
 
 static struct sunxi_rtc_data_year data_year_param[] = {
 	[0] = {
-		.min		= 2010,
-		.max		= 2073,
+		.min		= 2018,
+		.max		= 2081,
 		.mask		= 0x3f,
 		.yshift		= 16,
 		.leap_shift	= 22,
