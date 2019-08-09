@@ -13,6 +13,63 @@
 
 static char andr_tmp_str[ANDR_BOOT_ARGS_SIZE + 1];
 
+#ifdef CONFIG_OF_LIBUFDT
+int dtbo_idx[10];
+int strtoint(char *str)
+{
+	char *p = str;
+	int val = 0;
+	while (*p != '\0') {
+		val = val * 10 + (*p - '0');
+		p++;
+	}
+	return val;
+}
+void get_andriod_dtbo_idx(const char *cmdline, const char *name)
+{
+	char value[10] = {0};
+	char *p = NULL;
+	int i = 0;
+	int count = 0;
+
+	if (cmdline == NULL) {
+		printf("%s cmdline is NULL", __func__);
+		return;
+	}
+	memset((void *)dtbo_idx, 0xf5, sizeof(dtbo_idx));
+	p = (char *)cmdline;
+	while (*p != '\0') {
+		if (*p++ == ' ') {
+			if (!strncmp(p, name, strlen(name))) {
+				p += strlen(name);
+				if (*p++ != '=') {
+					continue;
+				}
+				while ((*p != '\0') && (*p != ' ')) {
+					if (*p != ',') {
+						value[i] = *p;
+						i++;
+					} else {
+						value[i] = '\0';
+						i = 0;
+						dtbo_idx[count] = strtoint(value);
+						printf("dtbo_idx= %d\n", dtbo_idx[count]);
+						count++;
+					}
+					p++;
+				}
+				value[i] = '\0';
+				i = 0;
+				dtbo_idx[count] = strtoint(value);
+				printf("dtbo_idx= %d\n", dtbo_idx[count]);
+				return;
+			}
+		}
+	}
+	printf("%s  can't find", name);
+	return;
+}
+#endif
 
 /**
  * android_image_get_kernel() - processes kernel part of Android boot images
@@ -38,6 +95,9 @@ int android_image_get_kernel(const struct andr_img_hdr *hdr, int verify,
 	 * sha1 (or anything) so we don't check it. It is not obvious that the
 	 * string is null terminated so we take care of this.
 	 */
+#ifdef CONFIG_OF_LIBUFDT
+	get_andriod_dtbo_idx(hdr->cmdline, ANDR_BOOT_DTBO_MAIGC);
+#endif
 	strncpy(andr_tmp_str, hdr->name, ANDR_BOOT_NAME_SIZE);
 	andr_tmp_str[ANDR_BOOT_NAME_SIZE] = '\0';
 	if (strlen(andr_tmp_str))

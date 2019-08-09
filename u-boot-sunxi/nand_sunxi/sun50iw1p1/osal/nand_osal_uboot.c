@@ -33,9 +33,9 @@
 //#define get_wvalue(addr)	(*((volatile unsigned long  *)(addr)))
 //#define put_wvalue(addr, v)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 #define  NAND_DRV_VERSION_0		0x03
-#define  NAND_DRV_VERSION_1		0x5022
-#define  NAND_DRV_DATE			0x20180918
-#define  NAND_DRV_TIME			0x16891444
+#define  NAND_DRV_VERSION_1		0x5026
+#define  NAND_DRV_DATE			0x20190218
+#define  NAND_DRV_TIME			0x16891750
 
 
 extern int sunxi_get_securemode(void);

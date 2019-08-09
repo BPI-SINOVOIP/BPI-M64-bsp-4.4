@@ -43,7 +43,7 @@ progressbar_t   progress;
 *
 ************************************************************************************************************
 */
-uint sprite_cartoon_progressbar_create(int x1, int y1, int x2, int y2)
+uint sprite_cartoon_progressbar_create(int x1, int y1, int x2, int y2, int op)
 {
 	progressbar_t *progress = NULL;
 	int tmp;
@@ -55,6 +55,7 @@ uint sprite_cartoon_progressbar_create(int x1, int y1, int x2, int y2)
 
 		return 0;
 	}
+	progress->direction_option = op;
 	if(x1 > x2)
 	{
 		tmp = x1;
@@ -112,8 +113,26 @@ int sprite_cartoon_progressbar_config(uint p, int frame_color, int progress_colo
 	progress->progress_color = progress_color;
 	progress->progress_ratio = 0;
 	progress->thick          = thickness;
-	progress->st_x	 		 = progress->pr_x = progress->x1 + thickness;
-	progress->st_y	 		 = progress->pr_y = progress->y1 + thickness;
+	switch (progress->direction_option) {
+	case 0:
+		progress->st_x = progress->pr_x = progress->x1 + thickness;
+		progress->st_y = progress->pr_y = progress->y1 + thickness;
+		break;
+	case 1:
+		progress->st_x = progress->pr_x = progress->x2 + thickness;
+		progress->st_y = progress->pr_y = progress->y1 + thickness;
+		break;
+	case 2:
+		progress->st_x = progress->pr_x = progress->x1 + thickness;
+		progress->st_y = progress->pr_y = progress->y1 + thickness;
+		break;
+	case 3:
+		progress->st_x = progress->pr_x = progress->x1 + thickness;
+		progress->st_y = progress->pr_y = progress->y2 + thickness;
+		break;
+	default:
+		break;
+	}
 
 	return 0;
 }
@@ -209,8 +228,8 @@ int sprite_cartoon_progressbar_upgrate(uint p, int rate)
 	progressbar_t *progress = (progressbar_t *)p;
 	int base_color, progresscolor;
 	int pixel;
-	int x1, y1;
-	int x2, y2;
+	int x1 = 0, y1 = 0;
+	int x2 = 0, y2 = 0;
 
 	if((rate < 0) || (rate > 100))
 	{
@@ -222,24 +241,53 @@ int sprite_cartoon_progressbar_upgrate(uint p, int rate)
 		printf("sprite_cartoon ui progressbar: invalid progressbar pointer\n");
 		return -1;
 	}
-	pixel = (rate * (progress->width - progress->thick*2)/100);
+	if (progress->direction_option <= 1)
+		pixel = (rate * (progress->width - progress->thick*2)/100);
+	else
+		pixel = (rate * (progress->height - progress->thick*2)/100);
 	if(rate == progress->progress_ratio)
 	{
 		return 0;
 	}
 	else
 	{
-		x1 = progress->pr_x;
-		x2 = progress->st_x + pixel;
-		progresscolor = (rate > progress->progress_ratio)?(progress->progress_color):(SPRITE_CARTOON_GUI_BLACK);
-		progress->pr_x  = x2;
-		progress->progress_ratio = rate;
+		if (progress->direction_option <= 1) {
+			x1 = progress->pr_x;
+			if (progress->direction_option % 2)
+				x2 = progress->st_x - pixel;
+			else
+				x2 = progress->st_x + pixel;
+			progresscolor = (rate > progress->progress_ratio)
+					    ? (progress->progress_color)
+					    : (SPRITE_CARTOON_GUI_BLACK);
+			progress->pr_x  = x2;
+			progress->progress_ratio = rate;
+		} else {
+			y1 = progress->pr_y;
+			if (progress->direction_option % 2)
+				y2 = progress->st_y - pixel;
+			else
+				y2 = progress->st_y + pixel;
+
+			progresscolor = (rate > progress->progress_ratio)
+					    ? (progress->progress_color)
+					    : (SPRITE_CARTOON_GUI_BLACK);
+			progress->pr_y  = y2;
+			progress->progress_ratio = rate;
+		}
 
 	}
 	base_color = sprite_cartoon_ui_get_color();
 	sprite_cartoon_ui_set_color(progresscolor);
-	y1 = progress->y1 + progress->thick;
-	y2 = progress->y2 - progress->thick;
+
+	if (progress->direction_option <= 1) {
+		y1 = progress->y1 + progress->thick;
+		y2 = progress->y2 - progress->thick;
+	} else {
+		x1 = progress->x1 + progress->thick;
+		x2 = progress->x2 - progress->thick;
+	}
+
 
 	sprite_cartoon_ui_draw_solidrectangle(x1, y1, x2, y2);
 
@@ -247,5 +295,3 @@ int sprite_cartoon_progressbar_upgrate(uint p, int rate)
 
 	return 0;
 }
-
-

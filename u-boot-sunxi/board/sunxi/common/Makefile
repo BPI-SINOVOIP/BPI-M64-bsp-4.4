@@ -46,6 +46,7 @@ obj-$(CONFIG_VIDEO_SUNXI_V3)   += de_v3.o
 obj-y += grallocator.o
 obj-$(CONFIG_BOOT_GUI)   += bootGUI/
 
+obj-$(CONFIG_TINYJPEG_DECODER)  += tinyjpegdecoder/
 ifdef CONFIG_SUNXI_MULITCORE_BOOT
 obj-y   += secondary_main.o
 endif

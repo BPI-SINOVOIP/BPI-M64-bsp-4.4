@@ -341,6 +341,16 @@ s32 edp_get_sys_config(u32 disp, struct disp_video_timings *p_info)
 	if (ret == 1)
 		g_edp_info[disp].para.edp_lane = value;
 
+	ret = disp_sys_script_get_item(primary_key, "edp_training_func", &value,
+				       1);
+	if (ret == 1)
+		g_edp_info[disp].para.edp_training_func = value;
+
+	ret = disp_sys_script_get_item(primary_key, "edp_sramble_seed", &value,
+				       1);
+	if (ret == 1)
+		g_edp_info[disp].para.edp_sramble_seed = value;
+
 	ret =
 	    disp_sys_script_get_item(primary_key, "edp_colordepth", &value, 1);
 	if (ret == 1)

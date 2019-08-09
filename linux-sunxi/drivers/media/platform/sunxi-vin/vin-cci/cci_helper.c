@@ -162,6 +162,7 @@ static int cci_sys_unregister(struct cci_driver *drv_data)
 
 static int sensor_registered(struct v4l2_subdev *sd)
 {
+#ifndef VIN_IN_UBOOT
 	int ret;
 	struct sensor_info *info = to_state(sd);
 
@@ -170,9 +171,13 @@ static int sensor_registered(struct v4l2_subdev *sd)
 	v4l2_subdev_call(sd, core, s_power, PWR_ON);
 	ret = v4l2_subdev_call(sd, core, init, 0);
 	v4l2_subdev_call(sd, core, s_power, PWR_OFF);
+
 	mutex_unlock(&info->lock);
 
 	return ret;
+#else
+	return 0;
+#endif
 }
 
 static const struct v4l2_subdev_internal_ops sensor_internal_ops = {

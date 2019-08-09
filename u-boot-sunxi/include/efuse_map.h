@@ -94,6 +94,13 @@ int sunxi_efuse_write(void *key_buf);
 */
 int sunxi_efuse_read(void *key_name, void *rd_buf, int *len);
 
+/*
+ * breif: get burning status of rotpk
+ * return value: 0-rotpk not burned
+ *               1-rotpk burned
+ */
+int sunxi_efuse_get_rotpk_status(void);
+
 /*reference this struct when call api:sunxi_efuse_write*/
 typedef struct
 {

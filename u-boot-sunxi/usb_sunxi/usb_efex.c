@@ -1038,9 +1038,16 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 					trans_data.flash_start       = trans->addr;
 					trans_data.flash_sectors     = (trans->len + 511) >> 9;
 					printf("upload boot0 flash: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
-					if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, (void *)trans_data.act_send_buffer)) {
-						printf("flash read err: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
-						trans_data.last_err      = -1;
+					if (get_boot_storage_type() == STORAGE_EMMC ||
+							get_boot_storage_type() == STORAGE_EMMC3 ||
+							get_boot_storage_type() == STORAGE_SD1 ) {
+						if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, (void *)trans_data.act_send_buffer)) {
+							printf("flash read err: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
+							trans_data.last_err      = -1;
+						}
+					} else {
+						/* TODO: fix for nand/spinor */
+						printf("not support now, skip\n");
 					}
 				} else if ((trans->type & SUNXI_EFEX_FLASH_BOOT1_TAG) == SUNXI_EFEX_FLASH_BOOT1_TAG) {
 					trans_data.act_send_buffer   = trans_data.base_send_buffer;
@@ -1048,8 +1055,15 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 					trans_data.flash_start       = trans->addr;
 					trans_data.flash_sectors     = (trans->len + 511) >> 9;
 					sunxi_usb_dbg("upload boot1 flash: start 0x%x, sectors 0x%x\n", trans_data.flash_start, trans_data.flash_sectors);
-					if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, trans_data.act_send_buffer)) {
-						trans_data.last_err      = -1;
+					if (get_boot_storage_type() == STORAGE_EMMC ||
+							get_boot_storage_type() == STORAGE_EMMC3 ||
+							get_boot_storage_type() == STORAGE_SD1 ) {
+						if (!sunxi_sprite_phyread(trans_data.flash_start, trans_data.flash_sectors, trans_data.act_send_buffer)) {
+							trans_data.last_err      = -1;
+						}
+					} else {
+						/* TODO: fix for nand/spinor */
+						printf("not support now, skip\n");
 					}
 					/*sunxi_dump(trans_data.act_send_buffer,64);*/
 				}

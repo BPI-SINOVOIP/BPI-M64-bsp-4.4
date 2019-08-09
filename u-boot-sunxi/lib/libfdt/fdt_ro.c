@@ -121,17 +121,24 @@ int fdt_path_offset(const void *fdt, const char *path)
 	const char *end = path + strlen(path);
 	const char *p = path;
 	int offset = 0;
+	char  *fdt_base = NULL;
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
-	int cpu_id = get_core_pos();
-	char  *fdt_base = (char *)working_fdt;
+	if (((char *)working_fdt != NULL) && (((unsigned int)fdt) == ((unsigned int)working_fdt))) {
+		int cpu_id = get_core_pos();
+		fdt_base = (char *)working_fdt;
 
-	FDT_CHECK_HEADER(fdt);
-	if(cpu_id)
-		fdt_base += fdt_totalsize(fdt);
+		FDT_CHECK_HEADER(fdt);
+		if(cpu_id)
+			fdt_base += fdt_totalsize(fdt);
+	} else {
+		fdt_base = (char *)fdt;
+
+		FDT_CHECK_HEADER(fdt);
+	}
 #else
-	const void *fdt_base = fdt;
+		fdt_base = (char *)fdt;
 
-	FDT_CHECK_HEADER(fdt);
+		FDT_CHECK_HEADER(fdt);
 #endif
 
 	/* see if we have an alias */

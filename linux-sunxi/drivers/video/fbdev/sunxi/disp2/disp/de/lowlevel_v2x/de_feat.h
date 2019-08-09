@@ -163,6 +163,7 @@
 #define TV_UGLY_CLK_RATE 216000000
 /* #define SUPPORT_VGA */
 #define SUPPORT_LVDS
+#define LVDS_VERSION_28
 #define DE_WB_RESET_SHARE
 /* #define LVDS_REVERT */
 #define SUPPORT_VDPO

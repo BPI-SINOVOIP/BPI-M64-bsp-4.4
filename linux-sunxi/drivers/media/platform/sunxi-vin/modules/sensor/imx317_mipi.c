@@ -197,8 +197,6 @@ static struct regval_list sensor_12b4k15_regs[] = {
 
 	{0xffff, 0x10},
 
-	{0x3000, 0x00},
-
 	{0x303E, 0x03},
 
 	{0xffff, 0x10},
@@ -348,8 +346,6 @@ static struct regval_list sensor_12b4k30_regs[] = {
 	{0x3A87, 0x00},
 
 	{0xffff, 0x10},
-
-	{0x3000, 0x00},
 
 	{0x303E, 0x03},
 
@@ -501,8 +497,6 @@ static struct regval_list sensor_10b4k50_regs[] = {
 
 	{0xffff, 0x10},
 
-	{0x3000, 0x00},
-
 	{0x303E, 0x03},
 
 	{0xffff, 0x10},
@@ -651,8 +645,6 @@ static struct regval_list sensor_10b4k60_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
-
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x10},
@@ -797,8 +789,6 @@ static struct regval_list sensor_12b4k25_regs[] = {
 	{0x3A87, 0x00},
 
 	{REG_DLY, 0x10},
-
-	{0x3000, 0x00},
 
 	{0x303E, 0x02},
 
@@ -945,8 +935,6 @@ static struct regval_list sensor_10b4k30_regs[] = {
 	{0x3A87, 0x00},
 
 	{REG_DLY, 0x10},
-
-	{0x3000, 0x00},
 
 	{0x303E, 0x02},
 
@@ -1098,8 +1086,6 @@ static struct regval_list sensor_10b4k25_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
-
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x10},
@@ -1250,8 +1236,6 @@ static struct regval_list sensor_1080p60_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
-
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x10},
@@ -1399,8 +1383,6 @@ static struct regval_list sensor_1080p30_regs[] = {
 	{0x3A87, 0x00},
 
 	{REG_DLY, 0x10},
-
-	{0x3000, 0x00},
 
 	{0x303E, 0x02},
 
@@ -1550,7 +1532,6 @@ static struct regval_list sensor_1080p120_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x10},
@@ -1696,7 +1677,6 @@ static struct regval_list sensor_720p180_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x07},
@@ -1840,7 +1820,6 @@ static struct regval_list sensor_540p240_regs[] = {
 
 	{REG_DLY, 0x10},
 
-	{0x3000, 0x00},
 	{0x303E, 0x02},
 
 	{REG_DLY, 0x07},
@@ -1980,7 +1959,7 @@ static struct regval_list sensor_1080p30wdr_regs[] = {
 	{0x366D, 0x17},
 	{0x3A41, 0x08},
 
-	{0x3000, 0x00},
+
 	{0x303E, 0x02},
 	{0x30F4, 0x00},
 	{0x3018, 0xA2},
@@ -2710,6 +2689,7 @@ static int sensor_reg_init(struct sensor_info *info)
 	struct v4l2_subdev *sd = &info->sd;
 	struct sensor_format_struct *sensor_fmt = info->fmt;
 	struct sensor_win_size *wsize = info->current_wins;
+	struct sensor_exp_gain exp_gain;
 
 	ret = sensor_write_array(sd, sensor_default_regs,
 				 ARRAY_SIZE(sensor_default_regs));
@@ -2734,6 +2714,17 @@ static int sensor_reg_init(struct sensor_info *info)
 	sensor_read(sd, 0x300E, &rdval_l);
 	sensor_read(sd, 0x300F, &rdval_h);
 	imx317_sensor_svr = (rdval_h << 8) | rdval_l;
+
+	if (info->exp && info->gain) {
+		exp_gain.exp_val = info->exp;
+		exp_gain.gain_val = info->gain;
+	} else {
+		exp_gain.exp_val = 160000;
+		exp_gain.gain_val = 32;
+	}
+	sensor_s_exp_gain(sd, &exp_gain);
+
+	sensor_write(sd, 0x3000, 0); /*sensor mipi stream on*/
 
 	sensor_dbg("s_fmt set width = %d, height = %d\n", wsize->width,
 		     wsize->height);

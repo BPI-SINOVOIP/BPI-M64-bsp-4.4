@@ -252,7 +252,7 @@ void sunxi_board_close_source(void)
 	/* timer_exit should be call after sunxi_flash,because delay function */
 	sunxi_flash_exit(1);
 	sunxi_sprite_exit(1);
-#ifdef CONFIG_SUNXI_DMA
+#if defined(CONFIG_SUNXI_DMA) && !defined(CONFIG_SUNXI_BOOT_TONE)
 	sunxi_dma_exit();
 #endif
 	timer_exit();

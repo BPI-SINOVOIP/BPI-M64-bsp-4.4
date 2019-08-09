@@ -16,10 +16,10 @@
 /*#define DRQSRC_DAUDIO_2_RX	6*/
 #define DRQSRC_DAUDIO_2_RX	27
 #define DRQSRC_NAND0		5
-#define DRQSRC_UART0RX		6
-#define DRQSRC_UART1RX		7
-#define DRQSRC_UART2RX		8
-#define DRQSRC_UART3RX		9
+#define DRQSRC_UART0_RX		6
+#define DRQSRC_UART1_RX		7
+#define DRQSRC_UART2_RX		8
+#define DRQSRC_UART3_RX		9
 #define DRQSRC_SS_RX		16
 #define DRQSRC_OTG_EP1		17
 /* #define DRQSRC_RESEVER	18 */

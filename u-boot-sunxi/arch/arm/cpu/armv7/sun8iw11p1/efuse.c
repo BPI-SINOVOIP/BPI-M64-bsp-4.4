@@ -121,37 +121,23 @@ static uint sid_read_key(uint key_index)
 *
 ************************************************************************************************************
 */
-void sid_set_security_mode(void)
+void sid_write_customer_id (void)
 {
-    uint reg_val;
+	 uint reg_val;
+	 int val = 0x2D;
 
-    reg_val  = sid_read_key(EFUSE_LCJS);
-    reg_val |= (0x1<<11);		//使能securebit
-    sid_program_key(EFUSE_LCJS, reg_val);
-    reg_val = (sid_read_key(EFUSE_LCJS) >> 11) & 1;
+	 reg_val = sid_read_key(EFUSE_CUSTOMER_ID);
+	 if (reg_val == 0) {
+		 sid_program_key(EFUSE_CUSTOMER_ID, val);
+	}
 
-    return;
-}
-/*
-************************************************************************************************************
-*
-*                                             function
-*
-*    name          :
-*
-*    parmeters     :
-*
-*    return        :
-*
-*    note          :
-*
-*
-************************************************************************************************************
-*/
-int sid_probe_security_mode(void)
-{
-	return ((sid_read_key(EFUSE_LCJS)>>11) & 1);
-}
+	reg_val = sid_read_key(EFUSE_CUSTOMER_ID);
+	if (reg_val != val) {
+		printf("write customer id err0 =%d\n", reg_val);
+	}
 
-
-
+	if (reg_val == val) {
+		printf("write customer id sucess =%d\n", reg_val);
+	}
+	return;
+ }

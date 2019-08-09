@@ -10,7 +10,7 @@
 #include "./lowlevel_sun8iw10/disp_al.h"
 #elif defined(CONFIG_ARCH_SUN8IW11P1) || defined(CONFIG_ARCH_SUN8IW15P1)
 #include "./lowlevel_v2x/disp_al.h"
-#elif defined(CONFIG_ARCH_SUN8IW12P1)
+#elif defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
 #include "./lowlevel_v2x/disp_al.h"
 #elif defined(CONFIG_ARCH_SUN8IW17P1)
 #include "./lowlevel_v2x/disp_al.h"

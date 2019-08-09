@@ -1090,167 +1090,146 @@ int NAND_Uboot_Force_Erase(void)
 	return 0;
 }
 
-__s32  read_boot0_1k_mode( __u32 Boot0_buf )
+int read_boot0_1k_mode(void *Boot0_buf, unsigned int len)
 {
 	__u32 i, j, k;
-	//    __u32 length;
 	__u32 pages_per_block;
 	__u32 copies_per_block;
-	__u8  oob_buf[32];
-	struct boot_physical_param  para;
+	__u8 oob_buf[32];
+	void *page_buf;
+	int length = (int)len;
+	struct boot_physical_param para;
 
 	printf("read boot0 normal mode!\n");
 
-	for(i=0;i<32;i++)
-		oob_buf[i] = 0xff;
+	memset(oob_buf, 0xff, 32);
 
 	NAND_GetVersion(oob_buf);
-	if((oob_buf[0]!=0xff)||(oob_buf[1]!= 0x00))
-	{
+	if((oob_buf[0] != 0xff) || (oob_buf[1] != 0x00)) {
 		printf("get flash driver version error!");
-		goto error;
+		return -1;
 	}
 
-	/* 检查 page count */
+	/* check page count */
 	pages_per_block = NAND_GetPageCntPerBlk();
-	if(pages_per_block%64)
-	{
+	if (pages_per_block % 64) {
 		printf("get page cnt per block error %x!", pages_per_block);
-		goto error;
+		return -1;
 	}
-
 	/* cal copy cnt per bock */
 	copies_per_block = pages_per_block / NAND_BOOT0_PAGE_CNT_PER_COPY;
 
-	/* burn boot0 copys */
-	for( i = NAND_BOOT0_BLK_START;  i < (NAND_BOOT0_BLK_START + NAND_BOOT0_BLK_CNT);  i++ )
-	{
-		printf("boot0 %x \n", i);
+	/* allocate one page buffer */
+	page_buf = malloc(NAND_GetPageSize());
+	if (!page_buf) {
+		printf("allocate buffer for page failed\n");
+		return -1;
+	}
 
-		para.chip  = 0;
+	/* read boot0 copys */
+	i = NAND_BOOT0_BLK_START;
+	for (; i < NAND_BOOT0_BLK_START + NAND_BOOT0_BLK_CNT; i++) {
+		printf("boot0 block %x \n", i);
+
+		para.chip = 0;
 		para.block = i;
 
-		/* 在块中读取boot0备份 */
-		for( j = 0;  j < copies_per_block;  j++ )
-		{
-
-			for( k = 0;  k < NAND_BOOT0_PAGE_CNT_PER_COPY;  k++ )
-			{
-				para.chip  = 0;
+		/* read boot0 copy from block */
+		for (j = 0; j < copies_per_block; j++) {
+			for (k = 0; k < NAND_BOOT0_PAGE_CNT_PER_COPY; k++) {
+				para.chip = 0;
 				para.block = i;
 				para.page = j * NAND_BOOT0_PAGE_CNT_PER_COPY + k;
-				para.mainbuf = (void *) (Boot0_buf + k * 1024);
+				para.mainbuf = page_buf;
 				para.oobbuf = oob_buf;
 				para.sectorbitmap = 0x3;
-				if( PHY_SimpleRead( &para ) <0)
-				{
-					printf("Warning. Fail in reading page %d in block %d.\n", j * NAND_BOOT0_PAGE_CNT_PER_COPY + k, i );
-				}
+				if (PHY_SimpleRead(&para) < 0)
+					printf("Warning. Fail in reading page %d in block %d.\n",
+							j * NAND_BOOT0_PAGE_CNT_PER_COPY + k, i);
+				/* maybe to fix for brom that only read 1k from each page */
+				memcpy(Boot0_buf + k * 1024, page_buf,
+						length < 1024 ? length : 1024);
+				length -= 1024;
+				if (length <= 0)
+					goto out;
 			}
 		}
 	}
-	__usdelay(100);  /* fix data abort, but why here need some delay? */
-	return 0;
 
-error:
-	return -1;
+out:
+	free(page_buf);
+	return 0;
 }
 
-__s32  burn_boot0_1k_mode( __u32 Boot0_buf )
+int burn_boot0_1k_mode(void *Boot0_buf, unsigned int len)
 {
 	__u32 i, j, k;
-	//    __u32 length;
 	__u32 pages_per_block;
 	__u32 copies_per_block;
-	__u8  oob_buf[32];
-	struct boot_physical_param  para;
+	__u8 oob_buf[32];
+	struct boot_physical_param para;
 
 	printf("burn boot0 normal mode!\n");
 
-	for(i=0;i<32;i++)
-		oob_buf[i] = 0xff;
+	memset(oob_buf, 0xff, 32);
 
 	NAND_GetVersion(oob_buf);
-	if((oob_buf[0]!=0xff)||(oob_buf[1]!= 0x00))
-	{
-		printf("get flash driver version error!");
-		goto error;
+	if ((oob_buf[0] != 0xff) || (oob_buf[1] != 0x00)) {
+		printf("get flash driver version error! 0x%x 0x%x",
+				oob_buf[0], oob_buf[1]);
+		return -1;
 	}
 
-	/* 检查 page count */
+	/* check page count */
 	pages_per_block = NAND_GetPageCntPerBlk();
-	if(pages_per_block%64)
-	{
-		printf("get page cnt per block error %x!", pages_per_block);
-		goto error;
+	if (pages_per_block % 64) {
+		printf("get page cnt per block error 0x%x!", pages_per_block);
+		return -1;
 	}
 
 	/* cal copy cnt per bock */
 	copies_per_block = pages_per_block / NAND_BOOT0_PAGE_CNT_PER_COPY;
 
 	/* burn boot0 copys */
-	for( i = NAND_BOOT0_BLK_START;  i < (NAND_BOOT0_BLK_START + NAND_BOOT0_BLK_CNT);  i++ )
-	{
-		printf("boot0 %x \n", i);
+	i = NAND_BOOT0_BLK_START;
+	for (;i < NAND_BOOT0_BLK_START + NAND_BOOT0_BLK_CNT; i++) {
+		printf("boot0 block %x \n", i);
 
-		/* 擦除块 */
-		para.chip  = 0;
+		/* erase block */
+		para.chip = 0;
 		para.block = i;
-		if( PHY_SimpleErase( &para ) <0 )
-		{
+		if (PHY_SimpleErase(&para) < 0)
 			printf("Fail in erasing block %d.\n", i );
-			//continue;
-		}
 
-		/* 在块中烧写boot0备份 */
-		for( j = 0;  j < copies_per_block;  j++ )
-		{
+		/* burn boot0 copy to block */
+		for (j = 0; j < copies_per_block; j++ ) {
 
-			for( k = 0;  k < NAND_BOOT0_PAGE_CNT_PER_COPY;  k++ )
-			{
-				para.chip  = 0;
+			for (k = 0; k < NAND_BOOT0_PAGE_CNT_PER_COPY; k++) {
+				para.chip = 0;
 				para.block = i;
 				para.page = j * NAND_BOOT0_PAGE_CNT_PER_COPY + k;
-				para.mainbuf = (void *) (Boot0_buf + k * 1024);
+				para.mainbuf = (void *)(Boot0_buf + k * 1024);
 				para.oobbuf = oob_buf;
 				para.sectorbitmap = 0x3;
-				if( PHY_SimpleWrite( &para ) <0)
-				{
-					printf("Warning. Fail in writing page %d in block %d.\n", j * NAND_BOOT0_PAGE_CNT_PER_COPY + k, i );
+				if (PHY_SimpleWrite(&para) <0) {
+					printf("Warning. Fail in writing page %d in block %d.\n",
+							j * NAND_BOOT0_PAGE_CNT_PER_COPY + k, i);
 				}
 			}
 		}
 	}
 	return 0;
-
-error:
-	return -1;
 }
 
 int NAND_ReadBoot0(uint length, void *buffer)
 {
-
-	if( read_boot0_1k_mode((__u32)buffer) )
-		goto error;
-
-	return 0;
-
-error:
-	return -1;
-
+	return read_boot0_1k_mode(buffer, length);
 }
 
 int NAND_BurnBoot0(uint length, void *buffer)
 {
 
-	if( burn_boot0_1k_mode((__u32)buffer) )
-		goto error;
-
-	return 0;
-
-error:
-	return -1;
-
+	return burn_boot0_1k_mode(buffer, length);
 }
 
 __s32 read_uboot_in_one_blk(__u32 UBOOT_buf, __u32 length)

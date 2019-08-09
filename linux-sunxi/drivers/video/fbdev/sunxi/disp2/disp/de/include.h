@@ -1023,6 +1023,7 @@ struct disp_manager {
 	struct disp_smbl *smbl;
 	struct disp_enhance *enhance;
 	struct disp_capture *cptr;
+	struct disp_rotation_sw *rot_sw;
 
 	struct list_head lyr_list;
 
@@ -1273,6 +1274,24 @@ struct disp_capture {
 	/* inner interface */
 	s32 (*apply)(struct disp_capture *cptr);
 };
+
+struct disp_rotation_sw {
+	u32 disp;
+	u32 degree;
+	struct disp_rectsz screen_size; /* virtual screen_size */
+
+	struct disp_manager *manager;
+
+	s32 (*init)(struct disp_rotation_sw *rot_sw);
+	s32 (*exit)(struct disp_rotation_sw *rot_sw);
+	s32 (*set_layer_degree)(struct disp_rotation_sw *rot_sw, u32 chn, u32 lyr_id, u32 degree);
+	s32 (*get_layer_degree)(struct disp_rotation_sw *rot_sw, u32 chn, u32 lyr_id);
+	s32 (*set_manager)(struct disp_rotation_sw *rot_sw, struct disp_manager *mgr);
+	s32 (*unset_manager)(struct disp_rotation_sw *rot_sw);
+	s32 (*apply)(struct disp_rotation_sw *rot_sw, struct disp_layer_config *lyr_config, struct disp_rect src_dirty_rect);
+	s32 (*checkout)(struct disp_rotation_sw *rot_sw, struct disp_layer_config *lyr_config);
+};
+
 
 struct ee_img {
 	unsigned long addr;

@@ -96,7 +96,7 @@
 #define DMAC_DMATYPE_NORMAL                             (0)
 #define DMAC_CFG_SRC_TYPE_NAND                          (5)
 #define	DMAC_CFG_SRC_TYPE_CODEC                         (15)
-#define DMAC_CFG_TYPE_SPI0                              (24)
+#define DMAC_CFG_TYPE_SPI0                              (23)
 
 #define DMAC_CFG_TYPE_SRAM                              (0)
 #define DMAC_CFG_TYPE_DRAM                              (1)

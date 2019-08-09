@@ -79,8 +79,9 @@
 
 uint sid_read_key(uint key_index);
 void sid_program_key(uint key_index, uint key_value);
-void sid_set_security_mode(void);
-int sid_probe_security_mode(void);
-int sid_get_security_status(void);
+int sid_write_ssk(uint *dst);
+int sid_write_rotpk_hash(uint *dst);
+int handler_offline_burn_key(u32 *buf);
+void printf_key_info(void);
 
 #endif    /*  #ifndef __EFUSE_H__  */

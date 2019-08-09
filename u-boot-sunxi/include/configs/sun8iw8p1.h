@@ -223,7 +223,7 @@
 #define CONFIG_SYS_PROMPT   "sunxi#"
 #define CONFIG_SYS_CBSIZE   256         /* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE   384         /* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS  32          /* max number of command args */
+#define CONFIG_SYS_MAXARGS  64          /* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE         CONFIG_SYS_CBSIZE
@@ -449,9 +449,10 @@
 #define CONFIG_CMD_MII
 #endif
 
-/* ifdef this can change GPIO interrupt clock select */
-#define CONFIG_SUNXI_GPIO_INT_DEB
-
 /* #define CONFIG_PWM_LED */
+
+/* ifdef this can change GPIO interrupt clock select */
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+#define CONFIG_SUNXI_GPIO_INT_DEB
 
 #endif /* __CONFIG_H */

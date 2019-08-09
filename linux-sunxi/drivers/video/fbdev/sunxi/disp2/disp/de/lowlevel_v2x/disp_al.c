@@ -650,7 +650,8 @@ static struct lcd_clk_info clk_tbl[] = {
 #else
 static struct lcd_clk_info clk_tbl[] = {
 	{LCD_IF_HV, 6, 1, 1, 0},
-	{LCD_IF_CPU, 12, 1, 1, 0},
+	{LCD_IF_CPU, 10, 2, 1, 0},
+	/* {LCD_IF_CPU, 12, 1, 1, 0}, */
 	{LCD_IF_LVDS, 7, 1, 1, 0},
 #if defined (DSI_VERSION_40)
 	{LCD_IF_DSI, 4, 1, 4, 1485000000},
@@ -738,6 +739,14 @@ int disp_al_lcd_get_clk_info(u32 screen_id, struct lcd_clk_info *info,
 		dsi_div /= 2;
 	} else
 		info->tcon_div = tcon_div;
+
+#if defined(DSI_VERSION_28)
+	if (panel->lcd_if == LCD_IF_DSI &&
+	    panel->lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE) {
+		info->tcon_div = 6;
+		dsi_div = 6;
+	}
+#endif
 
 	info->lcd_div = lcd_div;
 	info->dsi_div = dsi_div;
@@ -956,7 +965,7 @@ int disp_al_lcd_tri_busy(u32 screen_id, struct disp_panel_para *panel)
 /* take dsi irq s32o account, todo? */
 int disp_al_lcd_tri_start(u32 screen_id, struct disp_panel_para *panel)
 {
-#if defined(SUPPORT_DSI)
+#if defined(SUPPORT_DSI) && defined(DSI_VERSION_40)
 	if (panel->lcd_if == LCD_IF_DSI)
 		dsi_tri_start(screen_id);
 #endif

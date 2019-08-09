@@ -102,6 +102,7 @@ extern struct disp_layer *disp_get_layer_1(u32 disp, u32 layer_id);
 extern struct disp_smbl *disp_get_smbl(u32 disp);
 extern struct disp_enhance *disp_get_enhance(u32 disp);
 extern struct disp_capture *disp_get_capture(u32 disp);
+extern struct disp_rotation_sw *disp_get_rotation_sw(u32 disp);
 
 extern s32 disp_delay_ms(u32 ms);
 extern s32 disp_delay_us(u32 us);
@@ -131,6 +132,7 @@ extern s32 disp_init_smbl(struct disp_bsp_init_para *para);
 extern s32 disp_exit_smbl(void);
 extern s32 disp_init_capture(struct disp_bsp_init_para *para);
 extern s32 disp_exit_capture(void);
+extern s32 disp_init_rotation_sw(struct disp_bsp_init_para *para);
 
 extern s32 disp_init_eink(struct disp_bsp_init_para *para);
 extern s32 disp_exit_eink(void);

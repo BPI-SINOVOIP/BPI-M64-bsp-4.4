@@ -669,6 +669,11 @@ clocks {
 		};
 
 /*cpus space clocks from PRCM-SPEC*/
+		clk_cpurtwi1: cpurtwi1 {
+			#clock-cells = <0>;
+			compatible = "allwinner,periph-cpus-clock";
+			clock-output-names = "cpurtwi1";
+		};
 		clk_cpurcir: cpurcir {
 			#clock-cells = <0>;
 			compatible = "allwinner,periph-cpus-clock";

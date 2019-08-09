@@ -764,8 +764,8 @@ static int sunxi_pinctrl_gpio_of_xlate(struct gpio_chip *gc,
 		config = (struct gpio_config *)flags;
 		config->gpio = base + gpiospec->args[1];
 		config->mul_sel = gpiospec->args[2];
-		config->drv_level = gpiospec->args[3];
-		config->pull = gpiospec->args[4];
+		config->pull = gpiospec->args[3];
+		config->drv_level = gpiospec->args[4];
 		config->data = gpiospec->args[5];
 	}
 
@@ -1732,6 +1732,26 @@ static void sunxi_pinctrl_debugfs(void)
 
 }
 #endif
+
+static int sunxi_pinctrl_int_clk_set(struct device_node *np, struct sunxi_pinctrl *pctl)
+{
+	int ret = 0;
+	int i;
+	u32 *value = NULL;
+	value = devm_kzalloc(pctl->dev, pctl->desc->irq_banks * 2, GFP_KERNEL);
+	ret = of_property_read_u32_array(np, "int_clk", value, pctl->desc->irq_banks * 2);
+	if (ret) {
+		dev_warn(pctl->dev,"cann't found int_clk property");
+	}
+	for (i = 0; i < pctl->desc->irq_banks; i++) {
+		unsigned bank_base = pctl->desc->irq_bank_base[i];
+		writel(value[2*i + 1],pctl->membase +
+			sunxi_irq_debounce_reg_from_bank(i, bank_base));
+	}
+	devm_kfree(pctl->dev,value);
+	return 0;
+}
+
 int sunxi_pinctrl_init(struct platform_device *pdev,
 		       const struct sunxi_pinctrl_desc *desc)
 {
@@ -1898,6 +1918,7 @@ int sunxi_pinctrl_init(struct platform_device *pdev,
 						 sunxi_pinctrl_irq_handler,
 						 pctl);
 	}
+	sunxi_pinctrl_int_clk_set(node, pctl);
 
 #ifdef CONFIG_DEBUG_FS
 	sunxi_pinctrl_debugfs();

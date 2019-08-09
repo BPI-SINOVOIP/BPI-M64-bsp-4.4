@@ -48,21 +48,13 @@ void sunxi_lcd_tcon_enable(u32 screen_id)
  * sunxi_lcd_dsi_close - stop dsi transition(will take care of dual dsi)
  * @screen_id: The index of screen.
  */
-void sunxi_lcd_dsi_close(u32 screen_id)
+void sunxi_lcd_dsi_mode_switch(u32 screen_id, u32 cmd_en, u32 lp_en)
 {
-	if (g_lcd_drv.src_ops.sunxi_lcd_dsi_close)
-		g_lcd_drv.src_ops.sunxi_lcd_dsi_close(screen_id);
+	if (g_lcd_drv.src_ops.sunxi_lcd_dsi_mode_switch)
+		g_lcd_drv.src_ops.sunxi_lcd_dsi_mode_switch(screen_id, cmd_en,
+							    lp_en);
 }
 
-/**
- * sunxi_lcd_dsi_open - start dsi transition(will take care of dual dsi)
- * @screen_id: The index of screen.
- */
-void sunxi_lcd_dsi_open(u32 screen_id)
-{
-	if (g_lcd_drv.src_ops.sunxi_lcd_dsi_open)
-		g_lcd_drv.src_ops.sunxi_lcd_dsi_open(screen_id);
-}
 /**
  * sunxi_lcd_tcon_disable - disable timing controller.
  * @screen_id: The index of screen.

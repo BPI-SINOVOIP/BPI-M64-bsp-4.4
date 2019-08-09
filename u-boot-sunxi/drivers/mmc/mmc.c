@@ -251,6 +251,18 @@ struct mmc *find_mmc_device(int dev_num)
 	return NULL;
 }
 
+int _mmc_set_block_count(struct mmc *mmc, int len)
+{
+	struct mmc_cmd cmd;
+
+	cmd.cmdidx = MMC_CMD_SET_BLOCK_COUNT;
+	cmd.resp_type = MMC_RSP_R1;
+	cmd.cmdarg = len;
+	cmd.flags = 0;
+
+	return mmc_send_cmd(mmc, &cmd, NULL);
+}
+
 static int mmc_read_blocks(struct mmc *mmc, void *dst, lbaint_t start,
 			   lbaint_t blkcnt)
 {
@@ -329,7 +341,13 @@ ulong mmc_bread(int dev_num, lbaint_t start, lbaint_t blkcnt, void *dst)
 	do {
 		cur = (blocks_todo > mmc->cfg->b_max) ?
 			mmc->cfg->b_max : blocks_todo;
-		if(mmc_read_blocks(mmc, dst, start, cur) != cur) {
+		if (!IS_SD(mmc) && (mmc->cfg->platform_caps.emmc_set_block_count == 1) && (cur > 1)) {
+			if (_mmc_set_block_count(mmc, cur)) {
+				printf("read: set block count failed!\n");
+				return 0;
+			}
+		}
+		if (mmc_read_blocks(mmc, dst, start, cur) != cur) {
 			MMCMSG(mmc, "block read failed, %s %d\n", __FUNCTION__, __LINE__);
 			return 0;
 		}
@@ -1269,6 +1287,23 @@ static int mmc_en_emmc_hw_rst(struct mmc *mmc)
 OUT:
 	return 0;
 }
+
+static int mmc_chk_emmc_hw_rst(struct mmc *mmc)
+{
+		char ext_csd[512] = {0};
+		int err;
+
+		err = mmc_send_ext_csd(mmc, ext_csd);
+		if (err) {
+			MMCINFO("mmc get extcsd fail -0\n");
+			return err;
+		}
+
+		if (ext_csd[162] & 0x1)
+			MMCINFO("Warining:hw rst already enabled!!!!!\n");
+		return  0;
+}
+
 
 static int sd_switch(struct mmc *mmc, int mode, int group, u8 value, u8 *resp)
 {
@@ -2967,8 +3002,18 @@ int mmc_init_boot(struct mmc *mmc)
 	MMCDBG("secure removal type  : 0x%x\n", mmc->secure_removal_type);
     //MMCINFO("secure_feature      : 0x%x\n", mmc->secure_feature);
     //MMCINFO("secure_removal_type : 0x%x\n", mmc->secure_removal_type);
-    if (!IS_SD(mmc)) {
+	if (!IS_SD(mmc)) {
     	mmc_mmc_parse_health_report(mmc);
+
+		if (mmc->cfg->platform_caps.host_caps_mask & DRV_PARA_ENABLE_EMMC_HW_RST) {
+			err = mmc_en_emmc_hw_rst(mmc);
+			if (err)
+				MMCINFO("enable hw rst fail!!\n");
+		} else {
+			err = mmc_chk_emmc_hw_rst(mmc);
+			if (err)
+				return err;
+		}
     }
     //MMCINFO("========================================\n\n");
 

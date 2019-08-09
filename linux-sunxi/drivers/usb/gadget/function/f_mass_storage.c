@@ -731,30 +731,15 @@ static int do_read(struct fsg_common *common)
 
 		/* Perform the read */
 		file_offset_tmp = file_offset;
-#ifdef CONFIG_USB_SUNXI_UDC0
-		if (curlun->zero_disk) {
-			if (file_offset_tmp == 0) {
-				nread = vfs_read(curlun->filp,
-						(char __user *)bh->buf,
-						amount, &file_offset_tmp);
-			} else {
-				nread = amount;
-			}
-		} else {
-			vfs_amount = amount;
-			vfs_file_offset = file_offset_tmp;
-			atomic_set(&vfs_read_flag, DO_VFS_STAT);
-			nread = vfs_read(curlun->filp,
-					(char __user *)bh->buf,
-					amount, &file_offset_tmp);
-			atomic_set(&vfs_read_flag, DO_VFS_END);
-		}
-#else
-
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+		if (curlun->zero_disk && file_offset_tmp)
+			nread = amount;
+		else
+#endif
 		nread = vfs_read(curlun->filp,
 				 (char __user *)bh->buf,
 				 amount, &file_offset_tmp);
-#endif
+
 		VLDBG(curlun, "file read %u @ %llu -> %d\n", amount,
 		      (unsigned long long)file_offset, (int)nread);
 		if (signal_pending(current))
@@ -952,13 +937,9 @@ static int do_write(struct fsg_common *common)
 				if (amount <= 512)
 					msleep(20);
 
-				vfs_amount = amount;
-				vfs_file_offset = file_offset_tmp;
-				atomic_set(&vfs_write_flag, DO_VFS_STAT);
 				nwritten = vfs_write(curlun->filp,
 						(char __user *)bh->buf,
 						amount, &file_offset_tmp);
-				atomic_set(&vfs_write_flag, DO_VFS_END);
 			}
 #else
 			nwritten = vfs_write(curlun->filp,
@@ -1453,8 +1434,8 @@ static int do_prevent_allow(struct fsg_common *common)
 		return -EINVAL;
 	}
 
+#if !IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
 	if (curlun->prevent_medium_removal && !prevent)
-#ifndef CONFIG_USB_SUNXI_UDC0
 		fsg_lun_fsync_sub(curlun);
 #endif
 	curlun->prevent_medium_removal = prevent;

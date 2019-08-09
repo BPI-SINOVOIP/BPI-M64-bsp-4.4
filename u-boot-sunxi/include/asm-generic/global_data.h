@@ -94,6 +94,7 @@ typedef struct global_data {
 	long           securemode;
 	void          *parameter_mod_buf;
 	long           boot_card_num;
+	int            keybox_installed;
 	ulong          lockflag;
 	ulong          chargemode;
 

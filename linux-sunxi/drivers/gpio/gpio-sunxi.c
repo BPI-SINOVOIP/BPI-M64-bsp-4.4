@@ -27,7 +27,7 @@
 #include <linux/err.h>
 #include <linux/ctype.h>
 #include <linux/sysfs.h>
-#include <linux/device.h>
+
 #include <linux/sunxi-gpio.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
@@ -35,10 +35,10 @@
 #include "../base/base.h"
 
 #define PINS_PER_BANK       32
+
 DECLARE_RWSEM(gpio_sw_list_lock);
 LIST_HEAD(gpio_sw_list);
 static struct class *gpio_sw_class;
-static int network_led_data_suspend;
 
 struct sw_gpio_pd {
 	char name[16];
@@ -302,44 +302,20 @@ static ssize_t light_store(struct device *dev,
 
 static int gpio_sw_suspend(struct device *dev, pm_message_t state)
 {
-	struct gpio_sw_classdev *gpio_sw_cdev = dev_get_drvdata(dev);
-	struct sw_gpio_pd *pdata = dev->parent->platform_data;
-
-	if (strcmp(pdata->link, "network_led") == 0) {
-		network_led_data_suspend = gpio_sw_cdev->gpio_sw_data_get(\
-								gpio_sw_cdev);
-		gpio_sw_cdev->gpio_sw_data_set(gpio_sw_cdev, \
-						pdata->light ? 0 : 1);
-	}
 	return 0;
 }
 
 static int gpio_sw_resume(struct device *dev)
 {
-	struct gpio_sw_classdev *gpio_sw_cdev = dev_get_drvdata(dev);
-	struct sw_gpio_pd *pdata = dev->parent->platform_data;
-
-	if (strcmp(pdata->link, "network_led") == 0) {
-		gpio_sw_cdev->gpio_sw_data_set(gpio_sw_cdev, network_led_data_suspend);
-	}
 	return 0;
 }
 
-static DEVICE_ATTR(cfg, 0664, cfg_sel_show, cfg_sel_store);
-static DEVICE_ATTR(pull, 0664, pull_show, pull_store);
-static DEVICE_ATTR(drv, 0664, drv_level_show, drv_level_store);
-static DEVICE_ATTR(data, 0664, data_show, data_store);
-
-static struct attribute *gpio_sw_class_attrs[] = {
-	&dev_attr_cfg.attr,
-	&dev_attr_pull.attr,
-	&dev_attr_drv.attr,
-	&dev_attr_data.attr,
-	NULL
-};
-
-static const struct attribute_group gpio_sw_class_attr_group = {
-	.attrs = gpio_sw_class_attrs,
+static struct device_attribute gpio_sw_class_attrs[] = {
+	__ATTR(cfg, 0664, cfg_sel_show, cfg_sel_store),
+	__ATTR(pull, 0664, pull_show, pull_store),
+	__ATTR(drv, 0664, drv_level_show, drv_level_store),
+	__ATTR(data, 0664, data_show, data_store),
+	__ATTR_NULL,
 };
 
 static struct device_attribute easy_light_attr =
@@ -373,21 +349,20 @@ gpio_sw_classdev_register(struct device *parent,
 			  struct gpio_sw_classdev *gpio_sw_cdev)
 {
 	struct sw_gpio_pd *pdata = parent->platform_data;
+	int i = 0;
 
 	gpio_sw_cdev->dev = device_create(gpio_sw_class, parent, 0,
 					  gpio_sw_cdev, "%s",
 					  gpio_sw_cdev->name);
+	for (i = 0; i < (sizeof(gpio_sw_class_attrs)/sizeof(struct device_attribute) - 1); i++) {
+		sysfs_add_file_to_group(&gpio_sw_cdev->dev->kobj, &(gpio_sw_class_attrs[i].attr), NULL);
+	}
 	if (IS_ERR(gpio_sw_cdev->dev))
 		return PTR_ERR(gpio_sw_cdev->dev);
-
 	if (easy_light_used && strlen(pdata->link)) {
 		if (sysfs_create_file(&gpio_sw_cdev->dev->kobj, &easy_light_attr.attr))
 			pr_err("gpio_sw: sysfs_create_file fail\n");
 	}
-
-	if (sysfs_create_group(&gpio_sw_cdev->dev->kobj, &gpio_sw_class_attr_group))
-		pr_err("gpio_sw: sysfs_create_file fail\n");
-
 	down_write(&gpio_sw_list_lock);
 	list_add_tail(&gpio_sw_cdev->node, &gpio_sw_list);
 	up_write(&gpio_sw_list_lock);
@@ -638,7 +613,7 @@ static int sunxi_init_gpio_probe(struct platform_device *pdev)
 
 	gpio_sw_class->suspend = gpio_sw_suspend;
 	gpio_sw_class->resume = gpio_sw_resume;
-	//gpio_sw_class->class_attrs = (struct class_attribute *)gpio_sw_class_attrs;
+	/*gpio_sw_class->class_attrs = gpio_sw_class_attrs;*/
 
 	if (of_property_read_u32(node, "easy_light_used", &easy_light_used)) {
 		easy_light_used = 0;

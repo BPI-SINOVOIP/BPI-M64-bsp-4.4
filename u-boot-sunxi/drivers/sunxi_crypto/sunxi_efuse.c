@@ -607,3 +607,18 @@ int sunxi_efuse_read(void *key_name, void *rd_buf, int *len)
 
 	return 0;
 }
+
+#ifndef SID_ROTPK_CTRL
+int sunxi_efuse_get_rotpk_status(void)
+{
+	return -1;
+}
+#else
+int sunxi_efuse_get_rotpk_status(void)
+{
+	int ret;
+	ret = (readl(SID_ROTPK_CTRL) & (1 << SID_ROTPK_EFUSED_BIT)) ==
+	      (1 << SID_ROTPK_EFUSED_BIT);
+	return ret;
+}
+#endif

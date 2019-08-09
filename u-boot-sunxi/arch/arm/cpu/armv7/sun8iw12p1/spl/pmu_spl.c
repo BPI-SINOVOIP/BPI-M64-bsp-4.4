@@ -41,7 +41,7 @@
 
 #define PMU_IC_TYPY_REG (0x3)
 
-#define VDD_SYS_VOL	(980)
+#define VDD_SYS_VOL	(920)
 #define VOL_ON			(1)
 
 
@@ -113,7 +113,12 @@ int pmu_init(u8 power_mode)
 	if(pmu_type == 0x42)
 	{
 		/* pmu type AXP809 */
+#ifdef CONFIG_ARCH_SUN8IW12P1
+		printf("PMU: AXP233\n");
+#else
 		printf("PMU: AXP809\n");
+#endif
+
 		set_sys_voltage(VDD_SYS_VOL, VOL_ON);
 		return AXP809_CHIP_ID;
 	}

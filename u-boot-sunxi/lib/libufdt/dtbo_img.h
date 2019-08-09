@@ -13,7 +13,8 @@ struct dt_table_header {
 	uint32_t dt_entries_offset; /*offset to the first dt_table_entry*/
 								/*from head of dt_table_header*/
 	uint32_t page_size;         /*flash page size we assume*/
-	uint32_t reserved[1];       /*must be zero*/
+	uint32_t version;			/*must be zero*/
+
 };
 
 struct dt_table_entry {

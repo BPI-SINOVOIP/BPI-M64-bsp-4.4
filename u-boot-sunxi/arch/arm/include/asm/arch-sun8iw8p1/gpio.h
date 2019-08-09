@@ -48,9 +48,6 @@
 #define PIO_REG_PULL(n, i)              ((volatile unsigned int *)( SUNXI_PIO_BASE + ((n)-1)*0x24 + ((i)<<2) + 0x1C))
 #define PIO_REG_DATA(n)                 ((volatile unsigned int *)( SUNXI_PIO_BASE + ((n)-1)*0x24 + 0x10))
 
-#define PIO_REG_INT_DEB(n)              ((volatile unsigned int *)( SUNXI_PIO_BASE + 0x200 + ((n)-1)*0x20 + 0x18))
-#define PIO_REG_INT_DEB_VALUE(n)        readl( SUNXI_PIO_BASE + 0x200 + ((n)-1)*0x20 + 0x18)
-
 #define PIO_REG_CFG_VALUE(n, i)          readl( SUNXI_PIO_BASE + ((n)-1)*0x24 + ((i)<<2) + 0x00)
 #define PIO_REG_DLEVEL_VALUE(n, i)       readl( SUNXI_PIO_BASE + ((n)-1)*0x24 + ((i)<<2) + 0x14)
 #define PIO_REG_PULL_VALUE(n, i)         readl( SUNXI_PIO_BASE + ((n)-1)*0x24 + ((i)<<2) + 0x1C)
@@ -85,6 +82,5 @@ typedef struct
 normal_gpio_set_t;
 
 int boot_set_gpio(void  *user_gpio_list, __u32 group_count_max, __s32 set_gpio);
-void int_deb_set_gpio(int n, int value);
 
 #endif /* _SUNXI_GPIO_H */

@@ -66,6 +66,8 @@ struct sensor_win_size {
 	unsigned int height_input; /*isp height input, after isp crop*/
 	unsigned int vipp_hoff;	/*vipp crop hoffset */
 	unsigned int vipp_voff;	/*vipp crop voffset */
+	unsigned int vipp_w;	/*vipp crop width */
+	unsigned int vipp_h;	/*vipp crop height */
 
 	void *regs;		/* Regs to tweak */
 	int regs_size;

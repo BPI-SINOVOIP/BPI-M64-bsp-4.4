@@ -584,9 +584,21 @@ static int sunxi_rtc_probe(struct platform_device *pdev)
 	 */
 	tmp_data = readl(chip->base + SUNXI_LOSC_CTRL);
 	tmp_data &= (~REG_CLK32K_AUTO_SWT_EN);
-	tmp_data |= (RTC_SOURCE_EXTERNAL | REG_LOSCCTRL_MAGIC);
-	tmp_data |= (EXT_LOSC_GSM);
+
+	/* Disable auto switch function */
+	tmp_data |= REG_CLK32K_AUTO_SWT_BYPASS;
 	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
+
+	tmp_data = readl(chip->base + SUNXI_LOSC_CTRL);
+	tmp_data |= (RTC_SOURCE_EXTERNAL | REG_LOSCCTRL_MAGIC);
+	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
+
+	/* We need to set GSM after change clock source */
+	udelay(60);
+	tmp_data = readl(chip->base + SUNXI_LOSC_CTRL);
+	tmp_data |= (EXT_LOSC_GSM | REG_LOSCCTRL_MAGIC);
+	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
+
 	device_init_wakeup(&pdev->dev, 1);
 
 	chip->rtc = devm_rtc_device_register(&pdev->dev, "sunxi-rtc",

@@ -577,3 +577,62 @@ void ovl_cleanup_whiteouts(struct dentry *upper, struct list_head *list)
 	}
 	mutex_unlock(&upper->d_inode->i_mutex);
 }
+
+static void ovl_workdir_cleanup_recurse(struct path *path, int level)
+{
+	int err;
+	struct inode *dir = path->dentry->d_inode;
+	LIST_HEAD(list);
+	struct ovl_cache_entry *p;
+	struct ovl_readdir_data rdd = {
+		.ctx.actor = ovl_fill_merge,
+		.list = &list,
+		.root = RB_ROOT,
+	};
+
+	err = ovl_dir_read(path, &rdd);
+	if (err)
+		goto out;
+
+	inode_lock_nested(dir, I_MUTEX_PARENT);
+	list_for_each_entry(p, &list, l_node) {
+		struct dentry *dentry;
+
+		if (p->name[0] == '.') {
+			if (p->len == 1)
+				continue;
+			if (p->len == 2 && p->name[1] == '.')
+				continue;
+		}
+		dentry = lookup_one_len(p->name, path->dentry, p->len);
+		if (IS_ERR(dentry))
+			continue;
+		if (dentry->d_inode)
+			ovl_workdir_cleanup(dir, path->mnt, dentry, level);
+		dput(dentry);
+	}
+	inode_unlock(dir);
+out:
+	ovl_cache_free(&list);
+}
+
+void ovl_workdir_cleanup(struct inode *dir, struct vfsmount *mnt,
+			 struct dentry *dentry, int level)
+{
+	int err;
+
+	if (!d_is_dir(dentry) || level > 1) {
+		ovl_cleanup(dir, dentry);
+		return;
+	}
+
+	err = ovl_do_rmdir(dir, dentry);
+	if (err) {
+		struct path path = { .mnt = mnt, .dentry = dentry };
+
+		inode_unlock(dir);
+		ovl_workdir_cleanup_recurse(&path, level + 1);
+		inode_lock_nested(dir, I_MUTEX_PARENT);
+		ovl_cleanup(dir, dentry);
+	}
+}

@@ -152,7 +152,7 @@ static void isp_stat_bufs_free(struct isp_stat *stat)
 {
 	int i;
 
-	for (i = 0; i < STAT_MAX_BUFS; i++) {
+	for (i = 1; i < STAT_MAX_BUFS; i++) {
 		struct ispstat_buffer *buf = &stat->buf[i];
 		struct vin_mm *mm = &stat->ion_man[i];
 		mm->size = stat->buf_alloc_size;
@@ -183,7 +183,7 @@ static int isp_stat_bufs_alloc_dma(struct isp_stat *stat, unsigned int size)
 
 	stat->buf_alloc_size = size;
 
-	for (i = 0; i < STAT_MAX_BUFS; i++) {
+	for (i = 1; i < STAT_MAX_BUFS; i++) {
 		struct ispstat_buffer *buf = &stat->buf[i];
 		struct vin_mm *mm = &stat->ion_man[i];
 		mm->size = stat->buf_alloc_size;
@@ -199,7 +199,6 @@ static int isp_stat_bufs_alloc_dma(struct isp_stat *stat, unsigned int size)
 			return -ENOMEM;
 		}
 		buf->empty = 1;
-		memset(buf->virt_addr, 0, stat->buf_alloc_size);
 
 		vin_log(VIN_LOG_STAT, "%s: buffer[%d] allocated."
 			"dma_addr=0x%08lx virt_addr=0x%08lx\n",
@@ -466,8 +465,7 @@ int vin_isp_stat_enable(struct isp_stat *stat, u8 enable)
 		return -EINVAL;
 	}
 	stat->stata_en_flag = enable;
-	stat->isp->server_run = 0;
-	stat->isp->first_frame = 0;
+	stat->isp->f1_after_librun = 0;
 
 	if (enable) {
 		if (stat->state == ISPSTAT_DISABLING)

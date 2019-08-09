@@ -170,6 +170,39 @@ static int m25p80_erase(struct spi_nor *nor, loff_t offset)
 static const char * const part_probe_types[] = {
 	"cmdlinepart", "ofpart", "sunxipart", NULL };
 
+static int m25p80_detect_conf(struct m25p *flash)
+{
+	struct flash_platform_data	*data;
+	struct spi_device		*spi;
+	struct spi_nor			*nor;
+	char *flash_name;
+	enum read_mode mode = SPI_NOR_NORMAL;
+
+	if (!flash || !flash->spi)
+		return -EINVAL;
+
+	spi = flash->spi;
+	nor = &flash->spi_nor;
+	data = dev_get_platdata(&spi->dev);
+
+	if (spi->mode & SPI_RX_QUAD)
+		mode = SPI_NOR_QUAD;
+	else if (spi->mode & SPI_RX_DUAL)
+		mode = SPI_NOR_DUAL;
+
+	/* For some (historical?) reason many platforms provide two different
+	 * names in flash_platform_data: "name" and "type". Quite often name is
+	 * set to "m25p80" and then "type" provides a real chip name.
+	 * If that's the case, respect "type" and ignore a "name".
+	 */
+	if (data && data->type)
+		flash_name = data->type;
+	else
+		flash_name = spi->modalias;
+
+	return spi_nor_scan(nor, flash_name, mode);
+}
+
 /*
  * board specific setup should have ensured the SPI clock used here
  * matches what the READ command supports, at least until this driver
@@ -181,8 +214,6 @@ static int m25p_probe(struct spi_device *spi)
 	struct flash_platform_data	*data;
 	struct m25p *flash;
 	struct spi_nor *nor;
-	enum read_mode mode = SPI_NOR_NORMAL;
-	char *flash_name = NULL;
 	int ret;
 
 	data = dev_get_platdata(&spi->dev);
@@ -207,29 +238,14 @@ static int m25p_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, flash);
 	flash->spi = spi;
 
-	if (spi->mode & SPI_RX_QUAD)
-		mode = SPI_NOR_QUAD;
-	else if (spi->mode & SPI_RX_DUAL)
-		mode = SPI_NOR_DUAL;
-
 	if (data && data->name)
 		nor->mtd.name = data->name;
 
-	/* For some (historical?) reason many platforms provide two different
-	 * names in flash_platform_data: "name" and "type". Quite often name is
-	 * set to "m25p80" and then "type" provides a real chip name.
-	 * If that's the case, respect "type" and ignore a "name".
-	 */
-	if (data && data->type)
-		flash_name = data->type;
-	else
-		flash_name = spi->modalias;
+	ppdata.of_node = spi->dev.of_node;
 
-	ret = spi_nor_scan(nor, flash_name, mode);
+	ret = m25p80_detect_conf(flash);
 	if (ret)
 		return ret;
-
-	ppdata.of_node = spi->dev.of_node;
 
 	return mtd_device_parse_register(&nor->mtd, part_probe_types, &ppdata,
 			data ? data->parts : NULL,
@@ -243,6 +259,13 @@ static int m25p_remove(struct spi_device *spi)
 
 	/* Clean up MTD stuff. */
 	return mtd_device_unregister(&flash->spi_nor.mtd);
+}
+
+static void m25p_shutdown(struct spi_device *spi)
+{
+	struct m25p	*flash = spi_get_drvdata(spi);
+
+	spi_nor_restore(&flash->spi_nor);
 }
 
 /*
@@ -303,11 +326,13 @@ MODULE_DEVICE_TABLE(of, m25p_of_table);
 static struct spi_driver m25p80_driver = {
 	.driver = {
 		.name	= "m25p80",
+		.pm     = NULL,
 		.of_match_table = m25p_of_table,
 	},
 	.id_table	= m25p_ids,
 	.probe	= m25p_probe,
 	.remove	= m25p_remove,
+	.shutdown	= m25p_shutdown,
 
 	/* REVISIT: many of these chips have deep power-down modes, which
 	 * should clearly be entered on suspend() to minimize power use.

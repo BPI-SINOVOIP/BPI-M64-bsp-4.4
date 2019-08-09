@@ -243,11 +243,14 @@ int nand_download_boot0(uint length, void *buffer)
 			printf("NAND_BurnBoot0 fail\n");
 			return -1;
 		}
+#ifndef CONFIG_ARCH_SUN50IW1P1
+		/* TODO: fix sun50iw1p1's NAND_ReadBoot0 */
 		ret = nand_verify_boot0(length);
 		if (ret != 0) {
 			printf("nand_verify_boot0 fail\n");
 			return -1;
 		}
+#endif
 	}
 	else
 	{

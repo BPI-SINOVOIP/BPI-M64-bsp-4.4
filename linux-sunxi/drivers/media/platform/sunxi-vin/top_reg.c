@@ -184,7 +184,7 @@ void csic_ptn_generation_en(unsigned int sel, unsigned int en)
 void csic_ptn_control(unsigned int sel, int mode, int dw, int port)
 {
 	vin_reg_clr_set(csic_top_base[sel] + CSIC_PTN_CTRL_REG_OFF,
-			CSIC_PTN_CLK_DIV_MASK, 3 << CSIC_PTN_CLK_DIV);
+			CSIC_PTN_CLK_DIV_MASK, 0 << CSIC_PTN_CLK_DIV);
 	vin_reg_clr_set(csic_top_base[sel] + CSIC_PTN_CTRL_REG_OFF,
 			CSIC_PTN_MODE_MASK, mode << CSIC_PTN_MODE);
 	vin_reg_clr_set(csic_top_base[sel] + CSIC_PTN_CTRL_REG_OFF,

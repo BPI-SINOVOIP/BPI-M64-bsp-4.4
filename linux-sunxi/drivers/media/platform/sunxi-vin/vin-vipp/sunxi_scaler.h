@@ -41,7 +41,6 @@ struct scaler_dev {
 	struct v4l2_mbus_framefmt formats[SCALER_PAD_NUM];
 	struct platform_device *pdev;
 	unsigned int is_empty;
-	unsigned int is_osd_en;
 	unsigned int id;
 	spinlock_t slock;
 	struct mutex subdev_lock;
@@ -60,7 +59,6 @@ struct scaler_dev {
 
 struct v4l2_subdev *sunxi_scaler_get_subdev(int id);
 int sunxi_vipp_get_osd_stat(int id, unsigned int *stat);
-int sunxi_osd_change_sc_fmt(int id, enum vipp_format out_fmt, int en);
 int sunxi_scaler_platform_register(void);
 void sunxi_scaler_platform_unregister(void);
 

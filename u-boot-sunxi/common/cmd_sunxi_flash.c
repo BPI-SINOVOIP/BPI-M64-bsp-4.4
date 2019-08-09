@@ -58,11 +58,12 @@ static int get_partition_flash_info(const char *part_name, u32 *start_block,u32 
 static int sunxi_flash_read_all(u32 start, ulong buf, const char *part_name)
 {
 	int ret;
-	u32 rbytes, rblock;
+	u32 rbytes = 0, rblock;
 	u32 start_block = start;
 	void *addr;
 	struct andr_img_hdr *fb_hdr;
 	image_header_t *uz_hdr;
+	struct boot_img_hdr_ex *fb_hdr_ex;
 
 	addr = (void *)buf;
 	ret = sunxi_flash_read(start_block, SUNXI_FLASH_READ_FIRST_SIZE/512, addr);
@@ -74,9 +75,18 @@ static int sunxi_flash_read_all(u32 start, ulong buf, const char *part_name)
 
 	fb_hdr = (struct andr_img_hdr *)addr;
 	uz_hdr = (image_header_t *)addr;
-
+	fb_hdr_ex = (struct boot_img_hdr_ex *)addr;
 	if (!memcmp(fb_hdr->magic, ANDR_BOOT_MAGIC, 8)) {
-		rbytes = fb_hdr->kernel_size + fb_hdr->ramdisk_size + fb_hdr->second_size + 1024 * 1024 + 511;
+		rbytes += fb_hdr->page_size;
+		rbytes += ALIGN(fb_hdr->kernel_size, fb_hdr->page_size);
+		if (fb_hdr->second_size)
+			rbytes += ALIGN(fb_hdr->second_size, fb_hdr->page_size);
+		if (fb_hdr->ramdisk_size)
+			rbytes += ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size);
+		if (fb_hdr->recovery_dtbo_size)
+			rbytes += ALIGN(fb_hdr->recovery_dtbo_size, fb_hdr->page_size);
+		if (fb_hdr_ex->cert_size)
+			rbytes += ALIGN(fb_hdr_ex->cert_size, fb_hdr->page_size);
 
 	} else if (image_check_magic(uz_hdr)) {
 		rbytes = image_get_data_size(uz_hdr) + image_get_header_size() + 512;

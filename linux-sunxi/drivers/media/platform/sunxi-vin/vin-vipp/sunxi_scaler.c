@@ -65,15 +65,6 @@ static void __scaler_try_crop(const struct v4l2_mbus_framefmt *sink,
 			    const struct v4l2_mbus_framefmt *source,
 			    struct v4l2_rect *crop)
 {
-
-	unsigned int min_width = source->width;
-	unsigned int min_height = source->height;
-	unsigned int max_width = sink->width;
-	unsigned int max_height = sink->height;
-
-	crop->width = clamp_t(u32, crop->width, min_width, max_width);
-	crop->height = clamp_t(u32, crop->height, min_height, max_height);
-
 	/* Crop can not go beyond of the input rectangle */
 	crop->left = clamp_t(u32, crop->left, 0, sink->width - MIN_IN_WIDTH);
 	crop->width = \
@@ -444,26 +435,27 @@ static int sunxi_scaler_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 		case V4L2_PIX_FMT_NV12M:
 		case V4L2_PIX_FMT_FBC:
 			out_fmt = YUV420;
+			vipp_chroma_ds_en(scaler->id, 1);
 			break;
 		case V4L2_PIX_FMT_YUV422P:
 		case V4L2_PIX_FMT_NV16:
 		case V4L2_PIX_FMT_NV61:
+		case V4L2_PIX_FMT_NV61M:
+		case V4L2_PIX_FMT_NV16M:
 			out_fmt = YUV422;
 			break;
 		default:
 			out_fmt = YUV420;
 			break;
 		}
-		if (scaler->is_osd_en)
-			scaler_cfg.sc_out_fmt = YUV422;
-		else
-			scaler_cfg.sc_out_fmt = out_fmt;
+		scaler_cfg.sc_out_fmt = YUV422;
 		scaler_cfg.sc_x_ratio = scaler->para.xratio;
 		scaler_cfg.sc_y_ratio = scaler->para.yratio;
 		scaler_cfg.sc_w_shift = __scaler_w_shift(scaler->para.xratio, scaler->para.yratio);
 		vipp_scaler_cfg(scaler->id, &scaler_cfg);
 		vipp_output_fmt_cfg(scaler->id, out_fmt);
 		vipp_scaler_en(scaler->id, 1);
+		vipp_osd_en(scaler->id, 1);
 		vipp_set_para_ready(scaler->id, HAS_READY);
 		vipp_set_osd_ov_update(scaler->id, HAS_UPDATED);
 		vipp_set_osd_cv_update(scaler->id, HAS_UPDATED);
@@ -472,6 +464,8 @@ static int sunxi_scaler_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	} else {
 		vipp_disable(scaler->id);
 		vipp_top_clk_en(scaler->id, enable);
+		vipp_chroma_ds_en(scaler->id, 0);
+		vipp_osd_en(scaler->id, 0);
 		vipp_scaler_en(scaler->id, 0);
 		vipp_set_para_ready(scaler->id, NOT_READY);
 		vipp_set_osd_ov_update(scaler->id, NOT_UPDATED);
@@ -536,34 +530,25 @@ int __scaler_init_subdev(struct scaler_dev *scaler)
 static int scaler_resource_alloc(struct scaler_dev *scaler)
 {
 	int ret = 0;
-	scaler->vipp_reg.size = VIPP_REG_SIZE;
-	scaler->osd_para.size = OSD_PARA_SIZE;
-	scaler->osd_stat.size = OSD_STAT_SIZE;
+	scaler->vipp_reg.size = VIPP_REG_SIZE + OSD_PARA_SIZE + OSD_STAT_SIZE;
 
 	ret = os_mem_alloc(&scaler->pdev->dev, &scaler->vipp_reg);
 	if (ret < 0) {
 		vin_err("scaler regs load addr requset failed!\n");
 		return -ENOMEM;
 	}
-	ret = os_mem_alloc(&scaler->pdev->dev, &scaler->osd_para);
-	if (ret < 0) {
-		vin_err("scaler para load addr requset failed!\n");
-		return -ENOMEM;
-	}
-	ret = os_mem_alloc(&scaler->pdev->dev, &scaler->osd_stat);
-	if (ret < 0) {
-		vin_err("scaler statistic load addr requset failed!\n");
-		return -ENOMEM;
-	}
-	return 0;
 
+	scaler->osd_para.dma_addr = scaler->vipp_reg.dma_addr + VIPP_REG_SIZE;
+	scaler->osd_para.vir_addr = scaler->vipp_reg.vir_addr + VIPP_REG_SIZE;
+	scaler->osd_stat.dma_addr = scaler->osd_para.dma_addr + OSD_PARA_SIZE;
+	scaler->osd_stat.vir_addr = scaler->osd_para.vir_addr + OSD_PARA_SIZE;
+
+	return 0;
 }
 
 static void scaler_resource_free(struct scaler_dev *scaler)
 {
 	os_mem_free(&scaler->pdev->dev, &scaler->vipp_reg);
-	os_mem_free(&scaler->pdev->dev, &scaler->osd_para);
-	os_mem_free(&scaler->pdev->dev, &scaler->osd_stat);
 }
 
 static int scaler_probe(struct platform_device *pdev)
@@ -691,18 +676,6 @@ int sunxi_vipp_get_osd_stat(int id, unsigned int *stat)
 
 	for (i = 0; i < MAX_OVERLAY_NUM; i++)
 		stat[i] = stat_buf[i];
-
-	return 0;
-}
-
-int sunxi_osd_change_sc_fmt(int id, enum vipp_format out_fmt, int en)
-{
-	struct v4l2_subdev *sd = sunxi_scaler_get_subdev(id);
-	struct scaler_dev *vipp = v4l2_get_subdevdata(sd);
-
-	vipp->is_osd_en = en;
-
-	vipp_scaler_output_fmt(id, out_fmt);
 
 	return 0;
 }

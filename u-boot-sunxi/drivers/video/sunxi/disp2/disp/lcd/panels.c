@@ -1,3 +1,17 @@
+/**
+ * drivers/video/sunxi/disp2/disp/lcd/panels.c
+ * (C) Copyright 2010-2015
+ * Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+ *
+ * Include file for SUNXI HCI Host Controller Driver
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ */
+
 #include "panels.h"
 
 struct sunxi_lcd_drv g_lcd_drv;
@@ -15,20 +29,28 @@ extern __lcd_panel_t ili9881c_dsi_panel;
 extern __lcd_panel_t default_eink;
 
 __lcd_panel_t* panel_array[] = {
+	&default_panel,
+	&he0801a068_panel,
 #if defined(CONFIG_ARCH_SUN50IW3P1)
 	&lq101r1sx03_panel,
 	&ls029b3sx02_panel,
 	&vr_ls055t1sx01_panel,
 	&sl008pn21d_panel,
-	&he0801a068_panel,
 	&ili9881c_dsi_panel,
 #else
-#if defined(CONFIG_ARCH_SUN8IW12P1)
+#if defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
+	&st7701s_panel,
 	&ili9341_panel,
 	&fd055hd003s_panel,
-	&default_panel,
+	&to20t20000_panel,
+	&t30p106_panel,
+	&st7796s_panel,
+	&st7789v_panel,
+	&lh219wq1_panel,
+	&frd450h40014_panel,
+	&h245qbn02_panel,
+	&s2003t46g_panel,
 #else
-	&default_panel,
 	&lt070me05000_panel,
 	&wtq05027d01_panel,
 	&t27p06_panel,
@@ -39,12 +61,14 @@ __lcd_panel_t* panel_array[] = {
 	&tm_dsi_panel,
 	&gg1p4062utsw_panel,
 	&vr_sharp_panel,
-	&he0801a068_panel,
 	&WilliamLcd_panel,
-	&default_eink,
 	&S070WV20_MIPI_RGB_panel,
 #endif
 #endif /*endif CONFIG_ARCH_SUN50IW3P1 */
+
+#if defined(CONFIG_EINK_PANEL_USED)
+	&default_eink,
+#endif
 	/* add new panel below */
 
 	NULL,

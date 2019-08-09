@@ -842,6 +842,8 @@ s32 tcon0_cfg(u32 sel, struct disp_panel_para *panel)
 	} else if (panel->lcd_if == LCD_IF_DSI) {
 		lcd_dev[sel]->tcon_sync_ctl.bits.dsi_num =
 		    (panel->lcd_tcon_mode == DISP_TCON_DUAL_DSI) ? 1 : 0;
+		lcd_dev[sel]->tcon0_3d_fifo.bits.fifo_3d_setting =
+		    1; /*normal fifo*/
 
 		/*sync setting between master lcd and slave lcd*/
 		if (panel->lcd_tcon_mode < DISP_TCON_DUAL_DSI) {
@@ -905,14 +907,22 @@ s32 tcon0_cfg(u32 sel, struct disp_panel_para *panel)
 		} else
 #endif
 		{
+
 			lcd_dev[sel]->tcon0_ctl.bits.tcon0_if = 1;
-			lcd_dev[sel]->tcon0_cpu_ctl.bits.cpu_mode = 0x1;
+			lcd_dev[sel]->tcon0_cpu_ctl.bits.da = 1;
+			lcd_dev[sel]->tcon0_cpu_ctl.bits.flush = 1;
+			lcd_dev[sel]->tcon0_cpu_ctl.bits.cpu_mode = MODE0_16BIT;
 			lcd_dev[sel]->tcon_ecfifo_ctl.bits.ecc_fifo_setting =
 			    (1 << 3);
 			panel->lcd_fresh_mode =
 			    (panel->lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE) ? 1
 									   : 0;
 			tcon0_cfg_mode_tri(sel, panel);
+			lcd_dev[sel]->tcon0_cpu_tri4.bits.data = 0x460;
+			lcd_dev[sel]->tcon0_cpu_tri4.bits.a1 = 0;
+			lcd_dev[sel]->tcon0_cpu_tri5.bits.data = 0x4e0;
+			lcd_dev[sel]->tcon0_cpu_tri5.bits.a1 = 0;
+			lcd_dev[sel]->tcon0_cpu_tri4.bits.en = 1;
 #if defined(HAVE_DEVICE_COMMON_MODULE) && defined(SUPPORT_DSI)
 			if (panel->lcd_tcon_mode == DISP_TCON_DUAL_DSI) {
 				tcon0_dsi_clk_enable(0, 1);

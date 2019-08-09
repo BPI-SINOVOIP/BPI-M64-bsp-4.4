@@ -267,7 +267,59 @@ int sdmmc_init_for_boot(int workmode, int card_no)
 	return 0;
 
 }
+#ifdef CONFIG_ARCH_SUN3IW1P1
+int sdmmc_init_for_sprite(int workmode)
+{
+	int found = 0;
+	printf("try card 1\n");
+	board_mmc_pre_init(1);
+	mmc_sprite = find_mmc_device(1);
+	mmc_no = 1;
+	set_boot_storage_type(STORAGE_SD1);
+	if (mmc_init(mmc_sprite)) {
+		printf("MMC init failed\n");
+		found = 0;
+	}else{
+		found = 1;
+	}
 
+	if(found == 0){
+		printf("try card 0\n");
+		board_mmc_pre_init(0);
+		mmc_sprite = find_mmc_device(0);
+		mmc_no = 0;
+		set_boot_storage_type(STORAGE_SD);
+		if (mmc_init(mmc_sprite)) {
+			printf("MMC init failed\n");
+			found = 0;
+		}else{
+			found = 1;
+		}
+	}
+
+	if (found == 0){
+		printf("not found SDC\n");
+		return -1;
+	}
+	sunxi_sprite_init_pt  = sunxi_sprite_mmc_init;
+	sunxi_sprite_exit_pt  = sunxi_sprite_mmc_exit;
+	sunxi_sprite_read_pt  = sunxi_sprite_mmc_read;
+	sunxi_sprite_write_pt = sunxi_sprite_mmc_write;
+	sunxi_sprite_erase_pt = sunxi_sprite_mmc_erase;
+	sunxi_sprite_size_pt  = sunxi_sprite_mmc_size;
+	sunxi_sprite_phyread_pt  = sunxi_sprite_mmc_phyread;
+	sunxi_sprite_phywrite_pt = sunxi_sprite_mmc_phywrite;
+	sunxi_sprite_force_erase_pt = sunxi_sprite_mmc_force_erase;
+
+	/* for secure stoarge */
+	sunxi_secstorage_read_pt  = mmc_secure_storage_read;
+	sunxi_secstorage_write_pt = mmc_secure_storage_write;
+	debug("sunxi sprite has installed sdcard2 function\n");
+
+	return 0;
+}
+
+#else
 int sdmmc_init_for_sprite(int workmode)
 {
 	printf("try card 1\n");
@@ -324,7 +376,7 @@ int sdmmc_init_for_sprite(int workmode)
 
 	return 0;
 }
-
+#endif
 int sdmmc_init_card0_for_sprite(void)
 {
 	//init card0

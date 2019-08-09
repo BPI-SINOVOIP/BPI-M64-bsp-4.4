@@ -25,7 +25,17 @@
 #include  <asm/io.h>
 #include  <asm/arch/ccmu.h>
 #include  <asm/arch/timer.h>
+#include <asm/arch/usb.h>
 
+
+void otg_phy_config(void)
+{
+	u32 reg_val = 0;
+	reg_val = readl(SUNXI_USBOTG_BASE+USBC_REG_o_PHYCTL);
+	reg_val &= ~(0x01<<USBC_PHY_CTL_SIDDQ);
+	reg_val |= 0x01<<USBC_PHY_CTL_VBUSVLDEXT;
+	writel(reg_val, SUNXI_USBOTG_BASE+USBC_REG_o_PHYCTL);
+}
 
 int usb_open_clock(void)
 {

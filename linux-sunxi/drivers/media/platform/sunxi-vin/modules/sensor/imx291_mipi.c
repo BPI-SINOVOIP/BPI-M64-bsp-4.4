@@ -160,6 +160,103 @@ static struct regval_list sensor_4lane_1080P30_regs[] = {
 	{0x3014, 0x30},
 };
 
+static struct regval_list sensor_2lane_1080P30_regs[] = {
+	{0x3003, 0x01},
+	{REG_DLY, 0x10}, /* delay */
+	{0x3000, 0x01},
+	{0x3002, 0x00},
+	{0x3005, 0x01},
+	{0x3007, 0x00},
+	{0x3009, 0x02},
+	{0x300a, 0xf0},
+	{0x300f, 0x00},
+	{0x3010, 0x21},
+	{0x3012, 0x64},
+	{0x3016, 0x09},
+	{0x3018, 0x70},/*0x65},*/
+	{0x3019, 0x04},
+	{0x301c, 0x30},
+	{0x301d, 0x11},
+	{0x3046, 0x01},
+	{0x304b, 0x0a},
+	{0x305c, 0x18},
+	{0x305d, 0x03},
+	{0x305e, 0x20},
+	{0x305f, 0x01},
+	{0x3070, 0x02},
+	{0x3071, 0x11},
+	{0x309b, 0x10},
+	{0x309c, 0x22},
+	{0x30a2, 0x02},
+	{0x30a6, 0x20},
+	{0x30a8, 0x20},
+	{0x30aa, 0x20},
+	{0x30ac, 0x20},
+	{0x30b0, 0x43},
+	{0x3119, 0x9e},
+	{0x311c, 0x1e},
+	{0x311e, 0x08},
+	{0x3128, 0x05},
+	{0x3129, 0x00},
+	{0x313d, 0x83},
+	{0x3150, 0x03},
+	{0x315e, 0x1a},
+	{0x3164, 0x1a},
+	{0x317c, 0x00},
+	{0x317e, 0x00},
+	{0x31ec, 0x0e},
+	{0x32b8, 0x50},
+	{0x32b9, 0x10},
+	{0x32ba, 0x00},
+	{0x32bb, 0x04},
+	{0x32c8, 0x50},
+	{0x32c9, 0x10},
+	{0x32ca, 0x00},
+	{0x32cb, 0x04},
+	{0x332c, 0xd3},
+	{0x332d, 0x10},
+	{0x332e, 0x0d},
+	{0x3358, 0x06},
+	{0x3359, 0xe1},
+	{0x335a, 0x11},
+	{0x3360, 0x1e},
+	{0x3361, 0x61},
+	{0x3362, 0x10},
+	{0x33b0, 0x50},
+	{0x33b2, 0x1a},
+	{0x33b3, 0x04},
+	{0x3405, 0x10},
+	{0x3407, 0x01},  /*1 for 2lane; 3 for 4lane*/
+	{0x3414, 0x0a},
+	{0x3418, 0x49},
+	{0x3419, 0x04},
+	{0x3441, 0x0c},
+	{0x3442, 0x0c},
+	{0x3443, 0x01},  /*1 for 2lane; 3 for 4lane*/
+	{0x3444, 0x20},
+	{0x3445, 0x25},
+	{0x3446, 0x57},
+	{0x3447, 0x00},
+	{0x3448, 0x37},
+	{0x3449, 0x00},
+	{0x344a, 0x1f},
+	{0x344b, 0x00},
+	{0x344c, 0x1f},
+	{0x344d, 0x00},
+	{0x344e, 0x30}, /*data THSTRAIL default 0x1f , increase to 0x30*/
+	{0x344f, 0x00},
+	{0x3450, 0x77},
+	{0x3451, 0x00},
+	{0x3452, 0x1f},
+	{0x3453, 0x00},
+	{0x3454, 0x17},
+	{0x3455, 0x00},
+	{0x3472, 0x9c},
+	{0x3473, 0x07},
+	{0x3480, 0x49},
+
+	{0x3000, 0x00},
+};
 static struct regval_list sensor_2lane_720P30_regs[] = {
 	{0x3000, 0x01},
 	{0x3002, 0x00},
@@ -607,7 +704,7 @@ static struct sensor_format_struct sensor_formats[] = {
  */
 
 static struct sensor_win_size sensor_win_sizes[] = {
-	/* 1080P */
+	/* 4lane 1080P */
 	{
 	 .width = HD1080_WIDTH,
 	 .height = HD1080_HEIGHT,
@@ -628,6 +725,27 @@ static struct sensor_win_size sensor_win_sizes[] = {
 	 .set_size = NULL,
 	 },
 
+	/* 2lane 1080P */
+	{
+	 .width = HD1080_WIDTH,
+	 .height = HD1080_HEIGHT,
+	 .hoffset = 0,
+	 .voffset = 0,
+	 .hts = 4400,
+	 .vts = VMAX,
+	 .pclk = 150 * 1000 * 1000,
+	 .mipi_bps = 446 * 1000 * 1000,
+	 .fps_fixed = 30,
+	 .bin_factor = 1,
+	 .intg_min = 1 << 4,
+	 .intg_max = (VMAX - 2) << 4,
+	 .gain_min = 1 << 4,
+	 .gain_max = 32 << 4,
+	 .regs = sensor_2lane_1080P30_regs,
+	 .regs_size = ARRAY_SIZE(sensor_2lane_1080P30_regs),
+	 .set_size = NULL,
+	 },
+
 	/* 720P */
 	{
 	 .width = HD720_WIDTH,
@@ -638,7 +756,7 @@ static struct sensor_win_size sensor_win_sizes[] = {
 	 .vts = VMAX,
 	 .pclk = 150 * 1000 * 1000,
 	 .mipi_bps = 446 * 1000 * 1000,
-	 .fps_fixed = 60,
+	 .fps_fixed = 30,
 	 .bin_factor = 1,
 	 .intg_min = 1 << 4,
 	 .intg_max = (VMAX - 3) << 4,
@@ -660,7 +778,8 @@ static int sensor_g_mbus_config(struct v4l2_subdev *sd,
 	cfg->type = V4L2_MBUS_CSI2;
 
 	if (info->current_wins->width == HD1080_WIDTH &&
-	    info->current_wins->height == HD1080_HEIGHT)
+	    info->current_wins->height == HD1080_HEIGHT &&
+	    info->current_wins->fps_fixed == 60)
 		cfg->flags = V4L2_MBUS_CSI2_4_LANE | V4L2_MBUS_CSI2_CHANNEL_0;
 	else
 		cfg->flags = V4L2_MBUS_CSI2_2_LANE | V4L2_MBUS_CSI2_CHANNEL_0;
@@ -842,6 +961,8 @@ static int sensor_probe(struct i2c_client *client,
 	info->win_pt = &sensor_win_sizes[0];
 	info->fmt_num = N_FMTS;
 	info->win_size_num = N_WIN_SIZES;
+	info->combo_mode = CMB_TERMINAL_RES | CMB_PHYA_OFFSET3 | MIPI_NORMAL_MODE;
+	info->stream_seq = MIPI_BEFORE_SENSOR;
 	info->sensor_field = V4L2_FIELD_NONE;
 	info->af_first_flag = 1;
 	info->exp = 0;

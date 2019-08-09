@@ -36,9 +36,10 @@
 #include "../sprite/sparse/sparse.h"
 #include "../sprite/sprite_download.h"
 #include <private_toc.h>
+#include <private_boot0.h>
 #include <securestorage.h>
 #include <sprite.h>
-
+#include <../sprite/sprite_verify.h>
 DECLARE_GLOBAL_DATA_PTR;
 
 int do_go(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
@@ -373,8 +374,8 @@ static int __usb_get_descriptor(struct usb_device_request *req, uchar *buffer)
 
 			qua_dscrpt = (struct usb_qualifier_descriptor *)buffer;
 			memset(&buffer, 0, sizeof(struct usb_qualifier_descriptor));
-
-			qua_dscrpt->bLength = MIN(req->wLength, sizeof(struct usb_qualifier_descriptor));
+			uint32_t temp = sizeof(struct usb_qualifier_descriptor);
+			qua_dscrpt->bLength = MIN(req->wLength, sizeof(temp));
 			qua_dscrpt->bDescriptorType    = USB_DT_DEVICE_QUALIFIER;
 			qua_dscrpt->bcdUSB             = 0x200;
 			qua_dscrpt->bDeviceClass       = 0xff;
@@ -649,16 +650,104 @@ static int erase_userdata(void)
 *
 *******************************************************************************
 */
+static void __flash_to_mbr(void)
+{
+	char  response[68];
+	int storage_type = get_boot_storage_type();
+	int mbr_num = 4;
+	char *img_mbr = (char*)trans_data.base_recv_buffer;
+	if (sunxi_sprite_verify_mbr(img_mbr)) {
+		printf("sunxi fastboot: mbr verify fail\n");
+		sprintf(response, "FAIL");
+		__sunxi_fastboot_send_status(response, strlen(response));
+		return;
+	}
+	if (storage_type == STORAGE_NAND) {
+		nand_get_mbr((char *)img_mbr, 16 * 1024);
+	} else if (storage_type == STORAGE_NOR) {
+		mbr_num = 1;
+	}
+	if(sunxi_sprite_download_mbr(img_mbr, sizeof(sunxi_mbr_t) * mbr_num)) {
+		printf("sunxi fastboot error: download mbr err\n");
+		sprintf(response, "FAIL");
+
+	} else {
+		printf("sunxi fastboot: successed in downloading mbr\n");
+		sprintf(response, "OKAY");
+	}
+	__sunxi_fastboot_send_status(response, strlen(response));
+	return;
+
+}
+
+
+static void __flash_to_boot0(void)
+{
+	char  response[68];
+	int ret = -1;
+	char *temp_buf = (char*)trans_data.base_recv_buffer;
+	if(gd->bootfile_mode  == SUNXI_BOOT_FILE_NORMAL || gd->bootfile_mode  == SUNXI_BOOT_FILE_PKG) {
+		boot0_file_head_t *temp_boot0 = NULL;
+		boot0_file_head_t *boot0 =  (boot0_file_head_t*)trans_data.base_recv_buffer;
+		if (strncmp((const char *)boot0->boot_head.magic, BOOT0_MAGIC, MAGIC_SIZE)) {
+			printf("sunxi fastboot error: there is not boot0 file\n");
+			sprintf(response, "FAIL");
+			goto toc0_error;
+		}
+		temp_boot0 = memalign(64, ALIGN(sizeof(boot0_file_head_t), 512));
+		memset(temp_boot0, 0x0, ALIGN(sizeof(boot0_file_head_t), 512));
+		sunxi_flash_phyread(BOOT0_SDMMC_START_ADDR, ALIGN(sizeof(boot0_file_head_t), 512)/512, temp_boot0);
+		memcpy(boot0->prvt_head.storage_data, temp_boot0->prvt_head.storage_data, sizeof(temp_boot0->prvt_head.storage_data));
+		boot0->boot_head.check_sum = sunxi_sprite_generate_checksum(temp_buf, boot0->boot_head.length, boot0->boot_head.check_sum);
+		free(temp_boot0);
+	} else {
+		toc0_private_head_t  *temp_toc0 = NULL;
+		toc0_private_head_t  *toc0   = (toc0_private_head_t *)trans_data.base_recv_buffer;
+		sbrom_toc0_config_t  *temp_toc0_config = NULL;
+		sbrom_toc0_config_t  *toc0_config = NULL;
+		if (strncmp((const char *)toc0->name, TOC0_MAGIC, MAGIC_SIZE)) {
+			printf("sunxi fastboot error: there is not toc0 file\n");
+			sprintf(response, "FAIL");
+			goto toc0_error;
+		}
+		temp_toc0 = memalign(64, 2048);
+		memset(temp_toc0, 0x0, 2048);
+		sunxi_flash_phyread(BOOT0_SDMMC_START_ADDR, 2048/512, temp_toc0);
+
+		if (temp_toc0->items_nr == 3) {
+			temp_toc0_config = (sbrom_toc0_config_t *)(temp_toc0 + 0xa0);
+			toc0_config =  (sbrom_toc0_config_t *)(trans_data.base_recv_buffer + 0xa0);
+		} else {
+			temp_toc0_config = (sbrom_toc0_config_t *)(temp_toc0 + 0x80);
+			toc0_config = (sbrom_toc0_config_t *)(trans_data.base_recv_buffer + 0x80);
+		}
+		memcpy(toc0_config->storage_data, temp_toc0_config->storage_data, sizeof( temp_toc0_config->storage_data));
+		toc0->check_sum = sunxi_sprite_generate_checksum(temp_buf, toc0->length, toc0->check_sum);
+		free(temp_toc0);
+	}
+
+	ret = sunxi_sprite_download_boot0((char *)temp_buf, get_boot_storage_type());
+	if (!ret) {
+		printf("sunxi fastboot: successed in downloading boot0/toc0\n");
+		sprintf(response, "OKAY");
+	} else {
+		printf("sunxi fastboot: fail in downloading boot0/toc0\n");
+		sprintf(response, "FAIL");
+	}
+toc0_error:
+	__sunxi_fastboot_send_status(response, strlen(response));
+	return ;
+}
+
 static void __flash_to_uboot(void)
 {
 	sbrom_toc1_head_info_t *temp_buf = (sbrom_toc1_head_info_t *)trans_data.base_recv_buffer;
 	char  response[68];
 	int ret = -1;
-
-	if(strcmp((char*)temp_buf->name,"sunxi-package"))
-	{
-		printf("sunxi fastboot error: there is not sunxi-package file\n");
-		sprintf(response, "FAILdownload:there is not boot package file \n");
+	if (strncmp((char*)temp_buf->name,"sunxi-package", sizeof("sunxi-package"))
+		&& strncmp((char*)temp_buf->name,"sunxi-secure", sizeof("sunxi-secure"))) {
+		printf("sunxi fastboot error: there is not sunxi-package/toc1 file\n");
+		sprintf(response, "FAILdownload:there is not boot-package/toc1 file \n");
 		__sunxi_fastboot_send_status(response, strlen(response));
 		return ;
 	}
@@ -667,78 +756,24 @@ static void __flash_to_uboot(void)
 	ret = sunxi_sprite_download_uboot((char *)temp_buf,get_boot_storage_type() ,1);
 	if (!ret)
 	{
-		printf("sunxi fastboot: successed in downloading uboot package\n");
+		if (!strncmp((char*)temp_buf->name,"sunxi-package", sizeof("sunxi-package"))) {
+			printf("sunxi fastboot: successed in downloading uboot package\n");
+		} else {
+			printf("sunxi fastboot: successed in downloading toc1\n");
+		}
 		sprintf(response, "OKAY");
 	}
 	else
 	{
-		printf("sunxi fastboot: fail in downloading uboot package\n");
+		if (!strncmp((char*)temp_buf->name,"sunxi-package", sizeof("sunxi-package"))) {
+			printf("sunxi fastboot: fail in downloading uboot package\n");
+		} else {
+			printf("sunxi fastboot: fail in downloading toc1\n");
+		}
 		sprintf(response, "FAIL");
 	}
 	__sunxi_fastboot_send_status(response, strlen(response));
 	return ;
-}
-
-static void __flash_to_mbr(void)
-{
-	char  response[68];
-	int ret = -1;
-
-	int storage_type = 0;
-	int mbr_num = SUNXI_MBR_COPY_NUM;
-
-	storage_type = get_boot_storage_type();
-
-	if(storage_type == STORAGE_NOR)
-	{
-		mbr_num = 1;
-	}
-
-#ifdef CONFIG_SUNXI_GPT
-	printf("sunxi fastboot: The platform support GPT!\n");
-	printf("                The mbr will convert to GPT!\n");
-
-	ret = download_standard_gpt(trans_data.base_recv_buffer,(SUNXI_MBR_SIZE * mbr_num),storage_type);
-
-	if(ret)
-	{
-		printf("sunxi fastboot error: write GPT to flash failed\n");
-		sprintf(response, "FAILdownload: write GPT to flash failed\n");
-		__sunxi_fastboot_send_status(response, strlen(response));
-		return ;
-	}
-	else
-	{
-		sprintf(response, "OKAY\n");
-		__sunxi_fastboot_send_status(response, strlen(response));
-		return ;
-	}
-#else
-	ret = sunxi_sprite_verify_mbr(trans_data.base_recv_buffer);
-
-	if(ret)
-	{
-		printf("sunxi fastboot error: mbr verify failed,the file is not mbr file\n");
-		sprintf(response, "FAILdownload: mbr verify failed,the file is not mbr file\n");
-		__sunxi_fastboot_send_status(response, strlen(response));
-		return ;
-	}
-	else
-	{
-		if(sunxi_sprite_write(0, (SUNXI_MBR_SIZE * mbr_num)/512, trans_data.base_recv_buffer) == ((SUNXI_MBR_SIZE * mbr_num)/512))
-		{
-			printf("sunxi fastboot: write mbr to flash ok\n");
-			sprintf(response, "OKAY\n");
-			__sunxi_fastboot_send_status(response, strlen(response));
-		}
-		else
-		{
-			printf("sunxi fastboot error: write mbr to flash failed\n");
-			sprintf(response, "FAILdownload: write mbr to flash failed\n");
-			__sunxi_fastboot_send_status(response, strlen(response));
-		}
-	}
-#endif
 }
 
 static int __flash_to_part(char *name)
@@ -1726,18 +1761,16 @@ static int sunxi_fastboot_state_loop(void  *buffer)
 					__limited_fastboot();
 					break;
 				}
-				if(memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6),"u-boot",6) == 0)
-				{
+				if (!memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6), "u-boot", 6)
+					|| !memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6), "toc1", 4)) {
 					__flash_to_uboot();
-				}
-				else if(memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6),"mbr",3) == 0)
-				{
+				} else if (!memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6), "boot0", 5)
+					|| !memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6),"toc0", 4)) {
+					__flash_to_boot0();
+				} else if (!memcmp((char *)(sunxi_ubuf->rx_req_buffer + 6), "mbr", 3)) {
 					__flash_to_mbr();
-				}
-				else
-				{
+				} else
 					__flash_to_part((char *)(sunxi_ubuf->rx_req_buffer + 6));
-				}
 			}
 			else if(memcmp(sunxi_ubuf->rx_req_buffer, "download:", 9) == 0)
 			{

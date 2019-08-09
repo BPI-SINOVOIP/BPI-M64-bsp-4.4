@@ -370,6 +370,7 @@ int NAND_UbootProbe(void)
 
 	NAND_Print_DBG("NAND_UbootProbe start\n");
 
+	NAND_GetBootFlag(0);
 	/* logic init */
 	ret = NAND_PhyInit();
 	NAND_PhyExit();

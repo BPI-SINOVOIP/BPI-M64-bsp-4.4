@@ -22,6 +22,8 @@
 #include <linux/interrupt.h>
 #include <linux/kfifo.h>
 #include <linux/poll.h>
+#include <linux/time.h>
+#include <linux/hrtimer.h>
 #include "inv_mpu_iio.h"
 
 static void inv_clear_kfifo(struct inv_mpu6050_state *st)
@@ -50,6 +52,7 @@ int inv_reset_fifo(struct iio_dev *indio_dev)
 	result = inv_mpu6050_write_reg(st, st->reg->fifo_en, 0);
 	if (result)
 		goto reset_fifo_fail;
+
 	/* disable fifo reading */
 	result = inv_mpu6050_write_reg(st, st->reg->user_ctrl, 0);
 	if (result)
@@ -106,8 +109,10 @@ irqreturn_t inv_mpu6050_irq_handler(int irq, void *p)
 	struct iio_dev *indio_dev = pf->indio_dev;
 	struct inv_mpu6050_state *st = iio_priv(indio_dev);
 	s64 timestamp;
+	struct timespec ts;
 
-	timestamp = iio_get_time_ns();
+	ktime_get_ts(&ts);
+	timestamp = timespec_to_ns(&ts);
 	kfifo_in_spinlocked(&st->timestamps, &timestamp, 1,
 				&st->time_stamp_lock);
 

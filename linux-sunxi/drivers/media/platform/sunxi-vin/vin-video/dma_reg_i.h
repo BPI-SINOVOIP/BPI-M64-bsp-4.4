@@ -48,15 +48,15 @@
 
 #define	CSIC_DMA_HSIZE_REG_OFF			0X010
 #define	HOR_START				0
-#define	HOR_START_MASK				(0X1FFF << HOR_START)
+#define	HOR_START_MASK				(0X3FFF << HOR_START)
 #define	HOR_LEN					16
-#define	HOR_LEN_MASK				(0X1FFF << HOR_LEN)
+#define	HOR_LEN_MASK				(0X3FFF << HOR_LEN)
 
 #define	CSIC_DMA_VSIZE_REG_OFF			0X014
 #define	VER_START				0
-#define	VER_START_MASK				(0X1FFF << VER_START)
+#define	VER_START_MASK				(0X3FFF << VER_START)
 #define	VER_LEN					16
-#define	VER_LEN_MASK				(0X1FFF << VER_LEN)
+#define	VER_LEN_MASK				(0X3FFF << VER_LEN)
 
 #define	CSIC_DMA_F0_BUFA_REG_OFF		0X020
 #define	F0_BUFA					0
@@ -78,9 +78,9 @@
 
 #define	CSIC_DMA_FLIP_SIZE_REG_OFF		0X03C
 #define	VALID_LEN				0
-#define	VALID_LEN_MASK				(0X1FFF << VALID_LEN)
+#define	VALID_LEN_MASK				(0X3FFF << VALID_LEN)
 #define	VER_LEN					16
-#define	VER_LEN_MASK				(0X1FFF << VER_LEN)
+#define	VER_LEN_MASK				(0X3FFF << VER_LEN)
 
 #define	CSIC_DMA_CAP_STA_REG_OFF		0X04C
 #define	SCAP_STA				0

@@ -453,8 +453,8 @@ out:
 static int snd_sw_ise_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int ret = 0;
-	int times = 0;
 
+/*
 	while (times < 50) {
 		if (1 == frame_status)
 			break;
@@ -463,7 +463,13 @@ static int snd_sw_ise_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	ret = disable_ise_hw_clk();
-
+*/
+	wait_event_timeout(wait_ise, irq_flag, 1*HZ/30*3);
+	if (0 == irq_flag)
+		ise_print("[SYS] wait_event_timeout!\n");
+	irq_flag = 0;
+	frame_status = 1;
+	ret = disable_ise_hw_clk();
 	if (ret < 0) {
 		ise_err("ise clk disable somewhere error!\n");
 		return -EFAULT;

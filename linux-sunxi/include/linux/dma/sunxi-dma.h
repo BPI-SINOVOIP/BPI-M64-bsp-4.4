@@ -66,13 +66,13 @@
 #define DRQSRC_NAND0		5
 #endif
 
-#define DRQSRC_UART0RX		6
-#define DRQSRC_UART1RX 		7
-#define DRQSRC_UART2RX		8
+#define DRQSRC_UART0_RX		6
+#define DRQSRC_UART1_RX 	7
+#define DRQSRC_UART2_RX		8
 
 #ifndef CONFIG_ARCH_SUN8IW8
-#define DRQSRC_UART3RX		9
-#define DRQSRC_UART4RX		10
+#define DRQSRC_UART3_RX		9
+#define DRQSRC_UART4_RX		10
 #endif
 /* #define DRQSRC_RESEVER		11 */
 /* #define DRQSRC_RESEVER		12 */
@@ -114,7 +114,7 @@
 
 #if defined(CONFIG_ARCH_SUN8IW1) \
 	|| defined(CONFIG_ARCH_SUN9I)
-#define DRQSRC_UART5RX		22
+#define DRQSRC_UART5_RX		22
 #endif
 
 #define DRQSRC_SPI0_RX		23

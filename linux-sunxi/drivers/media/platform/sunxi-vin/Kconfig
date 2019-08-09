@@ -7,3 +7,7 @@ config CSI_VIN
 config CCI
 	tristate "use internal cci"
 	default m
+
+config PIPELINE_RESET
+	bool "use pipeline reset when timeout"
+	default n

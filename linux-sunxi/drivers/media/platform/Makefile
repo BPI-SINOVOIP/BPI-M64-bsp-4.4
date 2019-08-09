@@ -52,6 +52,7 @@ obj-y	+= omap/
 obj-$(CONFIG_SUNXI_EVE)	+= sunxi-eve/
 obj-$(CONFIG_SUNXI_ISE) += sunxi-ise/
 obj-$(CONFIG_SUNXI_CVE)	+= sunxi-cve/
+obj-$(CONFIG_SUNXI_AIO) += sunxi-aio/
 
 obj-$(CONFIG_VIDEO_AM437X_VPFE)		+= am437x/
 

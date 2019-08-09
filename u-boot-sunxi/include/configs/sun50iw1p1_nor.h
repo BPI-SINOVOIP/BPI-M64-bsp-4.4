@@ -139,7 +139,7 @@
 
 //#define CONFIG_OPTEE25
 //#define CONFIG_WIDEVINE_KEY_INSTALL
-#define CONFIG_DETECT_RTC_BOOT_MODE
+/* #define CONFIG_DETECT_RTC_BOOT_MODE */
 
 /*********************************************************************
  *uboot cmd support

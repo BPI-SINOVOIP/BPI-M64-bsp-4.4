@@ -322,7 +322,7 @@ static int mmc_get_timing_cfg_tm4(u32 sdc_no, u32 spd_md_id, u32 freq_id, u8 *od
 			spd_md_sdly = tune_sdly->tm4_smx_fx[spd_md_id*2 + freq_id/4];
 			dly = ((spd_md_sdly>>((freq_id%4)*8)) & 0xff);
 
-			if (dly == 0xff)
+			if (dly == 0 || dly == 0xff)
 			{
 				if (spd_md_id == DS26_SDR12)
 				{

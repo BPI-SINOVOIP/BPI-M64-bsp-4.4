@@ -21,9 +21,9 @@ typedef struct core_pll_freq_tbl {
 /* pll = 24M*(N+1)/(M+1)/(P+1) */
 static PLL_TABLE pll1_table[] = {
 	/*pll     N    M   P*/
-	{408,	  16,  0,  0},
+	{408,     16,  0,  0},
+	{912,     37,  0,  0},
 	{1008,    41,  0,  0},
-	{1440,    59,  0,  0},
 };
 
 

@@ -1,4 +1,19 @@
-
+/*
+ * drivers/video/sunxi/disp2/disp/de/lowlevel_v2x/de_lcd/de_lcd.c
+ *
+ * Copyright (c) 2007-2019 Allwinnertech Co., Ltd.
+ * Author: zhengxiaobin <zhengxiaobin@allwinnertech.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 #include "de_lcd_type.h"
 #include "de_lcd.h"
 
@@ -146,11 +161,12 @@ s32 tcon1_hdmi_clk_enable(u32 sel, u32 en)
  */
 s32 tcon0_dsi_clk_enable(u32 sel, u32 en)
 {
-	if (1 == sel)
-		lcd_top[0]->tcon_clk_gate.bits.lcd1_dsi_clk_gate = en;
-	if (0 == sel)
+#if defined(CONFIG_ARCH_SUN8IW17P1)
+	lcd_top[0]->tcon_clk_gate.bits.lcd1_dsi_clk_gate = en;
+#else
+	if (sel == 0)
 		lcd_top[0]->tcon_clk_gate.bits.dsi_clk_gate = en;
-
+#endif
 	return 0;
 }
 
@@ -884,12 +900,34 @@ s32 tcon0_cfg(u32 sel, disp_panel_para *panel)
 
 	tcon0_frm(sel, panel->lcd_frm);
 
+	/*fsync config*/
+	lcd_dev[sel]->fsync_gen_ctrl.bits.fsync_gen_en = panel->lcd_fsync_en;
+	tcon_set_fsync_pol(sel, panel->lcd_fsync_pol);
+
+	/*follow vsync's pol*/
+	lcd_dev[sel]->fsync_gen_ctrl.bits.sel_vsync_en =
+	    lcd_dev[sel]->tcon1_io_pol.bits.io0_inv;
+
+	if (panel->lcd_fsync_act_time) {
+		tcon_set_fsync_active_time(sel, panel->lcd_fsync_act_time);
+	} else {
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act0_time =
+		    panel->lcd_ht / 4;
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act1_time =
+		    panel->lcd_ht / 4;
+	}
+
+	lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_dis_time =
+	    (panel->lcd_fsync_dis_time) ? panel->lcd_fsync_dis_time : 1;
+
 	lcd_dev[sel]->tcon0_ctl.bits.rb_swap = panel->lcd_rb_swap;
 	lcd_dev[sel]->tcon0_io_tri.bits.rgb_endian = panel->lcd_rgb_endian;
 	lcd_dev[sel]->tcon_volume_ctl.bits.safe_period_mode = 3;
 	lcd_dev[sel]->tcon_volume_ctl.bits.safe_period_fifo_num =
 	    panel->lcd_dclk_freq * 15;
 	lcd_dev[sel]->tcon0_io_pol.bits.sync_inv = panel->lcd_hv_sync_polarity;
+	lcd_dev[sel]->fsync_gen_ctrl.bits.hsync_pol_sel =
+	    !panel->lcd_hv_sync_polarity;
 	switch (panel->lcd_hv_clk_phase) {
 	case 0:
 		lcd_dev[sel]->tcon0_io_pol.bits.clk_inv = 0;
@@ -1766,5 +1804,66 @@ s32 tcon_cmap(u32 sel, u32 mode, unsigned int lcd_cmap_tbl[2][3][4])
 		    | (lcd_cmap_tbl[1][0][3]);
 		lcd_dev[sel]->tcon_cmap_ctl.bits.cmap_en = 1;
 	}
+	return 0;
+}
+
+/**
+ * @name       :tcon_set_fsync_pol
+ * @brief      :set fsync's polarity
+ * @param[IN]  :sel:tcon index
+ * @param[IN]  :pol:polarity. 1:positive;0:negative
+ *	positive:
+ *           +---------+
+ *  ---------+         +-----------
+ *
+ *	negative:
+ *  ---------+         +------------
+ *	     +---------+
+ *
+ * @return     :always 0
+ */
+s32 tcon_set_fsync_pol(u32 sel, u32 pol)
+{
+	if (pol) {
+		lcd_dev[sel]->tcon_gint0.bits.tcon_irq_flag |= 0x00000004;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_dis_value = 0;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_act0_value = 1;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_act1_value = 1;
+	} else {
+		lcd_dev[sel]->tcon_gint0.bits.tcon_irq_flag &= 0xfffffffb;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_dis_value = 1;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_act0_value = 0;
+		lcd_dev[sel]->fsync_gen_ctrl.bits.sensor_act1_value = 0;
+	}
+	return 0;
+}
+
+/**
+ * @name       :tcon_set_fsync_active_time
+ * @brief      :set tcon fsync's active time
+ * @param[IN]  :sel:tcon index
+ * @param[IN]  :pixel_num:number of pixel time(Tpixel) to set
+ *
+ * Tpixel = 1/fps*1e9/vt/ht, unit:ns
+ *
+ * @return     :0 if success
+ */
+s32 tcon_set_fsync_active_time(u32 sel, u32 pixel_num)
+{
+	/*4095*2*/
+	if (pixel_num > 8190 || pixel_num <= 0)
+		return -1;
+
+	if (pixel_num > 4095) {
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act0_time = 4095;
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act1_time =
+		    pixel_num - 4095;
+	} else {
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act0_time =
+		    pixel_num / 2;
+		lcd_dev[sel]->fsync_gen_dly.bits.sensor_act1_time =
+		    pixel_num - pixel_num / 2;
+	}
+
 	return 0;
 }

@@ -34,7 +34,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define  NAND_DRV_VERSION_0		0x03
 #define  NAND_DRV_VERSION_1		0x6010
-#define  NAND_DRV_DATE			0x20180927
+#define  NAND_DRV_DATE			0x20181101
 #define  NAND_DRV_TIME			0x18211116
 /*
  *1755--AW1755--A50
@@ -748,7 +748,7 @@ int NAND_ClkRequest(__u32 nand_index)
 			/* 1. release ahb reset and open ahb clock gate */
 			_open_spic_ahb_gate_and_reset_v1(nand_index);
 
-			/* 2. configure ndfc's sclk0 */
+			/* 2. configure spic's sclk0 */
 			ret = _change_spic_clk_v1(nand_index, 3, 10);
 			if (ret < 0) {
 				printf("NAND_ClkRequest, set spi0 dclk failed!\n");

@@ -55,7 +55,7 @@ extern int  sunxi_flash_phyread(unsigned int start_block, unsigned int nblock, v
 extern int  sunxi_flash_phywrite(unsigned int start_block, unsigned int nblock, void *buffer);
 
 //video
-extern uint sprite_cartoon_create(void);
+extern uint sprite_cartoon_create(int op);
 extern int  sprite_cartoon_upgrade(int rate);
 extern int  sprite_cartoon_destroy(void);
 
@@ -70,6 +70,7 @@ extern int sunxi_sprite_setdata_finish(void);
 extern int spinor_erase(int erase, void *mbr_buffer);
 extern int spinor_download_uboot(uint length, void *buffer);
 extern int spinor_download_boot0(uint length, void *buffer);
+extern int spinor_read_uboot(uint length, void *buffer);
 #endif
 
 extern int read_boot_package(int storage_type, void *package_buf);

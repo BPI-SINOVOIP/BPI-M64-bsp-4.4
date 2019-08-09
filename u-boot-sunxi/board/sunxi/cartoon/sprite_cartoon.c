@@ -126,7 +126,7 @@ int sprite_cartoon_screen_set(void)
 *
 ************************************************************************************************************
 */
-int sprite_cartoon_test(void)
+int sprite_cartoon_test(int op)
 {
 	int i;
 	uint progressbar_hd;
@@ -157,16 +157,22 @@ int sprite_cartoon_test(void)
 	printf("screen_width = %d\n", screen_width);
 	printf("screen_height = %d\n", screen_height);
 
-	x1 = screen_width/4;
-	x2 = x1 * 3;
-
-	y1 = screen_height/2 - 40;
-	y2 = screen_height/2 + 40;
+	if (op <= 1) {
+		x1 = screen_width/4;
+		x2 = x1 * 3;
+		y1 = screen_height/2 - 40;
+		y2 = screen_height/2 + 40;
+	} else {
+		x1 = screen_width/2 - screen_width/16;
+		x2 = screen_width/2 + screen_width/16;
+		y1 = screen_height*1/8;
+		y2 = screen_height*7/8;
+	}
 
 	printf("bar x1: %d y1: %d\n", x1, y1);
 	printf("bar x2: %d y2: %d\n", x2, y2);
 
-	progressbar_hd = sprite_cartoon_progressbar_create(x1, y1, x2, y2);
+	progressbar_hd = sprite_cartoon_progressbar_create(x1, y1, x2, y2, op);
 	sprite_cartoon_progressbar_config(progressbar_hd, SPRITE_CARTOON_GUI_RED, SPRITE_CARTOON_GUI_GREEN, 2);
 	sprite_cartoon_progressbar_active(progressbar_hd);
 
@@ -214,7 +220,7 @@ int sprite_cartoon_test(void)
 *
 ************************************************************************************************************
 */
-uint sprite_cartoon_create(void)
+uint sprite_cartoon_create(int op)
 {
 
 	int screen_width, screen_height;
@@ -245,16 +251,22 @@ uint sprite_cartoon_create(void)
 	printf("screen_width = %d\n", screen_width);
 	printf("screen_height = %d\n", screen_height);
 
-	x1 = screen_width/4;
-	x2 = x1 * 3;
-
-	y1 = screen_height/2 - 40;
-	y2 = screen_height/2 + 40;
+	if (op <= 1) {
+		x1 = screen_width/4;
+		x2 = x1 * 3;
+		y1 = screen_height/2 - 40;
+		y2 = screen_height/2 + 40;
+	} else {
+		x1 = screen_width/2 - screen_width/16;
+		x2 = screen_width/2 + screen_width/16;
+		y1 = screen_height*1/8;
+		y2 = screen_height*7/8;
+	}
 
 	printf("bar x1: %d y1: %d\n", x1, y1);
 	printf("bar x2: %d y2: %d\n", x2, y2);
 
-	progressbar_hd = sprite_cartoon_progressbar_create(x1, y1, x2, y2);
+	progressbar_hd = sprite_cartoon_progressbar_create(x1, y1, x2, y2, op);
 	sprite_cartoon_progressbar_config(progressbar_hd, SPRITE_CARTOON_GUI_RED, SPRITE_CARTOON_GUI_GREEN, 2);
 	sprite_cartoon_progressbar_active(progressbar_hd);
 	sprite_uichar_init(24);
@@ -319,12 +331,20 @@ int sprite_cartoon_destroy(void)
 
 int do_sunxi_screen_char(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
-	return sprite_cartoon_test();
+	int direction_option = 0;
+	if (argc == 2)
+		direction_option = simple_strtoul(argv[1], NULL, 10);
+
+	return sprite_cartoon_test(direction_option);
 }
 
 U_BOOT_CMD(
-	screen_char,	1,	0,	do_sunxi_screen_char,
+	screen_char,	2,	0,	do_sunxi_screen_char,
 	"show default screen chars",
-	"no args\n"
+	" [direction]\n"
+	"direction:\n"
+	"0:left to right\n"
+	"1:right to left\n"
+	"2:up to down\n"
+	"3:down to up\n"
 );
-

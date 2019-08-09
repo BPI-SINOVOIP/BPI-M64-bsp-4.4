@@ -199,7 +199,12 @@ s32 dsi_close(u32 sel)
  *             0--> cmd mode
  * @return     alway return 0
  */
-__s32 dsi_mode_switch(__u32 sel, __u32 en)
+__s32 dsi_mode_switch(__u32 sel, __u32 cmd_en, __u32 lp_en)
+{
+	return 0;
+}
+
+__s32 dsi_gen_short_rd(__u32 sel, __u8 *para_p, __u8 para_num, __u8 *result)
 {
 	return 0;
 }

@@ -5,7 +5,7 @@
 #if defined(SUPPORT_DSI)
 
 static volatile struct __de_dsi_dev_t *dsi_dev[DEVICE_DSI_NUM];
-static volatile struct __de_dsi_dphy_dev_t *dphy_dev[1];
+static volatile struct __de_dsi_dphy_dev_t *dphy_dev[DEVICE_DSI_NUM];
 
 u32 dsi_pixel_bits[4] = { 24, 24, 18, 16 };
 u32 dsi_lane_den[4] = { 0x1, 0x3, 0x7, 0xf };

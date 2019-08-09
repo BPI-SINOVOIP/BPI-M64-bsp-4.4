@@ -1988,6 +1988,7 @@
 #define SUNXI_TXCHSEL_CHNUM(v) (((v)-1) << 0)
 #define SUNXI_RXCHSEL_CHNUM(v) (((v)-1) << 0)
 
+
 struct label {
 	const char *name;
 	int value;
@@ -2065,4 +2066,6 @@ struct sunxi_codec {
 	bool spkenable;
 	bool attr_flag;
 };
+#define AC_REG_DEBUG
+
 #endif

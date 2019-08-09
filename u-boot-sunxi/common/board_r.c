@@ -82,6 +82,9 @@
 
 #include <sun3i-sound.h>
 #include <pwm_led.h>
+#ifdef CONFIG_SUNXI_BOOT_TONE
+#include <sunxi_boot_tone.h>
+#endif
 
 #if defined(CONFIG_BOX_STANDBY)
 extern int do_box_standby(void);
@@ -334,6 +337,8 @@ extern int parameter_init(void);
 extern int PowerCheck(void);
 extern int sunxi_keydata_burn_by_usb(void);
 
+extern int sunxi_led_init(void);
+
 #ifdef CONFIG_READ_LOGO_FOR_KERNEL
 static int sunxi_read_bootlogo(void)
 {
@@ -574,7 +579,12 @@ static int initr_sunxi_flash(void)
 		printf("check boardid faile,will used default soccfg and dtb!\n");
 	}
 #endif
-
+#ifdef CONFIG_SUNXI_OFFLINE_BURN_KEY
+	ret = sunxi_clean_offline_key();
+	if (ret < 0) {
+		pr_msg("sunxi_clean_offline_key fail\n");
+	}
+#endif
 	return ret;
 }
 
@@ -750,6 +760,7 @@ init_fnc_t init_sequence_r[] = {
 
 #ifdef CONFIG_SUNXI
 	platform_dma_init,
+	sunxi_led_init,
 
 #ifdef CONFIG_BOOT_TONE
 	codec_play_audio_prepare_step2,
@@ -779,6 +790,9 @@ init_fnc_t init_sequence_r[] = {
 #endif
 #ifdef CONFIG_BOOT_TONE
 	play_boot_tone,
+#endif
+#ifdef CONFIG_SUNXI_BOOT_TONE
+	sunxi_boot_tone_play,
 #endif
 
 #ifdef CONFIG_EINK_PANEL_USED

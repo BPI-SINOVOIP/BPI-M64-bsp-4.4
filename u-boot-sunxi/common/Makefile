@@ -51,7 +51,9 @@ obj-$(CONFIG_CMD_SUNXI_EFEX) += cmd_sunxi_efex.o
 obj-$(CONFIG_CMD_SUNXI_SHUTDOWN) += cmd_sunxi_shutdown.o
 obj-$(CONFIG_CMD_SUNXI_MEMTEST) += cmd_sunxi_memtest.o
 obj-$(CONFIG_CMD_SUNXI_BMP) += cmd_sunxi_bmp.o
+obj-$(CONFIG_SUNXI_SPINOR_BMP) +=sunxi_load_bmp.o
 
+obj-$(CONFIG_SUNXI_LOAD_JPEG) += sunxi_load_jpeg.o
 obj-$(CONFIG_CMD_SUNXI_BURN) += cmd_sunxi_burn.o
 obj-$(CONFIG_CMD_MODIFY_SYSCONFIG) += cmd_modify_sysconfig.o
 # environment

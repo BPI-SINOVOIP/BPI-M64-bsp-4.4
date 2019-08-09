@@ -394,7 +394,7 @@ int NAND_UbootProbe(void)
 {
 	int ret = 0;
 
-	NAND_Print_DBG("NAND_UbootProbe start\n");
+	NAND_Print_DBG("NAND_UbootProbe start %s %s\n", __DATE__, __TIME__);
 
 	nand_set_boot_mode(0);
 

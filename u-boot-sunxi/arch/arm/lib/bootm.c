@@ -21,6 +21,7 @@
 #include <fdt_support.h>
 #include <asm/bootm.h>
 #include <linux/compiler.h>
+#include <smc.h>
 
 #ifdef CONFIG_ALLWINNER
 #include <sunxi_board.h>
@@ -276,7 +277,12 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 	announce_and_cleanup(fake);
 
 	if (!fake)
-		kernel_entry(images->ft_addr);
+	{
+		if(sunxi_probe_secure_monitor())
+			arm_svc_run_os((ulong)kernel_entry, (ulong)(images->ft_addr),  1);
+		else
+			kernel_entry(images->ft_addr);
+	}
 #else
 	unsigned long machid = gd->bd->bi_arch_number;
 	char *s;
@@ -303,12 +309,12 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 		r2 = gd->bd->bi_boot_params;
 
 	if (!fake)
-#if defined(CONFIG_ARCH_SUN50IW1P1) || defined(CONFIG_ARCH_SUN50IW3P1)
-		arm_svc_run_os((ulong)kernel_entry,r2,1);
-#else
-		kernel_entry(0, machid, r2);
-#endif
-
+	{
+		if(sunxi_probe_secure_monitor())
+			arm_svc_run_os((ulong)kernel_entry, r2,  1);
+		else
+			kernel_entry(0, machid, r2);
+	}
 #endif
 }
 

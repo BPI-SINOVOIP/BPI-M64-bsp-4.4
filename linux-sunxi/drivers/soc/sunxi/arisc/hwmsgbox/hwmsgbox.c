@@ -415,6 +415,7 @@ irqreturn_t arisc_hwmsgbox_int_handler(int irq, void *dev)
 		value = readl(vbase + AW_MSGBOX_MSG_REG(ARISC_HWMSGBOX_ARISC_ASYN_TX_CH));
 		pmessage = arisc_message_map_to_cpux(value);
 		if (arisc_message_valid(pmessage)) {
+			flush_message_pool();
 			/* message state switch */
 			if (pmessage->state == ARISC_MESSAGE_PROCESSED) {
 				/* if error call the callback function. by superm */

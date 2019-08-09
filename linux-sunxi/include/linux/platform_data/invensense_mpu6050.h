@@ -26,6 +26,7 @@
  */
 struct inv_mpu6050_platform_data {
 	__s8 orientation[9];
+	int int_gpio;
 };
 
 #endif

@@ -1,2 +1,0 @@
-
-mkimage -A arm64 -O linux -T kernel -C  gzip -a  0x40080000 -e  0x40080000 -n 'AARCH64 OpenWrt Linux-4.4.89' -d  Image.gz  uImage

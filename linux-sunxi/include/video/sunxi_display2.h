@@ -321,6 +321,14 @@ struct disp_rect64 {
 	long long height;
 };
 
+enum {
+	ROTATION_SW_0 = 0,
+	ROTATION_SW_90 = 1,
+	ROTATION_SW_180 = 2,
+	ROTATION_SW_270 = 3,
+};
+
+
 struct disp_fb_info {
 	/* address of frame buffer,
 	 * single addr for interleaved fomart,
@@ -892,6 +900,10 @@ enum tag_DISP_CMD {
 	DISP_MEM_RELEASE = 0x2c1,
 	DISP_MEM_GETADR = 0x2c2,
 	DISP_VDPO_SET_CONFIG = 0x2c3,
+
+	/* --- rotation sw --- */
+	DISP_ROTATION_SW_SET_ROT = 0x300,
+	DISP_ROTATION_SW_GET_ROT = 0x301,
 
 	DISP_EINK_UPDATE = 0x402,
 	DISP_EINK_SET_TEMP = 0x403,

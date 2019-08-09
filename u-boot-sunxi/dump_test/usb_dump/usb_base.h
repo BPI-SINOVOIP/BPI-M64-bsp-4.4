@@ -141,5 +141,7 @@ extern  int sunxi_udc_set_configuration(int config_param);
 extern	int sunxi_udc_get_ep_max(void);
 extern  int sunxi_udc_get_ep_in_type(void);
 extern  int sunxi_udc_get_ep_out_type(void);
+extern int __sunxi_udc_set_address(uchar address);
+
 
 #endif

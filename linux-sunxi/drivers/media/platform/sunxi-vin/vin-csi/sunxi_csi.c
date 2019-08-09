@@ -701,6 +701,7 @@ static int csi_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto unmap;
 
+	mutex_init(&csi->reset_lock);
 	spin_lock_init(&csi->slock);
 	init_waitqueue_head(&csi->wait);
 	list_add_tail(&csi->csi_list, &csi_drv_list);

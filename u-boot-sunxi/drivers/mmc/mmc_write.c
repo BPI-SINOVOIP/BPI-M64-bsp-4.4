@@ -985,6 +985,18 @@ ERR_RET:
 	return ret;
 }
 
+int mmc_set_block_count(struct mmc *mmc, int len)
+{
+	struct mmc_cmd cmd;
+
+	cmd.cmdidx = MMC_CMD_SET_BLOCK_COUNT;
+	cmd.resp_type = MMC_RSP_R1;
+	cmd.cmdarg = len;
+	cmd.flags = 0;
+
+	return mmc_send_cmd(mmc, &cmd, NULL);
+}
+
 static ulong mmc_write_blocks(struct mmc *mmc, lbaint_t start,
 		lbaint_t blkcnt, const void *src)
 {
@@ -1064,6 +1076,12 @@ ulong mmc_bwrite(int dev_num, lbaint_t start, lbaint_t blkcnt, const void *src)
 	do {
 		cur = (blocks_todo > mmc->cfg->b_max) ?
 			mmc->cfg->b_max : blocks_todo;
+		if (!IS_SD(mmc) && (mmc->cfg->platform_caps.emmc_set_block_count == 1) && (cur > 1)) {
+			if (mmc_set_block_count(mmc, cur)) {
+				printf("write: set block count failed!\n");
+				return 0;
+			}
+		}
 		if (mmc_write_blocks(mmc, start, cur, src) != cur) {
 			MMCINFO("write block failed\n");
 			return 0;

@@ -33,6 +33,8 @@
 #include "sprite_erase.h"
 #include "./firmware/imgdecode.h"
 #include "./firmware/imagefile_new.h"
+#include <sys_config.h>
+#include <fdt_support.h>
 
 extern uint img_file_start;
 extern int sunxi_sprite_deal_part_from_sysrevoery(sunxi_download_info *dl_map);
@@ -201,10 +203,20 @@ int sprite_form_sysrecovery(void)
 	char        *src_buf = NULL;
 	int         ret = -1;
 	int production_media = get_boot_storage_type();
+	int nodeoffset;
+	int processbar_direct = 0;;
+
+	nodeoffset = fdt_path_offset(working_fdt, FDT_PATH_CARD_BOOT);
+	if (nodeoffset >= 0) {
+		if (fdt_getprop_u32(working_fdt, nodeoffset,
+				    "processbar_direct",
+				    (uint32_t *)&processbar_direct) < 0)
+			processbar_direct = 0;
+	}
 
 	printf("sunxi sprite begin\n");
 
-	sprite_cartoon_create();
+	sprite_cartoon_create(processbar_direct);
 
 	src_buf = (char *)malloc(1024 * 1024);
 	if (!src_buf)

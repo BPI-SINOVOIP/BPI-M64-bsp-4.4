@@ -36,9 +36,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SPI_RX_IO_DATA                  (SPIC0_BASE + 0x300)
 
 #define  NAND_DRV_VERSION_0		0x03
-#define  NAND_DRV_VERSION_1		0x6014
-#define  NAND_DRV_DATE			0x20180725
-#define  NAND_DRV_TIME			0x17551449
+#define  NAND_DRV_VERSION_1		0x6031
+#define  NAND_DRV_DATE			0x20190711
+#define  NAND_DRV_TIME			0x17550849
 /*
  *1755--AW1755--A50
  *14--uboot2014
@@ -48,6 +48,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define NAND_CLK_BASE_ADDR              (0x03001000)
 #define NAND_PIO_BASE_ADDR              (0x0300B000)
 #define NDFC0_BASE_ADDR                 (0x04011000)
+
+
+#define PIO_POWER_MODE_SEL               (0x0340)
+#define PIO_PC_POWER_MODE_SEL                (1 << 2)
 
 extern int sunxi_get_securemode(void);
 extern __u32 get_storage_type_from_init(void);
@@ -1580,3 +1584,15 @@ int NAND_Get_Version(void)
 	return NAND_DRV_DATE;
 }
 
+int nand_set_gpio_power_1p8v(void)
+{
+	u32 cfg;
+
+	cfg = *(volatile __u32 *)(NAND_PIO_BASE_ADDR + PIO_POWER_MODE_SEL);
+	cfg |= PIO_PC_POWER_MODE_SEL;
+	*(volatile __u32 *)(NAND_PIO_BASE_ADDR + PIO_POWER_MODE_SEL) = cfg;
+
+	printf("%s %d switch PIO_C power to 1.8V\n",__func__,__LINE__);
+
+	return 0;
+}

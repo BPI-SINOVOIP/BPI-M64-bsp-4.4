@@ -32,7 +32,9 @@
 #define SPINOR_WREN        0x06
 #define SPINOR_WRDI        0x04
 #define SPINOR_RDSR        0x05
+#define SPINOR_RDSR2        0x35
 #define SPINOR_WRSR        0x01
+#define SPINOR_WRSR2        0x31
 #define SPINOR_PP          0x02
 #define SPINOR_SE          0xd8
 #define SPINOR_BE          0xc7
@@ -60,6 +62,9 @@
 #define SPINOR_RESET 		0xF0
 #define SPINOR_RESET_CFM   	0xd0
 #endif
+
+/* CFI Manufacture ID's */
+#define SPI_FLASH_CFI_MFR_PUYA 0x85
 
 extern int spinor_init(int stage);
 extern int spinor_exit(int force);

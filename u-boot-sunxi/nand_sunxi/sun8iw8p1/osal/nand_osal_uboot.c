@@ -40,9 +40,9 @@ extern __u32 SPIC_IO_BASE;
 //#define DMAC_STATUS_REG  		(DMAC_BASE_ADDR + 0x30)
 
 #define  NAND_DRV_VERSION_0		0x2
-#define  NAND_DRV_VERSION_1		0x04
-#define  NAND_DRV_DATE			0x20180905
-#define  NAND_DRV_TIME			0x1600
+#define  NAND_DRV_VERSION_1		0x08
+#define  NAND_DRV_DATE			0x20190408
+#define  NAND_DRV_TIME			0x1958
 
 
 extern int sunxi_get_securemode(void);

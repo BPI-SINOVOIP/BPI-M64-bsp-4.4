@@ -91,6 +91,10 @@ void ufdt_node_pool_destruct(struct ufdt_node_pool *pool)
 static struct ufdt_node_pool_block_header *_ufdt_node_pool_create_block(void)
 {
   char *block_buf = (char *)dto_malloc(UFDT_NODE_POOL_BLOCK_SIZE);
+  if (block_buf == NULL) {
+	dto_error("ufdt_node_pool_block_header malloc fail\n");
+	return NULL;
+  }
   char *block_buf_start = block_buf + sizeof(struct ufdt_node_pool_block_header);
   char *block_buf_end = block_buf + UFDT_NODE_POOL_BLOCK_SIZE;
 
@@ -192,6 +196,10 @@ void *ufdt_node_pool_alloc(struct ufdt_node_pool *pool)
   struct ufdt_node_pool_block_header *block = pool->first_block;
   if (block == NULL || block->first_free_entry == NULL) {
     block = _ufdt_node_pool_create_block();
+	if (block == NULL) {
+		dto_error("_ufdt_node_pool_create_block fail\n");
+		return NULL;
+	}
     _ufdt_node_pool_preppend_block(pool, block);
   }
 

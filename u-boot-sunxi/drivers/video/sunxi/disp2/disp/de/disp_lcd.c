@@ -1,3 +1,19 @@
+/*
+ * drivers/video/sunxi/disp2/disp/de/disp_lcd/disp_lcd.c
+ *
+ * Copyright (c) 2007-2019 Allwinnertech Co., Ltd.
+ * Author: zhengxiaobin <zhengxiaobin@allwinnertech.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 #include "disp_lcd.h"
 
 struct disp_lcd_private_data
@@ -300,29 +316,24 @@ static s32 lcd_parse_panel_para(u32 disp, disp_panel_para * info)
 	if (ret == 1)
 		info->lcd_tcon_en_odd_even = value;
 
-    ret = disp_sys_script_get_item(primary_key, "lcd_edp_rate", &value, 1);
-    if (ret == 1)
-    {
-        info->lcd_edp_rate = value;
-    }
 
-    ret = disp_sys_script_get_item(primary_key, "lcd_edp_lane", &value, 1);
-    if (ret == 1)
-    {
-        info->lcd_edp_lane= value;
-    }
+	ret = disp_sys_script_get_item(primary_key, "lcd_fsync_en", &value, 1);
+	if (ret == 1)
+		info->lcd_fsync_en = value;
 
-    ret = disp_sys_script_get_item(primary_key, "lcd_edp_colordepth", &value, 1);
-    if (ret == 1)
-    {
-        info->lcd_edp_colordepth = value;
-    }
+	ret = disp_sys_script_get_item(primary_key, "lcd_fsync_act_time", &value, 1);
+	if (ret == 1)
+		info->lcd_fsync_act_time = value;
 
-	ret = disp_sys_script_get_item(primary_key, "lcd_edp_fps", &value, 1);
-    if (ret == 1)
-    {
-        info->lcd_edp_fps = value;
-    }
+	ret = disp_sys_script_get_item(primary_key, "lcd_fsync_dis_time", &value, 1);
+	if (ret == 1)
+		info->lcd_fsync_dis_time = value;
+
+	ret =
+	    disp_sys_script_get_item(primary_key, "lcd_fsync_pol", &value,
+				     1);
+	if (ret == 1)
+		info->lcd_fsync_pol = value;
 
     ret = disp_sys_script_get_item(primary_key, "lcd_hv_clk_phase", &value, 1);
     if (ret == 1)
@@ -2220,7 +2231,7 @@ s32 disp_lcd_gpio_init(struct disp_device* lcd)
 			disp_gpio_set_t  gpio_info[1];
 
 			memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_gpio[i]), sizeof(disp_gpio_set_t));
-			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request_simple(gpio_info, 1);
+			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request(gpio_info, 1);
 		}
 	}
 
@@ -2245,7 +2256,7 @@ s32 disp_lcd_gpio_exit(struct disp_device* lcd)
 
 			memcpy(gpio_info, &(lcdp->lcd_cfg.lcd_gpio[i]), sizeof(disp_gpio_set_t));
 			gpio_info->mul_sel = 7;
-			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request_simple(gpio_info, 1);
+			lcdp->lcd_cfg.gpio_hdl[i] = disp_sys_gpio_request(gpio_info, 1);
 			disp_sys_gpio_release(lcdp->lcd_cfg.gpio_hdl[i], 2);
 			lcdp->lcd_cfg.gpio_hdl[i] = 0;
 		}
@@ -2561,6 +2572,11 @@ s32 disp_init_lcd(disp_bsp_init_para * para)
 #if defined(SUPPORT_DSI)
 	u32 i = 0;
 #endif
+	char primary_key[20];
+	int ret = 0, value = 1;
+#if defined(CONFIG_ARCH_SUN8IW17P1)
+	s32 use_dsi_flag = 0;
+#endif
 
 	DE_INF("disp_init_lcd\n");
 
@@ -2592,16 +2608,33 @@ s32 disp_init_lcd(disp_bsp_init_para * para)
 		if (!bsp_disp_feat_is_supported_output_types(hwdev_index, DISP_OUTPUT_TYPE_LCD)) {
 			continue;
 		}
+		sprintf(primary_key, "lcd%d", disp);
+		ret = disp_sys_script_get_item(primary_key, "lcd_used", &value,
+					       1);
+		if (ret != 1 || value != 1)
+			continue;
+
 		lcd = &lcds[disp];
 		lcdp = &lcd_private[disp];
 		lcd->priv_data = (void*)lcdp;
 
 		sprintf(lcd->name, "lcd%d", disp);
 		lcd->disp = disp;
+#if defined(CONFIG_ARCH_SUN8IW17P1)
+		value = 0;
+		ret = disp_sys_script_get_item(primary_key, "lcd_if", &value,
+					       1);
+		if (value == 4) {
+			lcd->hwdev_index = 1;
+			use_dsi_flag = 1;
+		} else
+			lcd->hwdev_index = (use_dsi_flag == 1) ? 0 : hwdev_index;
+#else
 		lcd->hwdev_index = hwdev_index;
+#endif
 		lcd->type = DISP_OUTPUT_TYPE_LCD;
-		lcdp->irq_no = para->irq_no[DISP_MOD_LCD0 + hwdev_index];
-		lcdp->clk = para->mclk[DISP_MOD_LCD0 + hwdev_index];
+		lcdp->irq_no = para->irq_no[DISP_MOD_LCD0 + lcd->hwdev_index];
+		lcdp->clk = para->mclk[DISP_MOD_LCD0 + lcd->hwdev_index];
 		lcdp->lvds_clk = para->mclk[DISP_MOD_LVDS];
 #if defined(SUPPORT_DSI)
 		lcdp->irq_no_dsi = para->irq_no[DISP_MOD_DSI0 + disp];

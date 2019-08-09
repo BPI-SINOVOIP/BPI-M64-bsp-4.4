@@ -97,3 +97,6 @@ obj-$(CONFIG_TOUCHSCREEN_GSLX680NEW)	+= gslx680new/
 obj-$(CONFIG_TOUCHSCREEN_FT5X16_TS)    += ftxxxx/
 obj-$(CONFIG_TOUCHSCREEN_GT9XX)		+= gt9xx/
 obj-$(CONFIG_TOUCHSCREEN_FTS)    += focaltech_touch/
+obj-$(CONFIG_TOUCHSCREEN_GT5688)	+= gt5688/
+obj-$(CONFIG_TOUCHSCREEN_MSG2XXX)	+= s23501t0-g/
+obj-$(TOUCHSCREEN_FT6X_TS)              += ft6x/

@@ -940,6 +940,8 @@ void malloc_stats();
 #endif
 #endif	/* DEBUG */
 
+static void __free(Void_t *mem);
+
 DECLARE_GLOBAL_DATA_PTR;
 
 /*
@@ -2074,7 +2076,11 @@ static void malloc_extend_top(nb) INTERNAL_SIZE_T nb;
 	SIZE_SZ|PREV_INUSE;
       /* If possible, release the rest. */
       if (old_top_size >= MINSIZE)
+#ifdef CONFIG_SUNXI_MULITCORE_BOOT
+	 __free(chunk2mem(old_top));
+#else
 	fREe(chunk2mem(old_top));
+#endif
     }
   }
 

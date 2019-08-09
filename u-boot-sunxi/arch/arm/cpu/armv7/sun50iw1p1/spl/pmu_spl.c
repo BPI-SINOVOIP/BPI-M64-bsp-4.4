@@ -33,6 +33,9 @@
 int pmu_type;
 
 #define dbg(format,arg...)	printf(format,##arg)
+#define CHIPID_BASE  0x01c14200
+
+static int axp81X_set_dcdc6(int set_vol);
 
 
 int pwrok_restart_enable(void)
@@ -53,6 +56,7 @@ int pwrok_restart_enable(void)
 static int axp_probe(void)
 {
 	u8  pmu_type;
+	u32 efuse_cfg = 0;
 
 	if(axp_i2c_read(AXP81X_ADDR, 0x3, &pmu_type))
 	{
@@ -65,6 +69,18 @@ static int axp_probe(void)
 	{
 		/* pmu type AXP81x */
 		printf("PMU: AXP81X\n");
+		/*SID REG0: bit17:10
+		 *if val>0 && val < 40, vdd-sys 1.14v,
+		 *else 1.1v
+		 */
+		efuse_cfg = readl(CHIPID_BASE);
+		efuse_cfg >>= 10;
+		efuse_cfg &= 0xff;
+		if ((efuse_cfg > 0) && (efuse_cfg < 40))
+			axp81X_set_dcdc6(1140);
+		else
+			axp81X_set_dcdc6(1100);
+
 		pwrok_restart_enable();
 		return AXP81X_ADDR;
 	}
@@ -74,6 +90,38 @@ static int axp_probe(void)
 		return -1;
 	}
 
+}
+
+/* dcdc 6 for vdd_sys */
+static int axp81X_set_dcdc6(int set_vol)
+{
+	u8   reg_value;
+
+	if (set_vol < 0)
+		return 0;
+	if(set_vol < 600)
+		set_vol = 600;
+	else if(set_vol > 1520)
+		set_vol = 1520;
+
+	if (axp_i2c_read(AXP81X_ADDR, BOOT_POWER81X_DC6OUT_VOL, &reg_value)) {
+		debug("%d\n", __LINE__);
+		return -1;
+	}
+	reg_value &= (~0x7f);
+
+	/*dcdc6:0.6v-1.1v  10mv/step   1.12v-1.52v  20mv/step */
+        if(set_vol > 1100)
+             reg_value |= (50+(set_vol - 1100)/20);
+        else
+            reg_value |= (set_vol - 600)/10;
+
+	if(axp_i2c_write(AXP81X_ADDR, BOOT_POWER81X_DC6OUT_VOL, reg_value)) {
+		printf("pmu : unable to set dcdc6\n");
+		return -1;
+	}
+	printf("set vdd sys to %dmv\n", set_vol);
+	return 0;
 }
 
 static int axp81X_set_dcdc5(int set_vol)

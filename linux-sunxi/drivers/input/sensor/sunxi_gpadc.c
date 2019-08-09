@@ -542,7 +542,11 @@ static int sunxi_gpadc_input_event_set(struct input_dev *input_dev, enum gp_chan
 
 	switch (id) {
 	case GP_CH_0:
+#ifdef CONFIG_REPEAT_KEY_USED
+		input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_REP);
+#else
 		input_dev->evbit[0] = BIT_MASK(EV_KEY);
+#endif
 		for (i = 0; i < KEY_MAX_CNT; i++)
 			set_bit(sunxi_gpadc->scankeycodes[i], input_dev->keybit);
 		break;
@@ -688,6 +692,19 @@ static int sunxi_gpadc_input_register_setup(struct sunxi_gpadc *sunxi_gpadc)
 	return 0;
 }
 
+static int sunxi_gpadc_input_unregister(struct sunxi_gpadc *sunxi_gpadc)
+{
+	struct sunxi_config *config = NULL;
+	int i;
+
+	config = &sunxi_gpadc->gpadc_config;
+	for (i = 0; i < sunxi_gpadc->channel_num; i++) {
+		if (config->channel_select & sunxi_gpadc_channel_id(i))
+			input_unregister_device(sunxi_gpadc->input_gpadc[i]);
+	}
+
+	return 0;
+}
 static int sunxi_gpadc_setup(struct platform_device *pdev,
 					struct sunxi_gpadc *sunxi_gpadc)
 {
@@ -1006,6 +1023,7 @@ int sunxi_gpadc_remove(struct platform_device *pdev)
 	struct sunxi_gpadc *sunxi_gpadc = platform_get_drvdata(pdev);
 
 	sunxi_gpadc_hw_exit(sunxi_gpadc);
+	sunxi_gpadc_input_unregister(sunxi_gpadc);
 	free_irq(sunxi_gpadc->irq_num, sunxi_gpadc);
 	clk_disable_unprepare(sunxi_gpadc->mclk);
 	iounmap(sunxi_gpadc->reg_base);

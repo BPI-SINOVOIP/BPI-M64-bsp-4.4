@@ -27,6 +27,7 @@
 
 #include <asm/arch/platform.h>
 
+#define  SUNXI_WATCHDOG_CTRL   (SUNXI_TIMER_BASE + 0xB0)
 #define  SUNXI_WATCHDOG_CFG    (SUNXI_TIMER_BASE + 0xB4)
 #define  SUNXI_WATCHDOG_MODE   (SUNXI_TIMER_BASE + 0xB8)
 
@@ -103,7 +104,8 @@ static __inline void watchdog_disable(void)
 static __inline void watchdog_enable(void)
 {
     /* enable watchdog */
-    writel(3, SUNXI_WATCHDOG_MODE);
+    writel(1, SUNXI_WATCHDOG_CFG);
+    writel(1, SUNXI_WATCHDOG_MODE);
 
     return ;
 }

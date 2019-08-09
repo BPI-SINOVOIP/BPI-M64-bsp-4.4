@@ -821,27 +821,27 @@ static ssize_t SC7A30_calibration_value_store(struct device *dev,
     return count;
 }
 
-static DEVICE_ATTR(reg, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(reg, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_register_show, SC7A30_register_store);
-static DEVICE_ATTR(mode, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(mode, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_mode_show, SC7A30_mode_store);
-static DEVICE_ATTR(rate, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(rate, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_rate_show, SC7A30_rate_store);
-static DEVICE_ATTR(value, 0666,//S_IRUGO,
+static DEVICE_ATTR(value, 0644,//S_IRUGO,
         SC7A30_value_show, NULL);
-static DEVICE_ATTR(delay, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(delay, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_delay_show, SC7A30_delay_store);
-static DEVICE_ATTR(enable, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(enable, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_enable_show, SC7A30_enable_store);
-static DEVICE_ATTR(fuzz, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(fuzz, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_fuzz_show, SC7A30_fuzz_store);
-static DEVICE_ATTR(board_position, 0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(board_position, 0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_board_position_show, SC7A30_board_position_store);
-static DEVICE_ATTR(calibration_run, 0666,//S_IWUSR|S_IWGRP, //calibration_run
+static DEVICE_ATTR(calibration_run, 0644,//S_IWUSR|S_IWGRP, //calibration_run
         NULL, SC7A30_calibration_run_store);
-static DEVICE_ATTR(calibration_reset, 0666,//S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(calibration_reset, 0644,//S_IWUSR|S_IWGRP,
         NULL, SC7A30_calibration_reset_store);
-static DEVICE_ATTR(calibration_value,0666,//S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(calibration_value,0644,//S_IRUGO|S_IWUSR|S_IWGRP,
         SC7A30_calibration_value_show,
         SC7A30_calibration_value_store);
 

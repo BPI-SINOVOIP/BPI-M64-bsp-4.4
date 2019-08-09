@@ -4,6 +4,9 @@
  * modify base on juno.dts
  */
 
+/* nobody use, just to "avoid"(not reslove) OOM problem at the begining of the physical memory address. */
+/memreserve/ 0x40000000 0x00001000; /* reserve for out of memory access problem: size = 4K */
+
 /* kernel used */
 /memreserve/ 0x40020000 0x00000800; /* super standby range        : [0x40020000~0x41020800], size = 2K  */
 
@@ -11,6 +14,10 @@
 /memreserve/ 0x48100000 0x00004000; /* arisc dram code space range: [0x48100000~0x48104000], size = 16K */
 /memreserve/ 0x48104000 0x00001000; /* arisc para cfg range       : [0x48104000~0x48105000], size = 4K  */
 /memreserve/ 0x48105000 0x00001000; /* arisc message pool range   : [0x48105000~0x48106000], size = 4K  */
+/memreserve/ 0x61700000 0x00100000; /* reserve for csi use in uboot mode*/
+
+/* fix cpus debug bug temporary */
+/memreserve/ 0x74f40000 0x00001000; /* reserve for segment fault issue, size = 4K  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
@@ -33,19 +40,48 @@
 		twi1 = &twi1;
 		twi2 = &twi2;
 		twi3 = &twi3;
+		twi4 = &twi4;
 		spi0 = &spi0;
 		spi1 = &spi1;
 		spi2 = &spi2;
 		spi3 = &spi3;
 		gmac0 = &gmac0;
 
+		vind = &vind0;
+		csi0 = &csi0;
+		csi1 = &csi1;
+		csi2 = &csi2;
+		csi3 = &csi3;
+		mipi0 = &mipi0;
+		mipi1 = &mipi1;
+		isp0 = &isp0;
+		isp1 = &isp1;
+		vipp0 = &scaler0;
+		vipp1 = &scaler1;
+		vipp2 = &scaler2;
+		vipp3 = &scaler3;
+		vipp4 = &scaler4;
+		vipp5 = &scaler5;
+		vipp6 = &scaler6;
+		vipp7 = &scaler7;
+		dma0= &vinc0;
+		dma1= &vinc1;
+		dma2= &vinc2;
+		dma3= &vinc3;
+		dma4= &vinc4;
+		dma5= &vinc5;
+		dma6= &vinc6;
+		dma7= &vinc7;
+
 		global_timer0  = &soc_timer0;
 		mmc0 = &sdc0;
 		mmc2 = &sdc2;
 		nand0 =&nand0;
+		spinand =&spinand;
 		disp = &disp;
 		lcd0 = &lcd0;
 		hdmi = &hdmi;
+
 		pwm = &pwm;
 		pwm0 = &pwm0;
 		pwm1 = &pwm1;
@@ -391,7 +427,7 @@
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&s_uart0_pins_a>;
-			status = "okay";
+			status = "disable";
 		};
 		s_rsb: s_rsb@7083000 {
 			compatible = "allwinner,s_rsb";
@@ -484,12 +520,12 @@
 			clocks = <&clk_pll_cve>, <&clk_cve>;
 		};
 
-		ve@01c0e000 {
+		ve: ve@01c0e000 {
 			compatible = "allwinner,sunxi-cedar-ve";
 			reg = <0x0 0x01c0e000 0x0 0x1000>,
-			      <0x0 0x01c00000 0x0 0x10>,
-			      <0x0 0x01c20000 0x0 0x800>;
-			interrupts = <GIC_SPI 58 4>;
+			      <0x0 0x03000000 0x0 0x10>,
+			      <0x0 0x03001000 0x0 0x1000>;
+			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk_pll_ve>,	<&clk_ve>;
 		};
 
@@ -594,7 +630,7 @@
 			reg = <0x0 0x05002400 0x0 0x400>;
 			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk_twi1>;
-			clock-frequency = <200000>;
+			clock-frequency = <100000>;
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&twi1_pins_a>;
 			pinctrl-1 = <&twi1_pins_b>;
@@ -609,7 +645,7 @@
 			reg = <0x0 0x05002800 0x0 0x400>;
 			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk_twi2>;
-			clock-frequency = <200000>;
+			clock-frequency = <100000>;
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&twi2_pins_a>;
 			pinctrl-1 = <&twi2_pins_b>;
@@ -624,10 +660,25 @@
 			reg = <0x0 0x05002c00 0x0 0x400>;
 			interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk_twi3>;
-			clock-frequency = <200000>;
+			clock-frequency = <100000>;
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&twi3_pins_a>;
 			pinctrl-1 = <&twi3_pins_b>;
+			status = "disabled";
+		};
+
+		twi4: twi@0x07081800{
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "allwinner,sun8i-twi";
+			device_type = "twi4";
+			reg = <0x0 0x07081800 0x0 0x400>;
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk_cpurtwi1>;
+			clock-frequency = <200000>;
+			pinctrl-names = "default", "sleep";
+			pinctrl-0 = <&twi4_pins_a>;
+			pinctrl-1 = <&twi4_pins_b>;
 			status = "disabled";
 		};
 
@@ -734,8 +785,8 @@
 			maingain =  <0x4>;
 			headsetmicgain =  <0x4>;
 			adcagc_cfg =  <0x0>;
-			adcdrc_cfg =  <0x0>;
-			adchpf_cfg =  <0x0>;
+			adcdrc_cfg =  <0x1>;
+			adchpf_cfg =  <0x1>;
 			dacdrc_cfg =  <0x0>;
 			dachpf_cfg =  <0x0>;
 			aif1_lrlk_div = <0x40>;
@@ -770,7 +821,7 @@
 			tdm_config =  <0x01>;
 			tdm_num = <0x0>;
 			mclk_div = <0x0>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		audiohdmi:daudio@0x05091000 {
@@ -796,7 +847,7 @@
 			tdm_config =  <0x01>;
 			tdm_num = <0x2>;
 			mclk_div = <0x0>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		dmic:dmic-controller@0x05095000{
@@ -824,7 +875,7 @@
 		snddaudio0:sound@1{
 			compatible = "allwinner,sunxi-daudio0-machine";
 			sunxi,daudio-controller = <&daudio0>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		sndhdmi:sound@2{
@@ -836,7 +887,7 @@
 		snddaudio2:sound@3{
 			compatible = "allwinner,sunxi-daudio2-machine";
 			sunxi,daudio-controller = <&daudio2>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		snddmic:sound@4{
@@ -920,7 +971,7 @@
 			reg = <0x0 0x04022000 0x0 0x1000>;
 			interrupts = <GIC_SPI 48 0x0104>;
 			clocks = <&clk_hosc>,
-				 <&clk_pll_periph1x2>,
+				 <&clk_pll_periph0x2>,
 				 <&clk_sdmmc2_mod>,
 				 <&clk_sdmmc2_bus>,
 				 <&clk_sdmmc2_rst>;
@@ -983,7 +1034,7 @@
 			reg = <0x0 0x04020000 0x0 0x1000>;
 			interrupts = <GIC_SPI 46 0x0104>;
 			clocks = <&clk_hosc>,
-				 <&clk_pll_periph1x2>,
+				 <&clk_pll_periph0x2>,
 				 <&clk_sdmmc0_mod>,
 				 <&clk_sdmmc0_bus>,
 				 <&clk_sdmmc0_rst>;
@@ -1032,7 +1083,7 @@
 			reg = <0x0 0x04021000 0x0 0x1000>;
 			interrupts = <GIC_SPI 47 0x0104>;
 			clocks = <&clk_hosc>,
-				 <&clk_pll_periph1x2>,
+				 <&clk_pll_periph0x2>,
 				 <&clk_sdmmc1_mod>,
 				 <&clk_sdmmc1_bus>,
 				 <&clk_sdmmc1_rst>;
@@ -2023,11 +2074,11 @@
 			ranges;
 			device_id = <0>;
 			reg = <0x0 0x06600000 0x0 0x1000>;
-			clocks = <&clk_csi_top>, <&clk_pll_isp>,
-				 <&clk_csi_master0>, <&clk_hosc>, <&clk_pll_video0>,
-				 <&clk_csi_master1>, <&clk_hosc>, <&clk_pll_video0>,
-				 <&clk_csi_master2>, <&clk_hosc>, <&clk_pll_video0>,
-				 <&clk_csi_master3>, <&clk_hosc>, <&clk_pll_video0>,
+			clocks = <&clk_csi_top>, <&clk_pll_video0>,
+				 <&clk_csi_master0>, <&clk_hosc>, <&clk_pll_isp>,
+				 <&clk_csi_master1>, <&clk_hosc>, <&clk_pll_isp>,
+				 <&clk_csi_master2>, <&clk_hosc>, <&clk_pll_isp>,
+				 <&clk_csi_master3>, <&clk_hosc>, <&clk_pll_isp>,
 				 <&clk_isp>;
 			pinctrl-names = "mclk0-default","mclk0-sleep","mclk1-default","mclk1-sleep",
 					"mclk2-default","mclk2-sleep","mclk3-default","mclk3-sleep";
@@ -2462,6 +2513,29 @@
 			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&nand0_pins_a &nand0_pins_b>;
 			pinctrl-1 = <&nand0_pins_c>;
+			nand0_regulator1 = "vcc-nand";
+			nand0_regulator2 = "none";
+			nand0_cache_level = <0x55aaaa55>;
+			nand0_flush_cache_num = <0x55aaaa55>;
+			nand0_capacity_level = <0x55aaaa55>;
+			nand0_id_number_ctl = <0x55aaaa55>;
+			nand0_print_level = <0x55aaaa55>;
+			nand0_p0 = <0x55aaaa55>;
+			nand0_p1 = <0x55aaaa55>;
+			nand0_p2 = <0x55aaaa55>;
+			nand0_p3 = <0x55aaaa55>;
+			status = "disable";
+		};
+
+		spinand:spinand@05010000 {
+			compatible = "allwinner,sunxi-spinand";
+			device_type = "spinand";
+			reg = <0x0 0x05010000 0x0 0x1000>;
+			interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk_pll_periph0>, <&clk_spi0>;
+			pinctrl-names = "default", "sleep";
+			pinctrl-0 = <&spi0_pins_a &spi0_pins_b>;
+			pinctrl-1 = <&spi0_pins_c>;
 			nand0_regulator1 = "vcc-nand";
 			nand0_regulator2 = "none";
 			nand0_cache_level = <0x55aaaa55>;

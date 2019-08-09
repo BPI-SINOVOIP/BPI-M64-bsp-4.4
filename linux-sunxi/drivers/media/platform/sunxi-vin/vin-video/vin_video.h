@@ -190,6 +190,7 @@ struct vin_vid_cap {
 	struct v4l2_ctrl *af_win[4];	/* af win cluster */
 	struct work_struct s_stream_task;
 	struct work_struct pipeline_reset_task;
+	bool isr_flag;
 	unsigned long state;
 };
 

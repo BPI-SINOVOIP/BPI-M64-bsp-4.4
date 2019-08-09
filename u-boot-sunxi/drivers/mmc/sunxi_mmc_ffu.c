@@ -311,6 +311,79 @@ ERR_RET:
 	return -1;
 }
 
+int mmc_ffu_get_fw1(struct mmc *mmc, char *fw, u32 fw_request_len, u32 *fw_real_len)
+{
+	int i;
+	int len = 0;
+
+	struct sbrom_toc1_head_info  *toc1_head = NULL;
+	struct sbrom_toc1_item_info  *item_head = NULL;
+
+	struct sbrom_toc1_item_info  *toc1_item = NULL;
+
+	toc1_head = (struct sbrom_toc1_head_info *)CONFIG_BOOTPKG_STORE_IN_DRAM_BASE;
+	item_head = (struct sbrom_toc1_item_info *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + sizeof(struct sbrom_toc1_head_info));
+
+#ifdef BOOT_DEBUG
+	printf("*******************TOC1 Head Message*************************\n");
+	printf("Toc_name          = %s\n",   toc1_head->name);
+	printf("Toc_magic         = 0x%x\n", toc1_head->magic);
+	printf("Toc_add_sum           = 0x%x\n", toc1_head->add_sum);
+
+	printf("Toc_serial_num    = 0x%x\n", toc1_head->serial_num);
+	printf("Toc_status        = 0x%x\n", toc1_head->status);
+
+	printf("Toc_items_nr      = 0x%x\n", toc1_head->items_nr);
+	printf("Toc_valid_len     = 0x%x\n", toc1_head->valid_len);
+	printf("TOC_MAIN_END      = 0x%x\n", toc1_head->end);
+	printf("***************************************************************\n\n");
+#endif
+
+	toc1_item = item_head;
+	for (i = 0; i < toc1_head->items_nr; i++, toc1_item++) {
+#ifdef BOOT_DEBUG
+		printf("\n*******************TOC1 Item Message*************************\n");
+		printf("Entry_name        = %s\n",   toc1_item->name);
+		printf("Entry_data_offset = 0x%x\n", toc1_item->data_offset);
+		printf("Entry_data_len    = 0x%x\n", toc1_item->data_len);
+
+		printf("encrypt           = 0x%x\n", toc1_item->encrypt);
+		printf("Entry_type        = 0x%x\n", toc1_item->type);
+		printf("run_addr          = 0x%x\n", toc1_item->run_addr);
+		printf("index             = 0x%x\n", toc1_item->index);
+		printf("Entry_end         = 0x%x\n", toc1_item->end);
+		printf("***************************************************************\n\n");
+#endif
+
+		if (strncmp(toc1_item->name, ITEM_EMMC_FW1_NAME, sizeof(ITEM_EMMC_FW1_NAME)) == 0) {
+			if (!fw_request_len) {
+				len = (toc1_item->data_len+511)/512;
+				if (!len) {
+					MMCINFO("invalid fw length %d from package.\n", len*512);
+					return -1;
+				}
+			} else if (fw_request_len != 0xFFFFFFFF) {
+				len = fw_request_len;
+			} else {
+				MMCINFO("invalid request fw length %d ---2 \n", fw_request_len);
+				return -1;
+			}
+			memcpy(fw, (void *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + toc1_item->data_offset), len*512);
+			MMCINFO("fw len: %d sector\n", len);
+			break;
+		}
+	}
+
+	if (i == toc1_head->items_nr) {
+		MMCINFO("get emmc fw from toc0 fail\n");
+		return -1;
+	}
+
+	*fw_real_len = len*512;
+
+	return 0;
+}
+
 int mmc_ffu_get_fw(struct mmc *mmc, char *fw, u32 fw_request_len, u32 *fw_real_len)
 {
 	int i;
@@ -357,8 +430,7 @@ int mmc_ffu_get_fw(struct mmc *mmc, char *fw, u32 fw_request_len, u32 *fw_real_l
 		printf("***************************************************************\n\n");
 #endif
 
-		if(strncmp(toc1_item->name, ITEM_EMMC_FW_NAME, sizeof(ITEM_EMMC_FW_NAME)) == 0)
-		{
+		if (strncmp(toc1_item->name, ITEM_EMMC_FW_NAME, sizeof(ITEM_EMMC_FW_NAME)) == 0) {
 			//toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SYS_TEXT_BASE);
 
 			if (!fw_request_len) {
@@ -373,7 +445,6 @@ int mmc_ffu_get_fw(struct mmc *mmc, char *fw, u32 fw_request_len, u32 *fw_real_l
 				MMCINFO("invalid request fw length %d ---2 \n", fw_request_len);
 				return -1;
 			}
-
 			memcpy(fw, (void *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + toc1_item->data_offset), len*512);
 			MMCINFO("fw len: %d sector\n", len);
 			break;
@@ -398,6 +469,27 @@ int sunxi_mmc_ffu(struct mmc *mmc)
 	ALLOC_CACHE_ALIGN_BUFFER(char, fw, 512*1024);
 	u32 len = 0;
 	u8 prv = 0, mid = 0;
+	char pnm1, pnm2, pnm3, pnm4, pnm5, pnm6;
+	pnm1 = mmc->cid[0] & 0xff;
+	pnm2 = (mmc->cid[1] >> 24) & 0xff;
+	pnm3 = (mmc->cid[1] >> 16) & 0xff;
+	pnm4 = (mmc->cid[1] >> 8) & 0xff;
+	pnm5 = mmc->cid[1] & 0xff;
+	pnm6 = (mmc->cid[2] >> 24) & 0xff;
+
+	char test[7] = {0};
+	test[0] = pnm1;
+	test[1] = pnm2;
+	test[2] = pnm3;
+	test[3] = pnm4;
+	test[4] = pnm5;
+	test[5] = pnm6;
+	test[6] = '\0';
+
+	int work_mode = uboot_spare_head.boot_data.work_mode;
+
+	if (work_mode != WORK_MODE_BOOT)
+		return 0;
 
 	if (!host->cfg.platform_caps.enable_ffu) {
 		MMCINFO("don't enable ffu\n");
@@ -410,8 +502,25 @@ int sunxi_mmc_ffu(struct mmc *mmc)
 	if (!IS_SD(mmc)) {
 		mid = ((mmc->cid[0] >> 24) & 0xff);
 		prv = ((mmc->cid[2] >> 16) & 0xff);
+
+		/*
+		MMCINFO("check pnm :0x%04x%04x%04x\n",pnm1, pnm2, pnm3);
+		MMCINFO("fw: 0x%04x%04x%04x\n",test1_1, test1_2, test1_3);
+		MMCINFO("fw: 0x%04x%04x%04x\n",test2_1, test2_2, test2_3);
+		*/
+		MMCINFO("fw :%s\n", host->cfg.platform_caps.emmc_ffu_fw);
+		MMCINFO("check fw :%c%c%c%c%c%c\n", pnm1, pnm2, pnm3, pnm4, pnm5, pnm6);
+		MMCINFO("check test :%s\n", test);
 		MMCINFO("check emmc mid: 0x%x, prv: 0x%x\n", mid, prv);
 		MMCINFO("cid: 0x%x, 0x%x 0x%x, 0x%x\n", mmc->cid[0], mmc->cid[1], mmc->cid[2], mmc->cid[3]);
+		if (mid != host->cfg.platform_caps.emmc_ffu_mid) {
+			MMCINFO("mid not support to ffu\n");
+			return 0;
+		}
+		if (strcmp(test, host->cfg.platform_caps.emmc_ffu_fw) == 0) {
+			MMCINFO("test succeed !!!!!!!!!!");
+		}
+
 	}
 
 #if 0
@@ -432,13 +541,40 @@ int sunxi_mmc_ffu(struct mmc *mmc)
 	}
 #endif
 
-	if (mmc_ffu_get_fw(mmc, fw, host->cfg.platform_caps.emmc_fw_byte_len, &len)) {
-		MMCINFO("get emmc fw fail\n");
-		goto OUT;
+	MMCINFO("-----------------------------------------------\n");
+	if (host->cfg.platform_caps.emmc_ffu_spt_fw) {
+		MMCINFO("ffu support many FWs!\n");
+		/*when is 32G,update 32G firmware*/
+		if (strcmp(test, host->cfg.platform_caps.emmc_ffu_fw) == 0) {
+			MMCINFO("is going to get fw...\n");
+			if (mmc_ffu_get_fw(mmc, fw, host->cfg.platform_caps.emmc_fw_byte_len, &len)) {
+				MMCINFO("get emmc fw fail\n");
+				goto OUT;
+			}
+
+		}
+		/*when is 64G,update 64G firmware*/
+		else if (strcmp(test, host->cfg.platform_caps.emmc_ffu_fw1) == 0) {
+			MMCINFO("is going to get fw1...\n");
+			if (mmc_ffu_get_fw1(mmc, fw, host->cfg.platform_caps.emmc_fw_byte_len, &len)) {
+				MMCINFO("get emmc fw1 fail\n");
+				goto OUT;
+			}
+		}
+		/*otherwise goto OUT*/
+		else
+			goto OUT;
+	} else {
+		if (mmc_ffu_get_fw(mmc, fw, host->cfg.platform_caps.emmc_fw_byte_len, &len)) {
+			MMCINFO("get emmc fw fail\n");
+			goto OUT;
+		}
+
 	}
 
-	if (mmc_support_ffu(mmc))
-	{
+	MMCINFO("-----------------------------------------------\n");
+
+	if (mmc_support_ffu(mmc)) {
 		err = mmc_ffu(mmc, (const char *)fw, len>>9);
 	}
 	else

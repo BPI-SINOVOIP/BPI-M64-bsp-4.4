@@ -49,6 +49,7 @@ s32 bsp_disp_init(struct disp_bsp_init_para *para)
 	disp_init_enhance(para);
 	disp_init_smbl(para);
 	disp_init_capture(para);
+	disp_init_rotation_sw(para);
 
 #if defined(SUPPORT_WB)
 	disp_init_format_convert_manager(para);
@@ -336,6 +337,7 @@ s32 disp_init_connections(struct disp_bsp_init_para *para)
 		struct disp_enhance *enhance = NULL;
 		struct disp_smbl *smbl = NULL;
 		struct disp_capture *cptr = NULL;
+		struct disp_rotation_sw *rot_sw = NULL;
 
 		mgr = disp_get_layer_manager(disp);
 		if (!mgr)
@@ -386,6 +388,14 @@ s32 disp_init_connections(struct disp_bsp_init_para *para)
 		cptr = disp_get_capture(disp);
 		if (cptr && (cptr->set_manager))
 			cptr->set_manager(cptr, mgr);
+
+		rot_sw = disp_get_rotation_sw(disp);
+		if (rot_sw && (rot_sw->set_manager)) {
+			rot_sw->set_manager(rot_sw, mgr);
+		} else {
+			DE_WRN("NULL pointer: %x, %x\n", (unsigned int)rot_sw,
+				rot_sw ? (unsigned int)rot_sw->set_manager : 0x0);
+		}
 	}
 
 	return 0;
@@ -1594,7 +1604,7 @@ int bsp_disp_get_display_size(u32 disp, unsigned int *width,
 	return disp_al_get_display_size(disp, width, height);
 }
 #if defined(SUPPORT_DSI)
-s32 bsp_disp_lcd_dsi_open(u32 disp)
+s32 bsp_disp_lcd_dsi_mode_switch(u32 disp, u32 cmd_en, u32 lp_en)
 {
 	s32 ret = -1;
 	struct disp_panel_para *panel_info =
@@ -1609,41 +1619,14 @@ s32 bsp_disp_lcd_dsi_open(u32 disp)
 	if (panel_info->lcd_tcon_mode == DISP_TCON_SLAVE_MODE)
 		goto OUT;
 
-	ret = dsi_mode_switch(disp, 1);
+	ret = dsi_mode_switch(disp, cmd_en, lp_en);
 	if (panel_info->lcd_tcon_mode == DISP_TCON_DUAL_DSI &&
 	    disp + 1 < DEVICE_DSI_NUM)
-		ret = dsi_mode_switch(disp + 1, 1);
+		ret = dsi_mode_switch(disp + 1, cmd_en, lp_en);
 	else if (panel_info->lcd_tcon_mode != DISP_TCON_NORMAL_MODE &&
 		 panel_info->lcd_tcon_mode != DISP_TCON_DUAL_DSI)
-		ret = dsi_mode_switch(panel_info->lcd_slave_tcon_num, 1);
-
-OUT:
-	kfree(panel_info);
-	return ret;
-}
-
-s32 bsp_disp_lcd_dsi_close(u32 disp)
-{
-	s32 ret = -1;
-	struct disp_panel_para *panel_info =
-	    kmalloc(sizeof(struct disp_panel_para), GFP_KERNEL | __GFP_ZERO);
-
-	ret = bsp_disp_get_panel_info(disp, panel_info);
-	if (ret == DIS_FAIL) {
-		DE_WRN("%s:Get panel info failed\n", __func__);
-		goto OUT;
-	}
-
-	if (panel_info->lcd_tcon_mode == DISP_TCON_SLAVE_MODE)
-		goto OUT;
-
-	ret = dsi_mode_switch(disp, 0);
-	if (panel_info->lcd_tcon_mode == DISP_TCON_DUAL_DSI &&
-	    disp + 1 < DEVICE_DSI_NUM)
-		ret = dsi_mode_switch(disp + 1, 0);
-	else if (panel_info->lcd_tcon_mode != DISP_TCON_NORMAL_MODE &&
-		 panel_info->lcd_tcon_mode != DISP_TCON_DUAL_DSI)
-		ret = dsi_mode_switch(panel_info->lcd_slave_tcon_num, 0);
+		ret = dsi_mode_switch(panel_info->lcd_slave_tcon_num, cmd_en,
+				      lp_en);
 OUT:
 	kfree(panel_info);
 	return ret;

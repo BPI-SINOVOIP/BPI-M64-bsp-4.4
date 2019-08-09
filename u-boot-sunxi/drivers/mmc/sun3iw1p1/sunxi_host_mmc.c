@@ -683,6 +683,17 @@ static void mmc_get_para_from_fex(int sdc_no)
                 }
             }
         }
+
+        /* speed mode caps */
+        ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_dis_host_caps", (uint32_t*)(&rval));
+        if (ret < 0) {
+            MMCDBG("get sdc1 sdc_dis_host_caps fail.\n");
+            cfg->platform_caps.host_caps_mask = 0x0;
+        } else {
+            cfg->platform_caps.host_caps_mask = rval;
+            MMCINFO("get sdc1 sdc_dis_host_caps 0x%x.\n", cfg->platform_caps.host_caps_mask);
+        }
+
     }
 	else if(sdc_no == 2){
 
@@ -1171,6 +1182,8 @@ int sunxi_mmc_init(int sdc_no)
         if (mask & DRV_PARA_DISABLE_MMC_MODE_8BIT)
             host->cfg.host_caps &= (~(DRV_PARA_DISABLE_MMC_MODE_8BIT
                                         | DRV_PARA_DISABLE_MMC_MODE_HS400));
+		if (mask & DRV_PARA_ENABLE_EMMC_HW_RST)
+			host->cfg.host_caps |= DRV_PARA_ENABLE_EMMC_HW_RST;
     }
     MMCDBG("mmc->host_caps %x\n", host->cfg.host_caps);
 

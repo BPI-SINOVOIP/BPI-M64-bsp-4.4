@@ -144,8 +144,8 @@ static int __usb_set_address(struct usb_device_request *req)
 	__usdelay(10);
 	printf("set address 0x%x\n", address);
 
-	sunxi_udc_set_address(address);
-
+	/*sunxi_udc_set_address(address);*/ /*some pc can't find usb device if use this interface*/
+	__sunxi_udc_set_address(address);
 	return SUNXI_USB_REQ_SUCCESSED;
 }
 
@@ -961,7 +961,7 @@ static int __sunxi_usb_efex_op_cmd(u8 *cmd_buffer)
 						trans_data.act_send_buffer   = (uint)trans_data.base_send_buffer + trans_data.send_size;	 //设置发送数据地址
 					}
 #endif
-					trans->addr += CONFIG_SYS_SDRAM_BASE;
+					/*trans->addr += CONFIG_SYS_SDRAM_BASE;*/
 					trans_data.act_send_buffer   = (void*)(ulong)trans->addr;	//设置发送地址，属于字节单位
 					trans_data.send_size         = trans->len;	//设置接收长度，字节单位
 					sunxi_usb_dbg("dram read: start 0x%x: length 0x%x\n", trans->addr, trans->len);

@@ -108,6 +108,26 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		reg = phy_read(phydev, 0x11);
 		reg |= RTL8211F_TX_DELAY;
 		phy_write(phydev, 0x11, reg);
+
+#if defined(CONFIG_ARCH_SUN8IW12)
+		/* Realtek RTL8211F: enable aldps low power mode. */
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xa43);
+		reg = phy_read(phydev, 0x18);
+		reg |= 0x1 << 2;
+		reg |= 0x1 << 12;
+		reg |= 0x1 << 1;
+		phy_write(phydev, 0x18, reg);
+
+		reg = phy_read(phydev, 0x19);
+		reg &= ~(0x1 << 0);
+		reg |= 0x1 << 8;
+		phy_write(phydev, 0x19, reg);
+
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0);
+		reg = phy_read(phydev, MII_BMCR);
+		phy_write(phydev, MII_BMCR, BMCR_RESET);
+#endif
+
 		/* restore to default page 0 */
 		phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
 	}

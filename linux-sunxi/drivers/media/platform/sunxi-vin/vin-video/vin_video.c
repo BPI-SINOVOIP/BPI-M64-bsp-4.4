@@ -50,11 +50,66 @@
 #define VIN_VERSION \
   KERNEL_VERSION(VIN_MAJOR_VERSION, VIN_MINOR_VERSION, VIN_RELEASE)
 
+#ifdef VIN_IN_UBOOT
+static void __sunxi_vin_reset(struct vin_core *vinc)
+{
+	struct prs_cap_mode mode = {.mode = VCAP};
+
+	vin_log(VIN_LOG_VIDEO, "Pipeline reset!!!\n");
+
+	/*****************stop*******************/
+	csic_prs_capture_stop(vinc->csi_sel);
+	csic_prs_disable(vinc->csi_sel);
+
+	if (vinc->vid_cap.frame.fmt.fourcc == V4L2_PIX_FMT_FBC)
+		csic_fbc_disable(vinc->vipp_sel);
+	else
+		csic_dma_disable(vinc->vipp_sel);
+	vipp_disable(vinc->vipp_sel);
+	vipp_top_clk_en(vinc->vipp_sel, 0);
+
+	bsp_isp_enable(vinc->isp_sel, 0);
+	bsp_isp_capture_stop(vinc->isp_sel);
+
+	/*****************start*******************/
+	vipp_top_clk_en(vinc->vipp_sel, 1);
+	vipp_enable(vinc->vipp_sel);
+	if (vinc->vid_cap.frame.fmt.fourcc == V4L2_PIX_FMT_FBC)
+		csic_fbc_enable(vinc->vipp_sel);
+	else
+		csic_dma_enable(vinc->vipp_sel);
+	csic_dma_int_clear_status(vinc->vipp_sel, DMA_INT_ALL);
+	csic_dma_int_enable(vinc->vipp_sel, DMA_INT_ALL);
+	csic_dma_int_disable(vinc->vipp_sel, DMA_INT_LINE_CNT);
+
+	bsp_isp_enable(vinc->isp_sel, 1);
+	bsp_isp_clr_irq_status(vinc->isp_sel, ISP_IRQ_EN_ALL);
+	bsp_isp_irq_enable(vinc->isp_sel, FINISH_INT_EN | PARA_LOAD_INT_EN | SRC0_FIFO_INT_EN
+				     | FRAME_ERROR_INT_EN | FRAME_LOST_INT_EN);
+	bsp_isp_capture_start(vinc->isp_sel);
+
+	csic_prs_enable(vinc->csi_sel);
+	csic_prs_capture_start(vinc->csi_sel, 1, &mode);
+}
+#endif
+
 void __vin_s_stream_handle(struct work_struct *work)
 {
 	int ret = 0;
 	struct vin_vid_cap *cap =
 			container_of(work, struct vin_vid_cap, s_stream_task);
+
+#ifdef VIN_IN_UBOOT
+	struct vin_md *vind = entity_to_vin_mdev(&cap->pipe.sd[VIN_IND_SENSOR]->entity);
+	if (vind == NULL) {
+		vin_err("vin media is NULL, cannot s_stream\n");
+		return;
+	}
+
+	if (vind->first_net_app)
+		__sunxi_vin_reset(cap->vinc);
+#endif
+
 	ret = vin_pipeline_call(cap->vinc, set_stream, &cap->pipe, cap->vinc->stream_idx);
 	if (ret < 0) {
 		vin_err("%s error!\n", __func__);
@@ -71,18 +126,46 @@ void __vin_s_stream_handle(struct work_struct *work)
 
 void __vin_pipeline_reset_handle(struct work_struct *work)
 {
+#ifdef CONFIG_PIPELINE_RESET
 	int ret = 0;
 	struct vin_vid_cap *cap =
 			container_of(work, struct vin_vid_cap, pipeline_reset_task);
+	struct csi_dev *csi =
+			container_of(cap->pipe.sd[VIN_IND_CSI], struct csi_dev, subdev);
+	bool reset_all = 1;
 
-	vin_pipeline_call(cap->vinc, set_stream, &cap->pipe, 0);
+	cap->isr_flag = 0;
+	if (!mutex_trylock(&csi->reset_lock)) {
+		mutex_lock(&csi->reset_lock);
+		reset_all = 0;
+	}
 
-	ret = vin_pipeline_call(cap->vinc, set_stream, &cap->pipe, cap->vinc->stream_idx);
+	if (cap->isr_flag == 1) {
+		mutex_unlock(&csi->reset_lock);
+		/*we got reset finished by other vipp, so we give up it*/
+		return;
+	}
+
+	if (reset_all) {
+		/*reset a complete pipeline */
+		vin_pipeline_call(cap->vinc, reset_stream, &cap->pipe, 0);
+		ret = vin_pipeline_call(cap->vinc, reset_stream, &cap->pipe, cap->vinc->stream_idx);
+		/*ensure all reset at the same time*/
+		msleep((2 + csi->reset_time) * 1000);
+	} else {
+		/*only reset the part after parser or isp*/
+		vin_pipeline_call(cap->vinc, set_stream, &cap->pipe, 0);
+		ret = vin_pipeline_call(cap->vinc, set_stream, &cap->pipe, cap->vinc->stream_idx);
+	}
+	mutex_unlock(&csi->reset_lock);
+
 	if (ret < 0) {
 		vin_err("%s error!\n", __func__);
 		return;
 	}
-	vin_print("vin pipiline reset after interrupt timeout!\n");
+	vin_print("vin pipiline reset after interrupt timeout!, id:%d\n", cap->vinc->id);
+	mod_timer(&cap->vinc->timer_for_reset, jiffies + (2 + csi->reset_time) * HZ);
+#endif
 }
 
 /* The color format (colplanes, memplanes) must be already configured. */
@@ -146,13 +229,14 @@ int vin_set_addr(struct vin_core *vinc, struct vb2_buffer *vb,
 		paddr->cb += CEIL_EXP(frame->o_width, 4) * (CEIL_EXP(frame->o_height, 2) - 1) * 96;
 		paddr->cr = 0;
 	} else if (vinc->vflip == 1) {
-		paddr->y += pix_size - frame->o_width * frame->fmt.depth[0] / 8;
 		switch (frame->fmt.colplanes) {
 		case 1:
+			paddr->y += (pix_size - frame->o_width) * frame->fmt.depth[0] / 8;
 			paddr->cb = 0;
 			paddr->cr = 0;
 			break;
 		case 2:
+			paddr->y += pix_size - frame->o_width;
 			/* 420 */
 			if (12 == depth)
 				paddr->cb += pix_size / 2 - frame->o_width;
@@ -161,6 +245,7 @@ int vin_set_addr(struct vin_core *vinc, struct vb2_buffer *vb,
 			paddr->cr = 0;
 			break;
 		case 3:
+			paddr->y += pix_size - frame->o_width;
 			if (12 == depth) {
 				paddr->cb += pix_size / 4 - frame->o_width / 2;
 				paddr->cr += pix_size / 4 - frame->o_width / 2;
@@ -696,11 +781,15 @@ static int __vin_set_fmt(struct vin_core *vinc, struct v4l2_format *f)
 
 		/*vipp crop*/
 		if ((win_cfg.vipp_hoff != 0) || (win_cfg.vipp_voff != 0)) {
+			if ((win_cfg.vipp_w + win_cfg.vipp_hoff > win_cfg.width_input) || (win_cfg.vipp_w == 0))
+				win_cfg.vipp_w = win_cfg.width_input - win_cfg.vipp_hoff;
+			if ((win_cfg.vipp_h + win_cfg.vipp_voff > win_cfg.height_input) || (win_cfg.vipp_h == 0))
+				win_cfg.vipp_h = win_cfg.height_input - win_cfg.vipp_voff;
 			sel.target = V4L2_SEL_TGT_CROP;
 			sel.pad = SCALER_PAD_SINK;
 			sel.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-			sel.r.width = win_cfg.width_input - 2 * win_cfg.vipp_hoff;
-			sel.r.height = win_cfg.height_input - 2 * win_cfg.vipp_voff;
+			sel.r.width = win_cfg.vipp_w;
+			sel.r.height = win_cfg.vipp_h;
 			sel.r.left = win_cfg.vipp_hoff;
 			sel.r.top = win_cfg.vipp_voff;
 			ret = v4l2_subdev_call(cap->pipe.sd[VIN_IND_SCALER],
@@ -709,6 +798,8 @@ static int __vin_set_fmt(struct vin_core *vinc, struct v4l2_format *f)
 				vin_err("vipp set_selection error!\n");
 				goto out;
 			}
+			mf.width = sel.r.width;
+			mf.height = sel.r.height;
 		}
 	} else {
 		ret = 0;
@@ -913,7 +1004,7 @@ void __osd_bitmap2dram(struct vin_osd *osd, void *databuf)
 	int y_num = 0, *y_temp = NULL;
 	int *hor_num = NULL, *hor_index = NULL;
 	int *x_temp = NULL, *xbuf = NULL, *x_idx = NULL;
-	int addr_offset = 0, pix_size = 0;
+	int addr_offset = 0, pix_size = osd->fmt->depth[0]/8;
 	int cnt = osd->overlay_cnt;
 	void *dram_addr = osd->ov_mask[osd->ov_set_cnt % 2].vir_addr;
 
@@ -963,14 +1054,13 @@ void __osd_bitmap2dram(struct vin_osd *osd, void *databuf)
 		else
 			kend = y_temp[j + 1] - 1;
 		for (k = y_temp[j]; k <= kend; k++) {
-			for (i = 0; i < hor_num[j]; i++)	{
+			for (i = 0; i < hor_num[j]; i++) {
 				idx = hor_index[j * cnt + x_idx[i]];
 				addr_offset = 0;
 				for (n = 0; n < idx; n++)
 					addr_offset +=	(osd->ov_win[n].width * osd->ov_win[n].height) * pix_size;
 				ww = osd->ov_win[idx].width;
 				if (k < (osd->ov_win[idx].top + osd->ov_win[idx].height)) {
-					pix_size = osd->fmt->depth[0]/8;
 					memcpy(dram_addr, databuf + addr_offset
 						+ ww * (k - osd->ov_win[idx].top) * pix_size,
 						ww * pix_size);
@@ -1313,69 +1403,35 @@ static int vidioc_overlay(struct file *file, void *__fh, unsigned int on)
 		osd->ov_set_cnt = 0;
 		osd->overlay_en = 0;
 		osd->cover_en = 0;
-		vipp_chroma_ds_en(vinc->vipp_sel, 0);
-		vipp_osd_en(vinc->vipp_sel, 0);
-		switch (vinc->vid_cap.frame.fmt.fourcc) {
-		case V4L2_PIX_FMT_YUV420:
-		case V4L2_PIX_FMT_YUV420M:
-		case V4L2_PIX_FMT_YVU420:
-		case V4L2_PIX_FMT_YVU420M:
-		case V4L2_PIX_FMT_NV21:
-		case V4L2_PIX_FMT_NV21M:
-		case V4L2_PIX_FMT_NV12:
-		case V4L2_PIX_FMT_NV12M:
-		case V4L2_PIX_FMT_FBC:
-			sunxi_osd_change_sc_fmt(vinc->vipp_sel, YUV420, on);
-			break;
-		default:
-			break;
-		}
-		goto para_ready;
 	} else {
 		if (osd->is_set)
 			return ret;
-		ret = __osd_reg_setup(vinc->vipp_sel, osd);
-		/*when osd enable scaler down outfmt must be YUV422*/
-		sunxi_osd_change_sc_fmt(vinc->vipp_sel, YUV422, on);
-		vipp_osd_en(vinc->vipp_sel, 1);
-		switch (vinc->vid_cap.frame.fmt.fourcc) {
-		case V4L2_PIX_FMT_YUV420:
-		case V4L2_PIX_FMT_YUV420M:
-		case V4L2_PIX_FMT_YVU420:
-		case V4L2_PIX_FMT_YVU420M:
-		case V4L2_PIX_FMT_NV21:
-		case V4L2_PIX_FMT_NV21M:
-		case V4L2_PIX_FMT_NV12:
-		case V4L2_PIX_FMT_NV12M:
-		case V4L2_PIX_FMT_FBC:
-			vipp_chroma_ds_en(vinc->vipp_sel, 1);
-			break;
-		default:
-			break;
-		}
 	}
 
-para_ready:
+	ret = __osd_reg_setup(vinc->vipp_sel, osd);
 	osd->is_set = 1;
 	return ret;
 }
 
 void vin_pipeline_reset(unsigned long data)
 {
+#ifdef CONFIG_PIPELINE_RESET
 	struct vin_core *vinc = (struct vin_core *)data;
 
-	mod_timer(&vinc->timer_for_reset, jiffies + 2*HZ);
 	schedule_work(&vinc->vid_cap.pipeline_reset_task);
+#endif
 }
 
 int vin_timer_init(struct vin_core *vinc)
 {
+#ifdef CONFIG_PIPELINE_RESET
 	INIT_WORK(&vinc->vid_cap.pipeline_reset_task, __vin_pipeline_reset_handle);
 	init_timer(&vinc->timer_for_reset);
 	vinc->timer_for_reset.data = (unsigned long)vinc;
 	vinc->timer_for_reset.expires = jiffies + 2*HZ;
 	vinc->timer_for_reset.function = vin_pipeline_reset;
 	add_timer(&vinc->timer_for_reset);
+#endif
 	return 0;
 }
 
@@ -1412,6 +1468,11 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	ret = vb2_ioctl_streamon(file, priv, i);
 	if (ret)
 		goto streamon_error;
+
+	vinc->vid_cap.first_flag = 0;
+	vinc->vin_status.frame_cnt = 0;
+	vinc->vin_status.err_cnt = 0;
+	vinc->vin_status.lost_cnt = 0;
 
 	if (vinc->large_image == 1) {
 		vinc->ptn_cfg.ptn_w = cap->frame.o_width;
@@ -1563,11 +1624,6 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
 	sunxi_isp_sensor_type(cap->pipe.sd[VIN_IND_ISP], inst->is_isp_used);
 	vinc->support_raw = inst->is_isp_used;
 
-	vinc->vid_cap.first_flag = 0;
-	vinc->vin_status.frame_cnt = 0;
-	vinc->vin_status.err_cnt = 0;
-	vinc->vin_status.lost_cnt = 0;
-
 	ret = vin_pipeline_call(vinc, open, &cap->pipe, &cap->vdev.entity, true);
 	if (ret < 0) {
 		vin_err("vin pipeline open failed (%d)!\n", ret);
@@ -1702,6 +1758,35 @@ static int isp_exif_req(struct file *file, struct v4l2_fh *fh,
 	return 0;
 }
 
+static int __vin_sensor_line2time(struct v4l2_subdev *sd, u32 exp_line)
+{
+	struct sensor_info *info = to_state(sd);
+	u32 overflow = 0xffffffff / 1000000, pclk = 0;
+	int exp_time = 0;
+
+	if ((exp_line / 16) > overflow) {
+		exp_line = exp_line / 16;
+		pclk = info->current_wins->pclk / 1000000;
+	} else if ((exp_line / 16) > (overflow / 10)) {
+		exp_line = exp_line * 10 / 16;
+		pclk = info->current_wins->pclk / 100000;
+	} else if ((exp_line / 16) > (overflow / 100)) {
+		exp_line = exp_line * 100 / 16;
+		pclk = info->current_wins->pclk / 10000;
+	} else if ((exp_line / 16) > (overflow / 1000)) {
+		exp_line = exp_line * 1000 / 16;
+		pclk = info->current_wins->pclk / 1000;
+	} else {
+		exp_line = exp_line * 10000 / 16;
+		pclk = info->current_wins->pclk / 100;
+	}
+
+	if (pclk)
+		exp_time = exp_line * info->current_wins->hts / pclk;
+
+	return exp_time;
+}
+
 static int __vin_sensor_set_af_win(struct vin_vid_cap *cap)
 {
 	struct vin_pipeline *pipe = &cap->pipe;
@@ -1811,13 +1896,17 @@ static int vidioc_vin_ptn_config(struct file *file, struct v4l2_fh *fh,
 	struct csi_dev *csi = v4l2_get_subdevdata(vinc->vid_cap.pipe.sd[VIN_IND_CSI]);
 	int ret = 0;
 
+	if (!csi)
+		return -ENODEV;
+
 	if (ptn->ptn_en) {
 		vinc->ptn_cfg.ptn_en = 1;
 		vinc->ptn_cfg.ptn_w = ptn->ptn_w;
 		vinc->ptn_cfg.ptn_h = ptn->ptn_h;
 		vinc->ptn_cfg.ptn_mode = 12;
 		vinc->ptn_cfg.ptn_buf.size = ptn->ptn_size;
-
+		vinc->ptn_cfg.ptn_type = ptn->ptn_type;
+		sunxi_isp_ptn(vinc->vid_cap.pipe.sd[VIN_IND_ISP], vinc->ptn_cfg.ptn_type);
 		switch (ptn->ptn_fmt) {
 		case V4L2_PIX_FMT_SBGGR8:
 		case V4L2_PIX_FMT_SGBRG8:
@@ -1869,6 +1958,18 @@ static int vidioc_vin_ptn_config(struct file *file, struct v4l2_fh *fh,
 	return 0;
 }
 
+static int vidioc_vin_set_reset_time(struct file *file, struct v4l2_fh *fh,
+			struct vin_reset_time *time)
+{
+	struct vin_core *vinc = video_drvdata(file);
+	struct csi_dev *csi = v4l2_get_subdevdata(vinc->vid_cap.pipe.sd[VIN_IND_CSI]);
+
+	/*ensure different video use same reset_time*/
+	csi->reset_time = time->reset_time;
+
+	return 0;
+}
+
 static long vin_param_handler(struct file *file, void *priv,
 			      bool valid_prio, unsigned int cmd, void *param)
 {
@@ -1896,6 +1997,9 @@ static long vin_param_handler(struct file *file, void *priv,
 		break;
 	case VIDIOC_VIN_PTN_CFG:
 		ret = vidioc_vin_ptn_config(file, fh, param);
+		break;
+	case VIDIOC_VIN_RESET_TIME:
+		ret = vidioc_vin_set_reset_time(file, fh, param);
 		break;
 	default:
 		ret = -ENOTTY;
@@ -1983,20 +2087,65 @@ static int vin_close(struct file *file)
 	return 0;
 }
 
+static int vin_try_ctrl(struct v4l2_ctrl *ctrl)
+{
+	/*
+	 * to cheat control framework, because of  when ctrl->cur.val == ctrl->val
+	 * s_ctrl would not be called
+	 */
+	if ((ctrl->minimum == 0) && (ctrl->maximum == 1)) {
+		if (ctrl->val)
+			ctrl->cur.val = 0;
+		else
+			ctrl->cur.val = 1;
+	} else {
+		if (ctrl->val == ctrl->maximum)
+			ctrl->cur.val = ctrl->val - 1;
+		else
+			ctrl->cur.val = ctrl->val + 1;
+	}
+
+	/*
+	 * to cheat control framework, because of  when ctrl->flags is
+	 * V4L2_CTRL_FLAG_VOLATILE, s_ctrl would not be called
+	 */
+	switch (ctrl->id) {
+	case V4L2_CID_EXPOSURE:
+	case V4L2_CID_EXPOSURE_ABSOLUTE:
+	case V4L2_CID_GAIN:
+		if (ctrl->val != ctrl->cur.val)
+			ctrl->flags &= ~V4L2_CTRL_FLAG_VOLATILE;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
 static int vin_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
-	int ret = 0;
-	struct vin_vid_cap *cap =
-	    container_of(ctrl->handler, struct vin_vid_cap, ctrl_handler);
-	struct vin_core *vinc = cap->vinc;
-	struct sensor_instance *inst = get_valid_sensor(vinc);
+	struct vin_vid_cap *cap = container_of(ctrl->handler, struct vin_vid_cap, ctrl_handler);
+	struct sensor_instance *inst = get_valid_sensor(cap->vinc);
+	struct v4l2_subdev *sensor = cap->pipe.sd[VIN_IND_SENSOR];
+	struct v4l2_subdev *flash = cap->pipe.sd[VIN_IND_FLASH];
 	struct v4l2_control c;
-	c.id = ctrl->id;
+	int ret = 0;
 
+	c.id = ctrl->id;
 	if (inst->is_isp_used && inst->is_bayer_raw) {
 		switch (ctrl->id) {
 		case V4L2_CID_EXPOSURE:
+			v4l2_subdev_call(sensor, core, g_ctrl, &c);
+			ctrl->val = c.value;
+			break;
+		case V4L2_CID_EXPOSURE_ABSOLUTE:
+			c.id = V4L2_CID_EXPOSURE;
+			v4l2_subdev_call(sensor, core, g_ctrl, &c);
+			ctrl->val = __vin_sensor_line2time(sensor, c.value);
+			break;
 		case V4L2_CID_GAIN:
+			v4l2_subdev_call(sensor, core, g_ctrl, &c);
+			ctrl->val = c.value;
+			break;
 		case V4L2_CID_HOR_VISUAL_ANGLE:
 		case V4L2_CID_VER_VISUAL_ANGLE:
 		case V4L2_CID_FOCUS_LENGTH:
@@ -2016,21 +2165,15 @@ static int vin_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			c.value = inst->is_bayer_raw;
 			break;
 		case V4L2_CID_FLASH_LED_MODE:
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_FLASH],
-						core, g_ctrl, &c);
+			ret = v4l2_subdev_call(flash, core, g_ctrl, &c);
 			break;
 		case V4L2_CID_AUTO_FOCUS_STATUS:
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, g_ctrl, &c);
+			ret = v4l2_subdev_call(sensor, core, g_ctrl, &c);
 			if (c.value != V4L2_AUTO_FOCUS_STATUS_BUSY)
-				sunxi_flash_stop(cap->pipe.sd[VIN_IND_FLASH]);
+				sunxi_flash_stop(flash);
 			break;
 		default:
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, g_ctrl, &c);
+			ret = v4l2_subdev_call(sensor, core, g_ctrl, &c);
 			break;
 		}
 		ctrl->val = c.value;
@@ -2042,10 +2185,11 @@ static int vin_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 
 static int vin_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	struct vin_vid_cap *cap =
-	    container_of(ctrl->handler, struct vin_vid_cap, ctrl_handler);
-	struct vin_core *vinc = cap->vinc;
-	struct sensor_instance *inst = get_valid_sensor(vinc);
+	struct vin_vid_cap *cap = container_of(ctrl->handler, struct vin_vid_cap, ctrl_handler);
+	struct sensor_instance *inst = get_valid_sensor(cap->vinc);
+	struct v4l2_subdev *sensor = cap->pipe.sd[VIN_IND_SENSOR];
+	struct v4l2_subdev *flash = cap->pipe.sd[VIN_IND_FLASH];
+	struct v4l2_subdev *act = cap->pipe.sd[VIN_IND_ACTUATOR];
 	struct csic_dma_flip flip;
 	struct actuator_ctrl_word_t vcm_ctrl;
 	struct v4l2_control c;
@@ -2056,16 +2200,30 @@ static int vin_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_VFLIP:
-		if (vinc->vid_cap.first_flag)
-			vinc->vflip_delay = 2;
-		vinc->vflip = c.value;
+		if (cap->first_flag)
+			cap->vinc->vflip_delay = 2;
+		cap->vinc->vflip = c.value;
 		return ret;
 	case V4L2_CID_HFLIP:
-		vinc->hflip = c.value;
-		flip.hflip_en = vinc->hflip;
-		flip.vflip_en = vinc->vflip;
-		csic_dma_flip_en(vinc->vipp_sel, &flip);
+		cap->vinc->hflip = c.value;
+		flip.hflip_en = cap->vinc->hflip;
+		flip.vflip_en = cap->vinc->vflip;
+		csic_dma_flip_en(cap->vinc->vipp_sel, &flip);
 		return ret;
+	default:
+		break;
+	}
+
+	/*
+	 * make sure g_ctrl will get the value that hardware is using
+	 * so that ctrl->flags should be V4L2_CTRL_FLAG_VOLATILE, after s_ctrl
+	 */
+	switch (ctrl->id) {
+	case V4L2_CID_EXPOSURE:
+	case V4L2_CID_EXPOSURE_ABSOLUTE:
+	case V4L2_CID_GAIN:
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+		break;
 	default:
 		break;
 	}
@@ -2125,28 +2283,18 @@ static int vin_s_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_FOCUS_ABSOLUTE:
 			vcm_ctrl.code = ctrl->val;
 			vcm_ctrl.sr = 0x0;
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_ACTUATOR],
-						core, ioctl,
-						ACT_SET_CODE, &vcm_ctrl);
+			ret = v4l2_subdev_call(act, core, ioctl, ACT_SET_CODE, &vcm_ctrl);
 			break;
 		case V4L2_CID_FLASH_LED_MODE:
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_FLASH],
-						core, s_ctrl, &c);
+			ret = v4l2_subdev_call(flash, core, s_ctrl, &c);
 			break;
 		case V4L2_CID_AUTO_FOCUS_START:
-			sunxi_flash_check_to_start(cap->pipe.sd[VIN_IND_FLASH],
-						SW_CTRL_TORCH_ON);
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, s_ctrl, &c);
+			sunxi_flash_check_to_start(flash, SW_CTRL_TORCH_ON);
+			ret = v4l2_subdev_call(sensor, core, s_ctrl, &c);
 			break;
 		case V4L2_CID_AUTO_FOCUS_STOP:
-			sunxi_flash_stop(cap->pipe.sd[VIN_IND_FLASH]);
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, s_ctrl, &c);
+			sunxi_flash_stop(flash);
+			ret = v4l2_subdev_call(sensor, core, s_ctrl, &c);
 			break;
 		case V4L2_CID_AE_WIN_X1:
 			ret = __vin_sensor_set_ae_win(cap);
@@ -2156,14 +2304,10 @@ static int vin_s_ctrl(struct v4l2_ctrl *ctrl)
 			break;
 		case V4L2_CID_AUTO_EXPOSURE_BIAS:
 			c.value = ctrl->qmenu_int[ctrl->val];
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, s_ctrl, &c);
+			ret = v4l2_subdev_call(sensor, core, s_ctrl, &c);
 			break;
 		default:
-			ret =
-			    v4l2_subdev_call(cap->pipe.sd[VIN_IND_SENSOR],
-						core, s_ctrl, &c);
+			ret = v4l2_subdev_call(sensor, core, s_ctrl, &c);
 			break;
 		}
 	}
@@ -2188,6 +2332,7 @@ static long vin_compat_ioctl32(struct file *file, unsigned int cmd,
 static const struct v4l2_ctrl_ops vin_ctrl_ops = {
 	.g_volatile_ctrl = vin_g_volatile_ctrl,
 	.s_ctrl = vin_s_ctrl,
+	.try_ctrl = vin_try_ctrl,
 };
 
 static const struct v4l2_file_operations vin_fops = {
@@ -2405,7 +2550,7 @@ static const struct v4l2_ctrl_config custom_ctrls[] = {
 	},
 };
 static const s64 iso_qmenu[] = {
-	50, 100, 200, 400, 800,
+	100, 200, 400, 800, 1600, 3200, 6400,
 };
 static const s64 exp_bias_qmenu[] = {
 	-4, -3, -2, -1, 0, 1, 2, 3, 4,
@@ -2418,21 +2563,18 @@ int vin_init_controls(struct v4l2_ctrl_handler *hdl, struct vin_vid_cap *cap)
 
 	v4l2_ctrl_handler_init(hdl, 40 + ARRAY_SIZE(custom_ctrls)
 		+ ARRAY_SIZE(ae_win_ctrls) + ARRAY_SIZE(af_win_ctrls));
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_BRIGHTNESS, -128, 128, 1,
-			  0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_BRIGHTNESS, -128, 128, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_CONTRAST, -128, 128, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_SATURATION, -256, 512, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_HUE, -180, 180, 1, 0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_WHITE_BALANCE, 0, 1,
-			  1, 1);
-	ctrl =
-	    v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE, 0,
-			      65536 * 16, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
+	ctrl = v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE, 1, 65536 * 16, 1, 1);
 	if (ctrl != NULL)
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTOGAIN, 0, 1, 1, 1);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_GAIN, 1 * 1600,
-			      256 * 1600, 1, 1 * 1600);
+	ctrl = v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_GAIN, 16, 6000 * 16, 1, 16);
+	if (ctrl != NULL)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_VFLIP, 0, 1, 1, 0);
 
@@ -2442,32 +2584,24 @@ int vin_init_controls(struct v4l2_ctrl_handler *hdl, struct vin_vid_cap *cap)
 			       V4L2_CID_POWER_LINE_FREQUENCY_AUTO);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_HUE_AUTO, 0, 1, 1, 1);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops,
-			  V4L2_CID_WHITE_BALANCE_TEMPERATURE, 2800, 10000, 1,
-			  6500);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_SHARPNESS, -32, 32, 1,
-			  0);
+			  V4L2_CID_WHITE_BALANCE_TEMPERATURE, 2800, 10000, 1, 6500);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_SHARPNESS, -32, 32, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_CHROMA_AGC, 0, 1, 1, 1);
 	v4l2_ctrl_new_std_menu(hdl, &vin_ctrl_ops, V4L2_CID_COLORFX,
 			       V4L2_COLORFX_SET_CBCR, 0, V4L2_COLORFX_NONE);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTOBRIGHTNESS, 0, 1, 1,
-			  1);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_BAND_STOP_FILTER, 0, 1,
-			  1, 1);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_ILLUMINATORS_1, 0, 1, 1,
-			  0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_ILLUMINATORS_2, 0, 1, 1,
-			  0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTOBRIGHTNESS, 0, 1, 1, 1);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_BAND_STOP_FILTER, 0, 1, 1, 1);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_ILLUMINATORS_1, 0, 1, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_ILLUMINATORS_2, 0, 1, 1, 0);
 	v4l2_ctrl_new_std_menu(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE_AUTO,
 			       V4L2_EXPOSURE_APERTURE_PRIORITY, 0,
 			       V4L2_EXPOSURE_AUTO);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE_ABSOLUTE, 1,
-			  1000000, 1, 1);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE_AUTO_PRIORITY,
-			  0, 1, 1, 0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_FOCUS_ABSOLUTE, 0, 127,
-			  1, 0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_FOCUS_RELATIVE, -127,
-			  127, 1, 0);
+	ctrl = v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE_ABSOLUTE, 1, 30 * 1000000, 1, 1);
+	if (ctrl != NULL)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_EXPOSURE_AUTO_PRIORITY, 0, 1, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_FOCUS_ABSOLUTE, 0, 127, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_FOCUS_RELATIVE, -127, 127, 1, 0);
 	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_FOCUS_AUTO, 0, 1, 1, 1);
 	v4l2_ctrl_new_int_menu(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_EXPOSURE_BIAS,
 			       ARRAY_SIZE(exp_bias_qmenu) - 1,
@@ -2476,10 +2610,8 @@ int vin_init_controls(struct v4l2_ctrl_handler *hdl, struct vin_vid_cap *cap)
 			       V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE,
 			       V4L2_WHITE_BALANCE_SHADE, 0,
 			       V4L2_WHITE_BALANCE_AUTO);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_WIDE_DYNAMIC_RANGE, 0, 1,
-			  1, 0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_IMAGE_STABILIZATION, 0,
-			  1, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_WIDE_DYNAMIC_RANGE, 0, 1, 1, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_IMAGE_STABILIZATION, 0, 1, 1, 0);
 	v4l2_ctrl_new_int_menu(hdl, &vin_ctrl_ops, V4L2_CID_ISO_SENSITIVITY,
 			       ARRAY_SIZE(iso_qmenu) - 1,
 			       ARRAY_SIZE(iso_qmenu) / 2 - 1, iso_qmenu);
@@ -2490,20 +2622,15 @@ int vin_init_controls(struct v4l2_ctrl_handler *hdl, struct vin_vid_cap *cap)
 	v4l2_ctrl_new_std_menu(hdl, &vin_ctrl_ops,
 			       V4L2_CID_EXPOSURE_METERING,
 			       V4L2_EXPOSURE_METERING_MATRIX, 0,
-			       V4L2_EXPOSURE_METERING_MATRIX);
+			       V4L2_EXPOSURE_METERING_AVERAGE);
 	v4l2_ctrl_new_std_menu(hdl, &vin_ctrl_ops, V4L2_CID_SCENE_MODE,
 			       V4L2_SCENE_MODE_TEXT, 0, V4L2_SCENE_MODE_NONE);
-	ctrl =
-	    v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_3A_LOCK, 0, 7, 0, 0);
+	ctrl = v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_3A_LOCK, 0, 7, 0, 0);
 	if (ctrl != NULL)
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_START, 0, 0,
-			  0, 0);
-	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_STOP, 0, 0, 0,
-			  0);
-	ctrl =
-	    v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_STATUS, 0,
-			      7, 0, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_START, 0, 0, 0, 0);
+	v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_STOP, 0, 0, 0, 0);
+	ctrl = v4l2_ctrl_new_std(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_STATUS, 0, 7, 0, 0);
 	if (ctrl != NULL)
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	v4l2_ctrl_new_std_menu(hdl, &vin_ctrl_ops, V4L2_CID_AUTO_FOCUS_RANGE,
@@ -2549,6 +2676,7 @@ int vin_init_video(struct v4l2_device *v4l2_dev, struct vin_vid_cap *cap)
 	cap->vdev.queue = &cap->vb_vidq;
 	cap->vdev.lock = &cap->lock;
 	cap->vdev.flags = V4L2_FL_USES_V4L2_FH;
+	cap->isr_flag = 0;
 	ret = video_register_device(&cap->vdev, VFL_TYPE_GRABBER, cap->vinc->id);
 	if (ret < 0) {
 		vin_err("Error video_register_device!!\n");
@@ -2723,13 +2851,20 @@ static int vin_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 			buf_len.buf_len_y = cap->frame.o_width;
 			buf_len.buf_len_c = buf_len.buf_len_y >> 1;
 			break;
+		case V4L2_PIX_FMT_YUV422P:
+			cfg.fmt = flag ? FRAME_PLANAR_YUV422 : FIELD_PLANAR_YUV422;
+			buf_len.buf_len_y = cap->frame.o_width;
+			buf_len.buf_len_c = buf_len.buf_len_y >> 1;
+			break;
 		case V4L2_PIX_FMT_NV61:
-			cfg.fmt = flag ? FRAME_UV_CB_YUV422 : FIELD_UV_CB_YUV422;
+		case V4L2_PIX_FMT_NV61M:
+			cfg.fmt = flag ? FRAME_VU_CB_YUV422 : FIELD_VU_CB_YUV422;
 			buf_len.buf_len_y = cap->frame.o_width;
 			buf_len.buf_len_c = buf_len.buf_len_y;
 			break;
 		case V4L2_PIX_FMT_NV16:
-			cfg.fmt = flag ? FRAME_VU_CB_YUV422 : FIELD_VU_CB_YUV422;
+		case V4L2_PIX_FMT_NV16M:
+			cfg.fmt = flag ? FRAME_UV_CB_YUV422 : FIELD_UV_CB_YUV422;
 			buf_len.buf_len_y = cap->frame.o_width;
 			buf_len.buf_len_c = buf_len.buf_len_y;
 			break;
@@ -2746,6 +2881,7 @@ static int vin_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 		case V4L2_PIX_FMT_SGBRG10:
 		case V4L2_PIX_FMT_SGRBG10:
 		case V4L2_PIX_FMT_SRGGB10:
+			flip_mul = 1;
 			cfg.fmt = flag ? FRAME_RAW_10 : FIELD_RAW_10;
 			buf_len.buf_len_y = cap->frame.o_width * 2;
 			buf_len.buf_len_c = buf_len.buf_len_y;
@@ -2754,6 +2890,7 @@ static int vin_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 		case V4L2_PIX_FMT_SGBRG12:
 		case V4L2_PIX_FMT_SGRBG12:
 		case V4L2_PIX_FMT_SRGGB12:
+			flip_mul = 1;
 			cfg.fmt = flag ? FRAME_RAW_12 : FIELD_RAW_12;
 			buf_len.buf_len_y = cap->frame.o_width * 2;
 			buf_len.buf_len_c = buf_len.buf_len_y;
@@ -2801,21 +2938,25 @@ static int vin_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 		if (vinc->large_image == 2) {
 			size.hor_len /= 2;
 			flip_size.hor_len /= 2;
-			vinc->merge_cnt = 0;
 		}
 
 		csic_dma_output_size_cfg(vinc->vipp_sel, &size);
 		csic_dma_buffer_length(vinc->vipp_sel, &buf_len);
 		csic_dma_flip_size(vinc->vipp_sel, &flip_size);
 		csic_dma_flip_en(vinc->vipp_sel, &flip);
-		csic_dma_line_cnt(vinc->vipp_sel, cap->frame.o_height / 16 * 12);
+		/* give up line_cut interrupt. process in vsync and frame_done isr.*/
+		/*csic_dma_line_cnt(vinc->vipp_sel, cap->frame.o_height / 16 * 12);*/
 		csic_frame_cnt_enable(vinc->vipp_sel);
 		if (cap->frame.fmt.fourcc == V4L2_PIX_FMT_FBC)
 			csic_fbc_enable(vinc->vipp_sel);
 		else
 			csic_dma_enable(vinc->vipp_sel);
 		csic_dma_int_clear_status(vinc->vipp_sel, DMA_INT_ALL);
-		csic_dma_int_enable(vinc->vipp_sel, DMA_INT_ALL);
+		if (vinc->isp_dbg.debug_en)
+			csic_dma_int_enable(vinc->vipp_sel, DMA_INT_ALL & ~(DMA_INT_FBC_OVHD_WRDDR_FULL));
+		else
+			csic_dma_int_enable(vinc->vipp_sel, DMA_INT_ALL);
+		csic_dma_int_disable(vinc->vipp_sel, DMA_INT_LINE_CNT);
 	} else {
 		csic_dma_int_disable(vinc->vipp_sel, DMA_INT_ALL);
 		csic_dma_int_clear_status(vinc->vipp_sel, DMA_INT_ALL);

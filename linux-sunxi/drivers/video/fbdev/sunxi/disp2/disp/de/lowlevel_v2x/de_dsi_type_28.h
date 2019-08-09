@@ -524,7 +524,7 @@ union DSI_CFG3_t {
 		u32 res2:5;
 		u32 reg_rint:2;
 		u32 reg_rext:1;
-		u32 res3:1;
+		u32 enrext:1;
 	} bits;
 };
 

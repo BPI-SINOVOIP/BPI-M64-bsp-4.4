@@ -46,22 +46,22 @@ static struct rsb_info rsbc;
 __attribute__((section(".data")))
 static struct sunxi_rsb_slave_set rsb_slave[SUNXI_RSB_SLAVE_MAX] = \
 {
-	#ifdef CONFIG_ARCH_SUN50IW3P1
+#ifdef CONFIG_ARCH_SUN50IW3P1
 	/*AXP81X_ADDR*/
 	/*slave_addr, runtime_addr, ID */
 	{0x3a3,       0x2d,         0x11},
 	{0,           0,            0,}
-	#elif defined(CONFIG_ARCH_SUN8IW12P1)
-	/*AXP809_CHIP_ID*/
+#elif defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
+	/*AXP21_CHIP_ID / AXP809_CHIP_ID*/
 	/*slave_addr, runtime_addr, ID */
+	{0x3a3,       0x2d,         0x34},
 	{0x3a3,       0x2d,         0x12},
-	{0,           0,            0,}
-    #elif defined(CONFIG_ARCH_SUN8IW17P1)
+#elif defined(CONFIG_ARCH_SUN8IW17P1)
 	/*AXP858_CHIP_ID*/
 	/*slave_addr, runtime_addr, ID */
 	{0x745,       0x2d,         0x14},
 	{0,           0,            0,}
-    #elif defined(CONFIG_ARCH_SUN8IW15P1)
+#elif defined(CONFIG_ARCH_SUN8IW15P1)
 	#ifdef CONFIG_SUNXI_AXP22
        /*AXP223_CHIP_ID*/
 	/*slave_addr, runtime_addr, ID */
@@ -72,7 +72,7 @@ static struct sunxi_rsb_slave_set rsb_slave[SUNXI_RSB_SLAVE_MAX] = \
 	{0x745,       0x2d,         0x14},
 	{0x3a3,       0x3a,         0x56}
 	#endif
-    #endif
+#endif
 };
 
 

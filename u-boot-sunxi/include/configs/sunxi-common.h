@@ -83,7 +83,7 @@
 #define CONFIG_CMD_ECHO
 #define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	32	/* max number of command args */
+#define CONFIG_SYS_MAXARGS	64	/* max number of command args */
 #define CONFIG_SYS_GENERIC_BOARD
 
 /* Boot Argument Buffer Size */

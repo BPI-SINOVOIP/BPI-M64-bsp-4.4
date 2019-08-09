@@ -20,9 +20,9 @@
 
 //#define DEBUG
 
-#define FPGA_PLATFORM
 #define CONFIG_SUNXI_CRASH
-
+/*#define CONFIG_OF_LIBUFDT*/
+//#define FPGA_PLATFORM
 #define LINUX_MACHINE_ID        4137
 
 #define UBOOT_VERSION			"3.0.0"
@@ -36,7 +36,7 @@
 #define CONFIG_STORAGE_MEDIA_MMC
 #define CONFIG_SUNXI_MULITCORE_BOOT
 #define CONFIG_LZMA
-#define CONFIG_SUNXI_CORE_VOL         900
+#define CONFIG_SUNXI_CORE_VOL         980
 #define CONFIG_BOOT0_CPU1_STACK_SIZE  0x1000
 
 #define CONFIG_SYS_GENERIC_BOARD
@@ -257,7 +257,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	64			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -368,7 +368,7 @@
 #define CONFIG_SUNXI_MODULE_SPRITE
 #define CONFIG_SUNXI_MODULE_NAND
 #define CONFIG_SUNXI_MODULE_SDMMC
-//#define CONFIG_SUNXI_MODULE_AXP
+#define CONFIG_SUNXI_MODULE_AXP
 #define CONFIG_SUNXI_MODULE_USB
 #define CONFIG_SUNXI_MODULE_DISPLAY
 
@@ -380,6 +380,7 @@
 *
 ***************************************************************/
 
+#define CONFIG_FIT				/* boot linux image */
 
 #define CONFIG_CMD_BOOTA		/* boot android image */
 #define CONFIG_CMD_RUN			/* run a command */
@@ -536,6 +537,6 @@
 #define CONFIG_CONVERT_CARD0_TO_GPT
 #endif
 
-#define CONFIG_DETECT_RTC_BOOT_MODE
+/* #define CONFIG_DETECT_RTC_BOOT_MODE */
 
 #endif /* __SUNXI_CONFIG_H */

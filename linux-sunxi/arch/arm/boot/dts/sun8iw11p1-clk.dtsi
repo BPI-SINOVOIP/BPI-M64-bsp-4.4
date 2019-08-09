@@ -239,7 +239,7 @@ clocks {
 			#clock-cells = <0>;
 			compatible = "allwinner,periph-clock";
 			assigned-clocks = <&clk_apb1>;
-			assigned-clock-rates = <100000000>;
+			assigned-clock-rates = <24000000>;
 			clock-output-names = "apb1";
 		};
 		clk_apb2: apb2 {

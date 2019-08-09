@@ -25,6 +25,7 @@
 #include <sys_config.h>
 #include <sys_config_old.h>
 #include <sys_partition.h>
+#include <efuse_map.h>
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
 #include <cputask.h>
 #endif
@@ -509,7 +510,7 @@ int check_physical_key_early(void)
 		pr_error("[key recovery] can't find recovery_key config.\n");
 		return 0;
 	}
-	gpio_recovery.mul_sel = 0;
+	gpio_recovery.mul_sel = 0; 
 	gpio_hd = gpio_request(&gpio_recovery, 1);
 	if (!gpio_hd) {
 		pr_error("[key recovery] gpio request fail!\n");
@@ -630,11 +631,11 @@ int update_bootcmd(void)
 	boot_mode = detect_other_boot_mode();
 
 #ifdef CONFIG_DETECT_RTC_BOOT_MODE
-	set_bootcmd_from_rtc(boot_mode, boot_commond);
-#else
-	set_bootcmd_from_misc(boot_mode, boot_commond);
+	if (set_bootcmd_from_rtc(boot_mode, boot_commond) < 0)
 #endif
-
+	{
+		set_bootcmd_from_misc(boot_mode, boot_commond);
+	}
 	if (gd->need_shutdown) {
 	#ifdef ALARM0_IRQ_STA_REG
 		/*avoid the system constantly reboot*/
@@ -871,11 +872,13 @@ if (gd->securemode == SUNXI_SECURE_MODE_WITH_SECUREOS) {
 	return 0;
 
 }
+extern u8 uboot_shell ;
 
 #ifdef CONFIG_DETECT_RTC_BOOT_MODE
-char *set_bootcmd_from_rtc(int mode, char *bootcmd)
+int set_bootcmd_from_rtc(int mode, char *bootcmd)
 {
 	u8 bootmode_flag = 0;
+	int ret = 0;
 	if (mode == ANDROID_NULL_MODE) {
 		/* read RTC flag*/
 		bootmode_flag = sunxi_get_bootmode_flag();
@@ -886,7 +889,6 @@ char *set_bootcmd_from_rtc(int mode, char *bootcmd)
 	}
 	/*clear rtc*/
 	sunxi_set_bootmode_flag(0);
-
 	switch (bootmode_flag) {
 	case SUNXI_EFEX_CMD_FLAG:
 		pr_msg("find efex cmd\n");
@@ -900,10 +902,15 @@ char *set_bootcmd_from_rtc(int mode, char *bootcmd)
 		pr_msg("Fastboot detected, will boot fastboot\n");
 		sunxi_str_replace(bootcmd, "boot_normal", "boot_fastboot");
 		break;
+	case SUNXI_UBOOT_FLAG:
+		pr_msg("uboot shell detected, will uboot shell\n");
+		uboot_shell = 1;
+		break;
 	default:
+		ret = -1;
 		break;
 	}
-	return bootcmd;
+	return ret;
 }
 #endif
 
@@ -1272,12 +1279,26 @@ int update_dram_para_for_ota(void)
 #endif
 }
 
+int sunxi_update_rotpk_info(void)
+{
+	char rotpk_status[16] = "";
+	int ret;
+	ret = sunxi_efuse_get_rotpk_status();
+	if (ret >= 0) {
+		sprintf(rotpk_status, "%d", ret);
+		setenv("rotpk_status", rotpk_status);
+	}
+	return 0;
+}
+
 int board_late_init(void)
 {
 	int ret = 0;
 	if (get_boot_work_mode() == WORK_MODE_BOOT) {
 
+#ifndef CONFIG_ARCH_SUN8IW12P1
 		sunxi_fastboot_status_read();
+#endif
 		sunxi_fastboot_init();
 #if defined(CONFIG_ARCH_HOMELET) && defined(CONFIG_ARCH_SUN50IW6P1)
 		/* will not use multi core when sprite mode(onekey recovery,etc) */
@@ -1285,8 +1306,13 @@ int board_late_init(void)
 		check_physical_key_early();
 		respond_physical_key_action();
 #endif
+
+#ifndef CONFIG_SUNXI_SPINOR
 		update_dram_para_for_ota();
+#endif
 		update_setargs();
+
+		sunxi_update_rotpk_info();
 		update_bootcmd();
 		ret = update_fdt_para_for_kernel(working_fdt);
 
@@ -1298,6 +1324,19 @@ int board_late_init(void)
 
 #ifdef CONFIG_SUNXI_SERIAL
 		sunxi_set_serial_num();
+#endif
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+#ifdef CONFIG_SUNXI_GPIO_INT_DEB
+		user_gpio_set_t gpio_deb;
+		int wlan_used = 0;
+		if(!script_parser_fetch("wlan", "wlan_used", (void *)&wlan_used, 1)) {
+			if(wlan_used) {
+				if(!script_parser_fetch("wlan", "wlan_hostwake", (void *)&gpio_deb, sizeof(user_gpio_set_t)>>2)) {
+					printf("wlan_hostwake port(%d) interrupt clock set to 24Mhz\n",gpio_deb.port);
+					int_deb_set_gpio(gpio_deb.port,1);
+				}
+			}
+		}
 #endif
 		return 0;
 	}
@@ -1346,6 +1385,24 @@ int sunxi_verify_checksum(void *buffer, uint length, uint src_sum)
 		return -1;
 }
 
+static int led_gpio_init(void)
+{
+	int ret;
+	int used;
+
+	ret = script_parser_fetch("boot_init_gpio", "boot_init_gpio_used", &used, sizeof(int) / 4);
+	if (!ret && used) {
+			gpio_request_ex("boot_init_gpio", NULL);
+	}
+	return 0;
+}
+
+int sunxi_led_init(void)
+{
+	/* init some gpios for led when boot */
+	led_gpio_init();
+	return 0;
+}
 
 static int do_switch_boot_partition(cmd_tbl_t *cmdtp, int flag, int argc,
 		       char * const argv[])

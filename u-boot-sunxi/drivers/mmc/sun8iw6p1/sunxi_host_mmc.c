@@ -815,6 +815,75 @@ static void mmc_get_para_from_fex(int sdc_no)
 			MMCINFO("get sdc2 sdc_kernel_no_limit 0x%x, limit 0x%x.\n", rval, cfg->platform_caps.tune_limit_kernel_timing);
 		}
 
+		ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_ffu_en", (uint32_t *)(&rval));
+		if (ret < 0) {
+			MMCINFO("get sdc2 sdc_ffu_en fail.\n");
+			cfg->platform_caps.enable_ffu = 0x0;
+		} else {
+			cfg->platform_caps.enable_ffu = rval;
+			MMCINFO("get sdc2 sdc_ffu_en 0x%x.\n", cfg->platform_caps.enable_ffu);
+		}
+
+		if (!cfg->platform_caps.enable_ffu) {
+			/* don't enable ffu  */
+			cfg->platform_caps.emmc_fw_byte_len = 0xFFFFFFFF;
+			cfg->platform_caps.emmc_fw_ver0 = 0xFFFFFFFF;
+			cfg->platform_caps.emmc_fw_ver1 = 0xFFFFFFFF;
+		} else {
+			ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_fw_len", (uint32_t *)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_fw_len fail, use length from package.\n");
+				cfg->platform_caps.emmc_fw_byte_len = 0x0;
+			} else {
+				cfg->platform_caps.emmc_fw_byte_len = rval;
+				MMCINFO("get sdc2 sdc_fw_len 0x%x.\n", cfg->platform_caps.emmc_fw_byte_len);
+			}
+
+			ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_fw_ver0", (uint32_t *)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_fw_ver0 fail, use 0x0.\n");
+				cfg->platform_caps.emmc_fw_ver0 = 0x0;
+			} else {
+				cfg->platform_caps.emmc_fw_ver0 = rval;
+				MMCINFO("get sdc2 sdc_fw_ver0 0x%x.\n", cfg->platform_caps.emmc_fw_ver0);
+			}
+
+			ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_fw_ver1", (uint32_t *)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_fw_ver1 fail, use 0x0.\n");
+				cfg->platform_caps.emmc_fw_ver1 = 0x0;
+			} else {
+				cfg->platform_caps.emmc_fw_ver1 = rval;
+				MMCINFO("get sdc2 sdc_fw_ver1 0x%x.\n", cfg->platform_caps.emmc_fw_ver1);
+			}
+
+			ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_ffu_mid", (uint32_t *)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_ffu_mid fail, use 0x0.\n");
+				cfg->platform_caps.emmc_ffu_mid = 0x0;
+			} else {
+				cfg->platform_caps.emmc_ffu_mid = rval;
+				MMCINFO("get sdc2 sdc_ffu_mid 0x%x.\n", cfg->platform_caps.emmc_ffu_mid);
+			}
+
+			ret = fdt_getprop_u32(working_fdt, nodeoffset, "sdc_ffu_spt_fw", (uint32_t *)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_ffu_spt_fw fail, use 0x0.\n");
+				cfg->platform_caps.emmc_ffu_spt_fw = 0x0;
+			} else {
+				cfg->platform_caps.emmc_ffu_spt_fw = rval;
+				MMCINFO("get sdc2 sdc_ffu_spt_fw 0x%x.\n", cfg->platform_caps.emmc_ffu_spt_fw);
+			}
+
+			ret = fdt_getprop_string(working_fdt, nodeoffset, "sdc_ffu_fw1", (char **)(&rval));
+			if (ret < 0) {
+				MMCINFO("get sdc2 sdc_ffu_fw1 fail, use NULL.\n");
+				cfg->platform_caps.emmc_ffu_fw1 = NULL;
+			} else {
+				cfg->platform_caps.emmc_ffu_fw1 = (char *)rval;
+				MMCINFO("get sdc2 sdc_ffu_fw1 %s.\n", cfg->platform_caps.emmc_ffu_fw1);
+			}
+		}
 		/* fmax, fmax_ddr */
 	}
 	else {

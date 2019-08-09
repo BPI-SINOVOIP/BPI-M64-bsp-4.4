@@ -89,7 +89,6 @@ int NAND_PhyInit(void)
 		return -1;
 	}
 
-
 	NAND_Print("NB1 : nand phy init ok\n");
 
 	return 0;

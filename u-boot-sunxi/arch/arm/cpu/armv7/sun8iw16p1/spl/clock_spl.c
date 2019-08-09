@@ -44,12 +44,13 @@ void set_factor_n(int factor_n, int reg)
 void set_pll_cpux_axi(void)
 {
 	__u32 reg_val;
+
 	/*select CPUX  clock src: OSC24M, AXI divide ratio is 3, system apb clk ratio is 4*/
 	writel((0<<24) | (3<<8) | (2<<0), CCMU_CPUX_AXI_CFG_REG);
 	__usdelay(1);
 
 	/* set default val: clk is 408M  , PLL_OUTPUT= 24M*N/(M*P)*/
-	writel((0x02001000), CCMU_PLL_CPUX_CTRL_REG);
+	writel((0x0a001000), CCMU_PLL_CPUX_CTRL_REG);
 
 	/* lock enable */
 	reg_val = readl(CCMU_PLL_CPUX_CTRL_REG);
@@ -247,24 +248,6 @@ void set_pll_mbus(void)
 	__usdelay(1);
 }
 
-void set_platform_config(void)
-{
-	u32 reg_val;
-	u32 reg_addr;
-	/*OSC clk soure config: DCXO or XO24M*/
-	/*bit3: 0-XO24M  1-DCXO*/
-	reg_addr = SUNXI_RTC_BASE + 0x160;
-	reg_val = readl(reg_addr);
-	if (!(reg_val & (1 << 3))) {
-		/* disable dcxo wake up function*/
-		reg_val |= (1 << 31);
-		/* disable dcxo */
-		reg_val &= ~(1 << 1);
-		writel(reg_val, reg_addr);
-	}
-
-	set_circuits_analog();
-}
 
 static void set_cpu_step(void)
 {
@@ -279,7 +262,7 @@ static void set_cpu_step(void)
 void set_pll(void)
 {
 	printf("set pll start\n");
-	set_platform_config();
+	set_circuits_analog();
 	set_cpu_step();
 	set_pll_cpux_axi();
 	set_pll_periph0();

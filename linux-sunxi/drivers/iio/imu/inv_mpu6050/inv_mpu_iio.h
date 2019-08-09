@@ -22,6 +22,8 @@
 #include <linux/iio/trigger_consumer.h>
 #include <linux/platform_data/invensense_mpu6050.h>
 
+
+#define CONFIG_MPU_ALLWINNER
 /**
  *  struct inv_mpu6050_reg_map - Notable registers.
  *  @sample_rate_div:	Divider applied to gyro output rate.
@@ -55,6 +57,7 @@ struct inv_mpu6050_reg_map {
 	u8 pwr_mgmt_1;
 	u8 pwr_mgmt_2;
 	u8 int_pin_cfg;
+	u8 accl_dlpf_config;
 };
 
 /*device enum */
@@ -125,6 +128,11 @@ struct inv_mpu6050_state {
 	unsigned int powerup_count;
 	struct inv_mpu6050_platform_data plat_data;
 	DECLARE_KFIFO(timestamps, long long, TIMESTAMP_FIFO_SIZE);
+	struct delayed_work		work;
+	unsigned			poll_time_jiffies;
+#if !defined(POLL_WORK)
+	int irq_is_disable;
+#endif
 };
 
 /*register and associated bit definition*/
@@ -132,6 +140,7 @@ struct inv_mpu6050_state {
 #define INV_MPU6050_REG_CONFIG              0x1A
 #define INV_MPU6050_REG_GYRO_CONFIG         0x1B
 #define INV_MPU6050_REG_ACCEL_CONFIG        0x1C
+#define INV_MPU6050_REG_ACCEL_DLPF_CONFIG   0x1D
 
 #define INV_MPU6050_REG_FIFO_EN             0x23
 #define INV_MPU6050_BIT_ACCEL_OUT           0x08
@@ -156,13 +165,13 @@ struct inv_mpu6050_state {
 #define INV_MPU6050_BIT_H_RESET             0x80
 #define INV_MPU6050_BIT_SLEEP               0x40
 #define INV_MPU6050_BIT_CLK_MASK            0x7
-
 #define INV_MPU6050_REG_PWR_MGMT_2          0x6C
 #define INV_MPU6050_BIT_PWR_ACCL_STBY       0x38
 #define INV_MPU6050_BIT_PWR_GYRO_STBY       0x07
 
 #define INV_MPU6050_REG_FIFO_COUNT_H        0x72
 #define INV_MPU6050_REG_FIFO_R_W            0x74
+#define INV_MPU6050_REG_WHO_AM_I            0x75
 
 #define INV_MPU6050_BYTES_PER_3AXIS_SENSOR   6
 #define INV_MPU6050_FIFO_COUNT_BYTE          2
@@ -187,11 +196,16 @@ struct inv_mpu6050_state {
 #define INV_MPU6050_BIT_BYPASS_EN	0x2
 
 /* init parameters */
-#define INV_MPU6050_INIT_FIFO_RATE           50
+#define INV_MPU6050_INIT_FIFO_RATE           500
 #define INV_MPU6050_TIME_STAMP_TOR           5
-#define INV_MPU6050_MAX_FIFO_RATE            1000
+#define INV_MPU6050_MAX_FIFO_RATE            8000
 #define INV_MPU6050_MIN_FIFO_RATE            4
 #define INV_MPU6050_ONE_K_HZ                 1000
+#define INV_MPU6050_8K_HZ                 8000
+
+#define INV_MPU6050_CHIP_ID		0x98
+
+/* #define POLL_WORK */
 
 /* scan element definition */
 enum inv_mpu6050_scan {

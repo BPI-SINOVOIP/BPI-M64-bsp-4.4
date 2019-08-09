@@ -58,6 +58,8 @@ char act_name[I2C_NAME_SIZE] = "";
 uint act_slave = 0xff;
 uint use_sensor_list = 0xff;
 uint vin_i2c_dbg;
+uint ptn_on_cnt;
+extern uint ptn_frame_cnt;
 
 module_param_string(ccm, ccm, sizeof(ccm), S_IRUGO | S_IWUSR);
 module_param(i2c_addr, uint, S_IRUGO | S_IWUSR);
@@ -436,11 +438,13 @@ static void __vin_pattern_config(struct vin_md *vind, struct vin_core *vinc, int
 	}
 }
 
-static int __vin_subdev_set_power(struct v4l2_subdev *sd, int on)
+static int __vin_subdev_set_power(struct vin_pipeline *p, unsigned int idx, int on)
 {
+	struct v4l2_subdev *sd;
 	int *use_count;
 	int ret;
 
+	sd = p->sd[idx];
 	if (sd == NULL)
 		return -ENXIO;
 
@@ -449,6 +453,21 @@ static int __vin_subdev_set_power(struct v4l2_subdev *sd, int on)
 		return 0;
 	else if (!on && (*use_count == 0 || --(*use_count) > 0))
 		return 0;
+
+#ifdef VIN_IN_UBOOT
+	if (idx == VIN_IND_SENSOR && on) {
+		struct vin_md *vind = entity_to_vin_mdev(&p->sd[VIN_IND_SENSOR]->entity);
+		if (vind == NULL) {
+			vin_err("vin media is NULL, cannot s_stream\n");
+			return -ENODEV;
+		}
+
+		if (vind->sensor_first_on) {
+			vind->sensor_first_on = false;
+			return 0;
+		}
+	}
+#endif
 	ret = v4l2_subdev_call(sd, core, s_power, on);
 #if 0
 	if (ret == 0 || ret == -ENOIOCTLCMD) {
@@ -463,7 +482,7 @@ static int vin_pipeline_s_power(struct vin_pipeline *p, bool on)
 {
 	static const u8 seq[2][VIN_IND_MAX] = {
 		{ VIN_IND_ISP, VIN_IND_SENSOR, VIN_IND_CSI, VIN_IND_MIPI,
-			VIN_IND_SCALER, VIN_IND_CAPTURE  },
+			VIN_IND_SCALER, VIN_IND_CAPTURE},
 		{ VIN_IND_CAPTURE, VIN_IND_MIPI, VIN_IND_CSI, VIN_IND_SENSOR,
 			VIN_IND_ISP, VIN_IND_SCALER},
 	};
@@ -472,26 +491,19 @@ static int vin_pipeline_s_power(struct vin_pipeline *p, bool on)
 
 	if (p->sd[VIN_IND_SENSOR] == NULL)
 		return -ENXIO;
+
 	vin_cap = pipe_to_vin_video(p);
 	if ((vin_cap == NULL) || (vin_cap->vinc == NULL)) {
 		vin_err("vin video is NULL, cannot s_stream\n");
 		return -ENODEV;
 	}
 
-	for (i = 0; i < VIN_IND_MAX; i++) {
+	for (i = 0; i < VIN_IND_ACTUATOR; i++) {
 		unsigned int idx = seq[on][i];
-
-		if (NULL == p->sd[idx])
+		if (!p->sd[idx] || !p->sd[idx]->entity.parent)
 			continue;
-
-		if (NULL == p->sd[idx]->entity.parent)
-			continue;
-
-		if (vin_cap->vinc->ptn_cfg.ptn_en && (idx <= VIN_IND_MIPI))
-			continue;
-
 		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
-		ret = __vin_subdev_set_power(p->sd[idx], on);
+		ret = __vin_subdev_set_power(p, idx, on);
 		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
 		if (ret < 0 && ret != -ENXIO)
 			goto error;
@@ -500,18 +512,10 @@ static int vin_pipeline_s_power(struct vin_pipeline *p, bool on)
 error:
 	for (; i >= 0; i--) {
 		unsigned int idx = seq[on][i];
-
-		if (NULL == p->sd[idx])
+		if (!p->sd[idx] || !p->sd[idx]->entity.parent)
 			continue;
-
-		if (NULL == p->sd[idx]->entity.parent)
-			continue;
-
-		if (vin_cap->vinc->ptn_cfg.ptn_en && (idx <= VIN_IND_MIPI))
-			continue;
-
 		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
-		__vin_subdev_set_power(p->sd[idx], !on);
+		__vin_subdev_set_power(p, idx, !on);
 		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
 	}
 	return ret;
@@ -569,11 +573,13 @@ static int __vin_pipeline_close(struct vin_pipeline *p)
 	return ret == -ENXIO ? 0 : ret;
 }
 
-static int __vin_subdev_set_stream(struct v4l2_subdev *sd, int on)
+static int __vin_subdev_set_stream(struct vin_pipeline *p, unsigned int idx, int on)
 {
+	struct v4l2_subdev *sd;
 	int *stream_count;
 	int ret;
 
+	sd = p->sd[idx];
 	if (sd == NULL)
 		return -ENODEV;
 
@@ -582,6 +588,34 @@ static int __vin_subdev_set_stream(struct v4l2_subdev *sd, int on)
 		return 0;
 	else if (!on && (*stream_count == 0 || --(*stream_count) > 0))
 		return 0;
+
+#ifdef VIN_IN_UBOOT
+	if (on) {
+		struct vin_md *vind = entity_to_vin_mdev(&p->sd[VIN_IND_SENSOR]->entity);
+		if (vind == NULL) {
+			vin_err("vin media is NULL, cannot s_stream\n");
+			return -ENODEV;
+		}
+
+		if (vind->first_net_app) {
+			if (idx == VIN_IND_CSI)
+				vind->first_net_app = false;
+			return 0;
+		}
+	}
+#endif
+	ret = v4l2_subdev_call(sd, video, s_stream, on);
+
+	return ret != -ENOIOCTLCMD ? ret : 0;
+}
+
+static int __vin_subdev_reset_stream(struct v4l2_subdev *sd, int on)
+{
+	int ret;
+
+	if (sd == NULL)
+		return -ENODEV;
+
 	ret = v4l2_subdev_call(sd, video, s_stream, on);
 
 	return ret != -ENOIOCTLCMD ? ret : 0;
@@ -650,7 +684,7 @@ static int __vin_pipeline_s_stream(struct vin_pipeline *p, int on_idx)
 			continue;
 
 		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
-		ret = __vin_subdev_set_stream(p->sd[idx], on);
+		ret = __vin_subdev_set_stream(p, idx, on);
 		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
 		if (ret < 0 && ret != -ENODEV) {
 			vin_err("%s error!\n", __func__);
@@ -658,8 +692,18 @@ static int __vin_pipeline_s_stream(struct vin_pipeline *p, int on_idx)
 		}
 		usleep_range(100, 120);
 	}
-	if (vin_cap->vinc->ptn_cfg.ptn_en)
-		csic_ptn_generation_en(vind->id, on);
+	if (vin_cap->vinc->ptn_cfg.ptn_en) {
+		if (vin_cap->vinc->ptn_cfg.ptn_type > 0) {
+			ptn_on_cnt++;
+			if (ptn_on_cnt%vin_cap->vinc->ptn_cfg.ptn_type == 0) {
+				ptn_on_cnt = 0;
+				ptn_frame_cnt = 0;
+				csic_ptn_generation_en(vind->id, on);
+			}
+		} else {
+			csic_ptn_generation_en(vind->id, on);
+		}
+	}
 
 	return 0;
 error:
@@ -676,7 +720,100 @@ error:
 			continue;
 
 		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
-		__vin_subdev_set_stream(p->sd[idx], !on);
+		__vin_subdev_set_stream(p, idx, !on);
+		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
+	}
+	return ret;
+}
+
+static int __vin_pipeline_reset_stream(struct vin_pipeline *p, int on_idx)
+{
+	static const u8 seq[3][VIN_IND_MAX] = {
+		{ VIN_IND_CAPTURE, VIN_IND_ISP, VIN_IND_SENSOR, VIN_IND_CSI,
+			VIN_IND_MIPI, VIN_IND_SCALER },
+		{ VIN_IND_SENSOR, VIN_IND_MIPI, VIN_IND_ISP,
+			VIN_IND_SCALER, VIN_IND_CAPTURE, VIN_IND_CSI},
+		{ VIN_IND_MIPI, VIN_IND_SENSOR, VIN_IND_ISP,
+			VIN_IND_SCALER, VIN_IND_CAPTURE, VIN_IND_CSI},
+	};
+	struct vin_vid_cap *vin_cap = NULL;
+	struct vin_md *vind = NULL;
+	int i, on, ret = 0;
+	struct isp_dev *isp_info = NULL;
+
+	if (p == NULL) {
+		vin_err("pipeline is NULL, cannot s_stream\n");
+		return -ENODEV;
+	}
+
+	if (p->sd[VIN_IND_SENSOR] == NULL)
+		return -ENODEV;
+
+	vind = entity_to_vin_mdev(&p->sd[VIN_IND_SENSOR]->entity);
+	if (vind == NULL) {
+		vin_err("vin media is NULL, cannot s_stream\n");
+		return -ENODEV;
+	}
+
+	vin_cap = pipe_to_vin_video(p);
+	if ((vin_cap == NULL) || (vin_cap->vinc == NULL)) {
+		vin_err("vin video is NULL, cannot s_stream\n");
+		return -ENODEV;
+	}
+	isp_info = container_of(
+		vin_cap->pipe.sd[VIN_IND_ISP], struct isp_dev, subdev);
+
+	/*vin change top clk rate*/
+	if ((vin_cap->vinc->vin_clk) && (vin_cap->vinc->vin_clk != vind->clk[VIN_TOP_CLK].frequency)) {
+		__vin_set_top_clk_rate(vind, vin_cap->vinc->vin_clk);
+		vind->clk[VIN_TOP_CLK].frequency = vin_cap->vinc->vin_clk;
+	}
+
+	for (i = 0; i < vin_cap->vinc->total_rx_ch; i++)
+		csic_isp_input_select(vind->id, vin_cap->vinc->isp_sel, i,
+				vin_cap->vinc->csi_sel, i);
+
+	csic_vipp_input_select(vind->id, vin_cap->vinc->vipp_sel,
+			vin_cap->vinc->isp_sel, vin_cap->vinc->isp_tx_ch);
+
+	on = on_idx ? 1 : 0;
+
+	__vin_pattern_config(vind, vin_cap->vinc, on);
+
+	isp_info->reset_flag = 1;
+
+	for (i = 0; i < VIN_IND_ACTUATOR; i++) {
+		unsigned int idx = seq[on_idx][i];
+		if (!p->sd[idx] || !p->sd[idx]->entity.parent)
+			continue;
+		if (vin_cap->vinc->ptn_cfg.ptn_en && (idx <= VIN_IND_MIPI))
+			continue;
+		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
+		ret = __vin_subdev_reset_stream(p->sd[idx], on);
+		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
+		if (ret < 0 && ret != -ENODEV) {
+			vin_err("%s error!\n", __func__);
+			goto error;
+		}
+		usleep_range(100, 120);
+	}
+
+	isp_info->reset_flag = 0;
+
+	if (vin_cap->vinc->ptn_cfg.ptn_en)
+		csic_ptn_generation_en(vind->id, on);
+
+	return 0;
+error:
+	for (; i >= 0; i--) {
+		unsigned int idx = seq[on_idx][i];
+
+		if (!p->sd[idx] || !p->sd[idx]->entity.parent)
+			continue;
+		if (vin_cap->vinc->ptn_cfg.ptn_en && (idx <= VIN_IND_MIPI))
+			continue;
+		mutex_lock(&p->sd[idx]->entity.parent->graph_mutex);
+		__vin_subdev_reset_stream(p->sd[idx], !on);
 		mutex_unlock(&p->sd[idx]->entity.parent->graph_mutex);
 	}
 	return ret;
@@ -686,6 +823,7 @@ static const struct vin_pipeline_ops vin_pipe_ops = {
 	.open		= __vin_pipeline_open,
 	.close		= __vin_pipeline_close,
 	.set_stream	= __vin_pipeline_s_stream,
+	.reset_stream	= __vin_pipeline_reset_stream,
 };
 
 static struct v4l2_subdev *__vin_subdev_register(struct vin_md *vind,
@@ -1459,7 +1597,9 @@ static int vin_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 #endif
 
+#ifndef VIN_IN_UBOOT
 	vin_md_clk_enable(vind);
+#endif
 	if (dev->of_node) {
 		ret = vin_md_register_entities(vind, dev->of_node);
 	} else {
@@ -1467,7 +1607,9 @@ static int vin_probe(struct platform_device *pdev)
 		ret = -ENOSYS;
 		goto err_clk;
 	}
+#ifndef VIN_IN_UBOOT
 	vin_md_clk_disable(vind);
+#endif
 
 	mutex_lock(&vind->media_dev.graph_mutex);
 	ret = vin_create_media_links(vind);
@@ -1495,6 +1637,13 @@ static int vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_clk;
 
+#ifdef VIN_IN_UBOOT
+	vind->first_net_app = true;
+	vind->sensor_first_on = true;
+#else
+	vind->first_net_app = false;
+	vind->sensor_first_on = false;
+#endif
 
 	vin_log(VIN_LOG_MD, "%s ok!\n", __func__);
 	return 0;

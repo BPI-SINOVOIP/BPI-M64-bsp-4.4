@@ -3,7 +3,7 @@
 
 
 #ifndef CONFIG_SUNXI_DISPLAY
-uint sprite_cartoon_create(void)
+uint sprite_cartoon_create(int op)
 {
 	
 	return 0;

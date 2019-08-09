@@ -30,7 +30,11 @@
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 
+#if defined(CONFIG_ARCH_SUN8IW8P1) || defined(CONFIG_ARCH_SUN8IW15P1)
+#define SUNXI_DMA_MAX     8
+#else
 #define SUNXI_DMA_MAX     16
+#endif
 
 
 #define SUNXI_DMA_CHANNAL_BASE    (SUNXI_DMA_BASE + 0x100)
@@ -91,6 +95,7 @@ sunxi_dma_source;
 #define  DMA_QUEUE_END_INT  (1<<2)
 
 static int    dma_int_count = 0;
+static int dma_init = -1;
 static sunxi_dma_source   dma_channal_source[SUNXI_DMA_MAX];
 
 extern void *malloc_noncache(uint num_bytes);
@@ -118,29 +123,24 @@ static void sunxi_dma_int_func(void *p)
 	uint pending;
 	sunxi_dma_int_set *dma_int = (sunxi_dma_int_set *)SUNXI_DMA_BASE;
 
-	for(i=0; i<8; i++)
-	{
-		if(dma_channal_source[i].dma_func.m_func)
-		{
-			pending = (DMA_PKG_END_INT << (i * 4));
-			if(dma_int->irq_pending0 & pending)
-			{
-				dma_int->irq_pending0 = pending;
-
-				dma_channal_source[i].dma_func.m_func(dma_channal_source[i].dma_func.m_data);
+	for (i = 0; i < 8 && i < SUNXI_DMA_MAX; i++) {
+		pending = (DMA_PKG_END_INT << (i * 4));
+		if (dma_int->irq_pending0 & pending) {
+			dma_int->irq_pending0 |= pending;
+			if (dma_channal_source[i].dma_func.m_func) {
+				dma_channal_source[i].dma_func.m_func(
+					dma_channal_source[i].dma_func.m_data);
 			}
 		}
 	}
-	for(i=8;i<15;i++)
-	{
-		if(dma_channal_source[i].dma_func.m_func)
-		{
-			pending = (DMA_PKG_END_INT << (i * 4));
-			if(dma_int->irq_pending1 & pending)
-			{
-				dma_int->irq_pending1 = pending;
 
-				dma_channal_source[i].dma_func.m_func(dma_channal_source[i].dma_func.m_data);
+	for(i = 8; i < SUNXI_DMA_MAX; i++) {
+		pending = (DMA_PKG_END_INT << ((i-8) * 4));
+		if (dma_int->irq_pending1 & pending) {
+			dma_int->irq_pending1 |= pending;
+			if (dma_channal_source[i].dma_func.m_func) {
+				dma_channal_source[i].dma_func.m_func(
+					dma_channal_source[i].dma_func.m_data);
 			}
 		}
 	}
@@ -166,6 +166,9 @@ void sunxi_dma_init(void)
 	int i;
 	u32 reg_val;
 	sunxi_dma_int_set *dma_int = (sunxi_dma_int_set *)SUNXI_DMA_BASE;
+
+	if (dma_init > 0)
+		return ;
 
 	dma_int->irq_en0 = 0;
 	dma_int->irq_en1 = 0;
@@ -194,6 +197,8 @@ void sunxi_dma_init(void)
         *(volatile unsigned int *)(DMA_AUTO_GATE_REG) = reg_val;
 
 #endif
+	dma_init = 1;
+
 	return ;
 }
 /*
@@ -246,7 +251,24 @@ void sunxi_dma_exit(void)
 	reg_val &= ~(DMA_GATING_PASS << DMA_GATING_BIT);
 	writel(reg_val , DMA_GATING_BASE);
 
+	dma_init--;
+
 }
+
+ulong sunxi_dma_request_from_last(uint dmatype)
+{
+	int i;
+
+	for(i = SUNXI_DMA_MAX - 1; i >= 0; i--) {
+		if (dma_channal_source[i].used == 0) {
+			dma_channal_source[i].used = 1;
+			dma_channal_source[i].channal_count = i;
+			return (ulong)&dma_channal_source[i];
+		}
+	}
+	return 0;
+}
+
 /*
 ****************************************************************************************************
 *

@@ -57,7 +57,9 @@ uint toc1_item_read(struct sbrom_toc1_item_info *p_toc_item, void * p_dest, u32 
 int load_fip(int *use_monitor)
 {
 	int i;
+#ifdef CONFIG_BOARD_ID_GPIO
 	int dtb_index = 0;
+#endif
 
 	struct sbrom_toc1_head_info  *toc1_head = NULL;
 	struct sbrom_toc1_item_info  *item_head = NULL;

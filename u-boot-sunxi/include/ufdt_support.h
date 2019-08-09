@@ -9,7 +9,7 @@
 #define __UFDT_SUPPORT_H
 
 #ifdef CONFIG_OF_LIBUFDT
-int sunxi_support_ufdt(void *dtb_base, u32 dtb_len);
+void *sunxi_support_ufdt(void *dtb_base, u32 dtb_len);
 int sunxi_dto_merge_test(void);
 #endif
 

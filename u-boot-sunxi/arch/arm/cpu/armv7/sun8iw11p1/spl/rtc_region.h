@@ -35,6 +35,7 @@
 #define BUS_NUM                      (8)
 #define STANDBY_SPACE_BASE_ADDR	     (0x43000000)
 #define EXTENDED_STANDBY_BASE_OFFSET (0x400)
+#define DRAM_CRC_MAGIC               (0x76543210)
 
 
 enum VDD_BIT {

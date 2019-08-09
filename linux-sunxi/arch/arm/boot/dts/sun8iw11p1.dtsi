@@ -166,6 +166,12 @@
 			type = <ION_HEAP_TYPE_DMA>;
 			name = "cma";
 		};
+		carvout {
+			type = <ION_HEAP_TYPE_CARVEOUT>;
+			name = "carvout";
+			base = <0x58000000>;
+			size = <0x08000000>;
+		};
 	};
 
 	dram: dram {
@@ -1144,6 +1150,7 @@
 			compatible = "allwinner,sunxi-hdmi";
 			reg = <0x0 0x01ee0000 0x0 0x20000>;
 			clocks = <&clk_hdmi>,<&clk_hdmi_slow>;
+			status = "okay";
 		};
 
 		lcd0: lcd0@01c0c000 {
@@ -1543,11 +1550,13 @@
 				flash0_mode = <>;
 				flash0_flvdd = "";
 				flash0_flvdd_vol = <>;
+				device_id = <0>;
 				status = "disabled";
 			};
 			sensor0:sensor@0{
 				device_type = "sensor0";
 				sensor0_mname = "ov5640";
+				sensor0_twi_cci_id = <4>;
 				sensor0_twi_addr = <0x78>;
 				sensor0_pos = "rear";
 				sensor0_isp_used = <0>;
@@ -1571,6 +1580,7 @@
 			sensor1:sensor@1{
 				device_type = "sensor1";
 				sensor1_mname = "ov2686";
+				sensor1_twi_cci_id = <2>;
 				sensor1_twi_addr = <0x20>;
 				sensor1_pos = "front";
 				sensor1_isp_used = <0>;
@@ -1595,14 +1605,12 @@
 				device_type = "vinc0";
 				compatible = "allwinner,sunxi-vin-core";
 				interrupts = <GIC_SPI 42 4>;
-				cci_sel	= <1>;
-				csi_sel	= <0>;
-				mipi_sel = <0xff>;
-				isp_sel = <0>;
-				scaler_sel = <0>;
-				vinc0_sensor_list = <1>;
-				isp_handle = <&isp0>;
-				sensor_handle = <&sensor0>;
+				vinc0_csi_sel = <0>;
+				vinc0_mipi_sel = <0xff>;
+				vinc0_isp_sel = <0>;
+				vinc0_rear_sensor_sel = <0>;
+				vinc0_front_sensor_sel = <0>;
+				vinc0_sensor_list = <0>;
 				device_id = <0>;
 				status = "okay";
 			};
@@ -1610,14 +1618,12 @@
 				device_type = "vinc1";
 				compatible = "allwinner,sunxi-vin-core";
 				interrupts = <GIC_SPI 43 4>;
-				cci_sel	= <1>;
-				csi_sel	= <1>;
-				mipi_sel = <0xff>;
-				isp_sel = <1>;
-				scaler_sel = <1>;
-				vinc1_sensor_list = <1>;
-				isp_handle = <&isp1>;
-				sensor_handle = <&sensor1>;
+				vinc1_csi_sel = <1>;
+				vinc1_mipi_sel = <0xff>;
+				vinc1_isp_sel = <0>;
+				vinc1_rear_sensor_sel = <1>;
+				vinc1_front_sensor_sel = <1>;
+				vinc1_sensor_list = <0>;
 				device_id = <1>;
 				status = "okay";
 			};

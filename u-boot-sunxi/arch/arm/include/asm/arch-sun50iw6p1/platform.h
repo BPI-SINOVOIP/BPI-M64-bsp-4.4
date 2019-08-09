@@ -110,6 +110,7 @@
 #define SUNXI_RTWI0_RST_BIT					(16)
 #define SUNXI_RTWI0_GATING_BIT				(0)
 
+#define CACHE_CFG_REG						(SUNXI_CPUX_CFG_BASE+0x24)
 #define RVBARADDR0_L                        (SUNXI_CPUX_CFG_BASE+0x40)
 #define RVBARADDR0_H                        (SUNXI_CPUX_CFG_BASE+0x44)
 

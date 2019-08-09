@@ -55,6 +55,12 @@ DECLARE_GLOBAL_DATA_PTR;
 #define _PIO_REG_DATA_VALUE(n)            readl( SUNXI_PIO_BASE + ((n)-1)*0x24 + 0x10)
 #define _PIO_REG_BASE(n)                    ((volatile unsigned int *)(SUNXI_PIO_BASE +((n)-1)*24))
 
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+#ifdef CONFIG_SUNXI_GPIO_INT_DEB
+#define PIO_REG_INT_DEB(n)              ((volatile unsigned int *)( SUNXI_PIO_BASE + 0x200 + ((n)-1)*0x20 + 0x18))
+#define PIO_REG_INT_DEB_VALUE(n)        readl(SUNXI_PIO_BASE + 0x200 + ((n)-1)*0x20 + 0x18)
+#endif
+
 #ifdef SUNXI_RPIO_BASE
 #define _R_PIO_REG_CFG(n, i)               ((volatile unsigned int *)( SUNXI_RPIO_BASE + ((n)-12)*0x24 + ((i)<<2) + 0x00))
 #define _R_PIO_REG_DLEVEL(n, i)            ((volatile unsigned int *)( SUNXI_RPIO_BASE + ((n)-12)*0x24 + ((i)<<2) + 0x14))
@@ -1710,3 +1716,23 @@ int fdt_set_normal_gpio(user_gpio_set_t  *gpio_set, int gpio_count)
 {
 	return gpio_request_early(&gpio_set,gpio_count,1);
 }
+
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+//@n:group number (PA~1 PB~2 PC~3 ... PH~8)
+//@value:0/1 (0:32Khz 1:24Mhz)
+#ifdef CONFIG_SUNXI_GPIO_INT_DEB
+void int_deb_set_gpio(int n, int value)
+{
+	__u32 register_value = PIO_REG_INT_DEB_VALUE(n);
+	if(value == 1)
+	{
+		register_value |= 0x1;
+		GPIO_REG_WRITE(PIO_REG_INT_DEB(n), register_value);
+	}
+	if(value == 0)
+	{
+		register_value &= (~(0x1));
+		GPIO_REG_WRITE(PIO_REG_INT_DEB(n), register_value);
+	}
+}
+#endif

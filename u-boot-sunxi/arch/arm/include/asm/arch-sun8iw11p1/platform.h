@@ -111,6 +111,9 @@
 #define RTC_STANDBY_FLAG_REG                     (SUNXI_RTC_BASE + 0x1f8)
 #define RTC_STANDBY_SOFT_ENTRY_REG               (SUNXI_RTC_BASE + 0x1fc)
 #define DRAM_CRC_REG_ADDR                        (SUNXI_RTC_BASE + 0x10c) /* 0x01c2050C */
+#define DRAM_CRC_EN_REG                          (SUNXI_RTC_BASE + 0x100)
+#define DRAM_CRC_START_REG                       (SUNXI_RTC_BASE + 0x118)
+#define DRAM_CRC_LEN_REG                         (SUNXI_RTC_BASE + 0x11c)
 
 #define SUNXI_EHCI0_BASE                         (SUNXI_USB0HOST_BASE)
 #define SUNXI_EHCI1_BASE                         (SUNXI_USB1HOST_BASE)

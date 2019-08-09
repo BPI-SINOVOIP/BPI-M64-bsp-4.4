@@ -637,6 +637,11 @@ struct mmc_platform_caps {
 	u32 emmc_fw_ver0;
 	/* emmc_fw_ver1[31:0] = ext_csd[261] | ext_csd[260] | ext_csd[259] | ext_csd[258] */
 	u32 emmc_fw_ver1;
+	u32 emmc_ffu_mid;
+	u32 emmc_ffu_spt_fw;	/*whether support many FWs*/
+	char *emmc_ffu_fw;	/*original fw(32G),other FWs please add at the back*/
+	char *emmc_ffu_fw1;
+	uint emmc_set_block_count;
 };
 
 struct mmc_config {

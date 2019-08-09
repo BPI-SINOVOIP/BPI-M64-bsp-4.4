@@ -1,3 +1,19 @@
+/*
+ * drivers/video/sunxi/disp2/disp/de/include/include.h
+ *
+ * Copyright (c) 2007-2019 Allwinnertech Co., Ltd.
+ * Author: zhengxiaobin <zhengxiaobin@allwinnertech.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 #ifndef _DISP_INCLUDE_H_
 #define _DISP_INCLUDE_H_
 
@@ -673,10 +689,10 @@ typedef struct
 	unsigned int             lcd_dsi_dphy_timing_en;
 	__disp_dsi_dphy_timing_t*	lcd_dsi_dphy_timing_p;
 
-	unsigned int            lcd_edp_rate; //1(1.62G); 2(2.7G); 3(5.4G)
-	unsigned int            lcd_edp_lane; //  1/2/4lane
-	unsigned int            lcd_edp_colordepth; //color depth, 0:8bit; 1:6bit
-	unsigned int            lcd_edp_fps;
+	unsigned int lcd_fsync_en;
+	unsigned int lcd_fsync_act_time;
+	unsigned int lcd_fsync_dis_time;
+	unsigned int lcd_fsync_pol;
 
 	unsigned int            lcd_dclk_freq;
 	unsigned int            lcd_x; //horizontal resolution

@@ -90,6 +90,11 @@ extern int sunxi_flash_handle_init(void);
 
 extern int sunxi_bmp_display(char *name);
 extern int sunxi_Eink_Get_bmp_buffer(char *name, char *bmp_gray_buf);
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR) || defined(CONFIG_SUN8IW16P1_AXP2101_NOR)
+extern int read_bmp_to_kernel(char *partition_name);
+#endif
+extern int sunxi_load_jpeg(const char *filename);
+extern int sunxi_bmp_load(char *name);
 
 extern int drv_disp_init(void);
 extern int drv_disp_exit(void);
@@ -108,6 +113,10 @@ extern void board_mmc_pre_init(int card_num);
 extern int board_mmc_get_num(void);
 extern void board_mmc_set_num(int num);
 //extern int mmc_get_env_addr(struct mmc *mmc, u32 *env_addr);
+#endif
+
+#ifdef CONFIG_SUNXI_OFFLINE_BURN_KEY
+extern int sunxi_clean_offline_key(void);
 #endif
 
 #ifdef	TIMESTAMP
@@ -140,7 +149,7 @@ extern void sunxi_dump(void *addr, unsigned int size);
 extern char *board_hardware_info(void);
 
 #ifdef CONFIG_DETECT_RTC_BOOT_MODE
-extern char *set_bootcmd_from_rtc(int mode, char *bootcmd);
+extern int set_bootcmd_from_rtc(int mode, char *bootcmd);
 extern int sunxi_get_bootmode_flag(void);
 extern int sunxi_set_bootmode_flag(u8 flag);
 #endif
@@ -167,6 +176,7 @@ extern int sunxi_probe_securemode(void);
 extern int sunxi_get_securemode(void);
 extern int sunxi_probe_secure_monitor(void);
 extern int sunxi_probe_secure_os(void);
+extern int sunxi_update_rotpk_info(void);
 
 extern int smc_init(void);
 

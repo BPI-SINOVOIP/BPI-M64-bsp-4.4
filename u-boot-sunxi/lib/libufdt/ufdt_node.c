@@ -21,6 +21,10 @@ struct ufdt_node *ufdt_node_construct(void *fdtp, fdt32_t *fdt_tag_ptr,
 									struct ufdt_node_pool *pool)
 {
   void *buf = ufdt_node_pool_alloc(pool);
+  if (buf == NULL) {
+	dto_error("ufdt_node_pool_alloc fail\n");
+	return NULL;
+  }
   uint32_t tag = fdt32_to_cpu(*fdt_tag_ptr);
   if (tag == FDT_PROP) {
     const struct fdt_property *prop = (const struct fdt_property *)fdt_tag_ptr;

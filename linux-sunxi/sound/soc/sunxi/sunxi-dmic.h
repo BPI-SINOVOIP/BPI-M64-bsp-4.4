@@ -108,4 +108,19 @@
 #define DATA2R_VOL			0
 #define	DMIC_DEFAULT_VOL		0xB0B0B0B0
 
+struct label {
+	const char *name;
+	const unsigned int address;
+	int value;
+};
+
+#define LABEL(constant)                                                        \
+	{                                                                      \
+		#constant, constant, 0                                         \
+	}
+#define LABEL_END                                                              \
+	{                                                                      \
+		NULL, -1, 0                                                    \
+	}
+
 #endif /* SUNXI_DMIC_H */

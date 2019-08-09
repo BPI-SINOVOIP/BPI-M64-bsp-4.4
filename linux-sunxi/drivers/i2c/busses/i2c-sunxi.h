@@ -22,6 +22,8 @@
 
 #define TWI_MODULE_NUM    (5)
 
+#define AUTOSUSPEND_TIMEOUT 5000
+
 /* TWI Register Offset */
 #define TWI_ADDR_REG		(0x00)	/*  31:8bit reserved,7-1bit for slave addr,0 bit for GCE */
 #define TWI_XADDR_REG		(0x04)	/*  31:8bit reserved,7-0bit for second addr in 10bit addr */

@@ -30,6 +30,11 @@ struct __lcd_panel *panel_array[] = {
 	&ili9881c_dsi_panel,
 	/* add new panel below */
 	&WilliamLcd_panel,
+	&ili9341_panel,
+	&fd055hd003s_panel,
+	&h245qbn02_panel,
+	&lh219wq1_panel,
+	&eagle_1_720_1280_panel,
 	&S070WV20_MIPI_RGB_panel,
 	NULL,
 };

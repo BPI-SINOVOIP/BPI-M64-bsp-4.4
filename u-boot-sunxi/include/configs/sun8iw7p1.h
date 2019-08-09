@@ -45,9 +45,10 @@
 
 
 #ifdef CONFIG_SUN8IW7P1_NOR
-#define CONFIG_TARGET_NAME      (spinor-sun8iw7p1)
+#define CONFIG_TARGET_NAME	"spinor-sun8iw7p1"
+#define CONFIG_SUNXI_SPINOR_PLATFORM
 #else
-#define CONFIG_TARGET_NAME      sun8iw7p1
+#define CONFIG_TARGET_NAME	sun8iw7p1
 #endif
 
 #define CONFIG_SYS_GENERIC_BOARD
@@ -63,8 +64,6 @@
 #define CONFIG_ARCH_SUN8IW7P1
 #define CONFIG_ARM_A7
 
-#define CONFIG_SUNXI_SECURE_STORAGE
-#define CONFIG_SUNXI_SECURE_SYSTEM
 #define CONFIG_SUNXI_ARISC_EXIST
 #define CONFIG_SUNXI_ARISC_NOT_RESET
 
@@ -103,12 +102,12 @@
 /*base addr for boot 0 to load the fw image*/
 #define SCP_SRAM_BASE                        (CONFIG_SYS_SRAMA2_BASE)
 #define SCP_SRAM_SIZE                        (CONFIG_SYS_SRAMA2_SIZE)
-#define SCP_DRAM_BASE                        (0x43080000)
+#define SCP_DRAM_BASE                        (0x42080000)
 #define SCP_DRAM_SIZE                        (0x10000)
 #define SCP_CODE_DRAM_OFFSET		         (0xC000)
 
 /* fdt addr for kernel */
-#define CONFIG_SUNXI_FDT_ADDR                (CONFIG_SYS_SDRAM_BASE+0x04000000)
+#define CONFIG_SUNXI_FDT_ADDR                (CONFIG_SYS_SDRAM_BASE+0x02100000)
 
 /* serial number */
 /* #define CONFIG_SUNXI_SERIAL */
@@ -127,16 +126,28 @@
 
 #define CONFIG_NR_DRAM_BANKS		1
 #define PHYS_SDRAM_1				CONFIG_SYS_SDRAM_BASE	/* SDRAM Bank #1 */
+#if defined (CONFIG_SUN8IW7P1_NOR) || defined (CONFIG_SUN8IW7P1_LITE)
+#define PHYS_SDRAM_1_SIZE			(128 << 20)				/* 0x08000000, 128 MB Bank #1 */
+#else
 #define PHYS_SDRAM_1_SIZE			(512 << 20)				/* 0x20000000, 512 MB Bank #1 */
+#endif
 
 #define CONFIG_NONCACHE_MEMORY
+#if defined (CONFIG_SUN8IW7P1_NOR) || defined (CONFIG_SUN8IW7P1_LITE)
+#define CONFIG_NONCACHE_MEMORY_SIZE (8 * 1024 * 1024)
+#else
 #define CONFIG_NONCACHE_MEMORY_SIZE (16 * 1024 * 1024)
+#endif
 /*
  * define malloc space
  * Size of malloc() pool
  * 1MB = 0x100000, 0x100000 = 1024 * 1024
  */
+#if defined (CONFIG_SUN8IW7P1_NOR) || defined (CONFIG_SUN8IW7P1_LITE)
+#define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (32 << 20))
+#else
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (128 << 20))
+#endif
 
 
 
@@ -282,7 +293,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	64			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -388,11 +399,14 @@
 /* #define CONFIG_SUNXI_MODULE_AXP */
 #define CONFIG_SUNXI_MODULE_USB
 #define CONFIG_SUNXI_MODULE_DISPLAY
-#else
-#define CONFIG_SUNXI_MODULE_SPINOR
-#define CONFIG_SUNXI_MODULE_AXP
+
+#define CONFIG_SUNXI_SECURE_STORAGE
+#define CONFIG_SUNXI_SECURE_SYSTEM
+
 #endif
 
+/* #define CONFIG_SUNXI_MODULE_AXP */
+#define CONFIG_SUNXI_MODULE_SPINOR
 
 /***************************************************************
 *

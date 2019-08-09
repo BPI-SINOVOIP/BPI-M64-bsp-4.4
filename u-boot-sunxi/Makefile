@@ -179,11 +179,8 @@ SPLTREE		:= $(OBJTREE)/spl
 SRCTREE		:= $(CURDIR)
 TOPDIR		:= $(SRCTREE)
 LNDIR		:= $(OBJTREE)
-#BPI
-#SPLDIR		:= $(OBJTREE)/../../bootloader/uboot_2014_sunxi_spl/sunxi_spl
-#SPLBASE		:= $(OBJTREE)/../../bootloader/uboot_2014_sunxi_spl
-SPLDIR		:= $(OBJTREE)/../bootloader/uboot_2014_sunxi_spl/sunxi_spl
-SPLBASE		:= $(OBJTREE)/../bootloader/uboot_2014_sunxi_spl
+SPLDIR		:= $(OBJTREE)/../../bootloader/uboot_2014_sunxi_spl/sunxi_spl
+SPLBASE		:= $(OBJTREE)/../../bootloader/uboot_2014_sunxi_spl
 SPLSUPPORT  := $(shell if [ -d $(SPLBASE) ] ; then echo "y"; else echo "n"; fi)
 
 export	TOPDIR SRCTREE OBJTREE SPLTREE SPLDIR SPLBASE

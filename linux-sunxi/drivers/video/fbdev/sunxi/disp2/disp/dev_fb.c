@@ -552,7 +552,7 @@ static s32 var_to_disp_fb(struct disp_fb_info *fb,
 			return -EINVAL;
 		}
 	}
-	__inf
+	printk
 	    ("format%d,para:%dbpp,a(%d,%d),r(%d,%d),g(%d,%d),b(%d,%d)\n",
 	     (int)fb->format, (int)var->bits_per_pixel, (int)var->transp.offset,
 	     (int)var->transp.length, (int)var->red.offset,
@@ -616,11 +616,39 @@ static int fb_wait_for_vsync(struct fb_info *info)
 	return 0;
 }
 
+#if 0
+static void print_layer_config_info(char *str, struct disp_layer_config *config)
+{
+	printk("%s:\n", str);
+	printk("enable = %u\n", config->enable);
+	printk("channel = %u\n", config->channel);
+	printk("layer_id = %u\n", config->layer_id);
+	printk("info:\n");
+	printk("	mode = %u\n", config->info.mode);
+	printk("	screen_win = [%d %d %u %u]\n", config->info.screen_win.x, config->info.screen_win.y,
+		config->info.screen_win.width, config->info.screen_win.height);
+	printk("	fb:\n");
+	printk("		addr[0] = 0x%08llx\n", config->info.fb.addr[0]);
+	printk("		addr[1] = 0x%08llx\n", config->info.fb.addr[1]);
+	printk("		addr[2] = 0x%08llx\n", config->info.fb.addr[2]);
+	printk("		size[0] = [%u %u]\n", config->info.fb.size[0].width, config->info.fb.size[0].height);
+	printk("		size[1] = [%u %u]\n", config->info.fb.size[1].width, config->info.fb.size[1].height);
+	printk("		size[2] = [%u %u]\n", config->info.fb.size[2].width, config->info.fb.size[2].height);
+	printk("		crop[0] = [%lld %lld %lld %lld]\n", (config->info.fb.crop.x >> 32), (config->info.fb.crop.y >> 32),
+		(config->info.fb.crop.width >> 32), (config->info.fb.crop.height >> 32));
+	printk("		format = %u\n", config->info.fb.format);
+}
+#else
+static void print_layer_config_info(char *str, struct disp_layer_config *config) {}
+#endif
+
 static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 				struct fb_info *info)
 {
 	u32 sel = 0;
 	u32 num_screens;
+	int need_wait_vsync = 1;
+	s32 type_switch_flag = 0;
 
 	num_screens = bsp_disp_feat_get_num_screens();
 
@@ -632,6 +660,7 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 			u32 y_offset = 0;
 			s32 chan = g_fbi.layer_hdl[info->node][0];
 			s32 layer_id = g_fbi.layer_hdl[info->node][1];
+			struct disp_rect dirty_rect;
 			struct disp_layer_config config;
 			struct disp_manager *mgr = g_disp_drv.mgr[sel];
 
@@ -647,6 +676,32 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 					     info->node, sel, chan, layer_id);
 					return -1;
 				}
+
+				if (mgr->rot_sw) {
+					if (0 != var->reserved[2] && 0 != var->reserved[3]) {
+						dirty_rect.x = var->reserved[0];
+						dirty_rect.y = var->reserved[1];
+						dirty_rect.width = var->reserved[2];
+						dirty_rect.height = var->reserved[3];
+					} else {
+						dirty_rect.x = 0;
+						dirty_rect.y = 0;
+						dirty_rect.width = 0;
+						dirty_rect.height = 0;
+						return 0;
+					}
+
+					if (mgr->rot_sw->checkout) {
+						type_switch_flag = mgr->rot_sw->checkout(mgr->rot_sw, &config);
+						if (type_switch_flag == 1) {
+							/* update the total buffer if disp device switch */
+							dirty_rect.x = 0;
+							dirty_rect.y = 0;
+							dirty_rect.width = config.info.fb.size[0].width;
+							dirty_rect.height = config.info.fb.size[0].height;
+						}
+					}
+				}
 				config.info.fb.crop.x =
 				    ((long long)var->xoffset) << 32;
 				config.info.fb.crop.y =
@@ -656,6 +711,16 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 				    ((long long)var->xres) << 32;
 				config.info.fb.crop.height =
 				    ((long long)(var->yres / buffer_num)) << 32;
+
+				if (mgr->rot_sw && mgr->rot_sw->apply) {
+					if (0 != mgr->rot_sw->apply(mgr->rot_sw, &config, dirty_rect)) {
+						__inf("rot sw need not apply, then return\n");
+						return 0;
+					}
+					need_wait_vsync = 0;
+				}
+
+				print_layer_config_info("set_layer_config: ", &config);
 				if (mgr->set_layer_config(mgr, &config, 1)
 				    != 0) {
 					__wrn
@@ -667,8 +732,8 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 		}
 	}
 
-	fb_wait_for_vsync(info);
-
+	if (1 == need_wait_vsync)
+		fb_wait_for_vsync(info);
 	return 0;
 }
 
@@ -815,7 +880,7 @@ static int sunxi_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 		len = info->fix.mmio_len;
 	}
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
-	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	return vm_iomap_memory(vma, start, len);
 }
 
@@ -1311,6 +1376,58 @@ static int Fb_copy_boot_fb(u32 sel, struct fb_info *info)
 	return 0;
 }
 
+static int rgb24_to_rgb32(const void* psrc,struct bmp_header *bmp_header, struct fb_info *info,void* pdst, int zero_num)
+{
+	int srclinesize,dstlinesize, w, h;
+	const unsigned char *psrcline = NULL, *psrcdot = NULL;
+	unsigned char *pdstline = NULL, *pdstdot = NULL;
+	int i = 0, j = 0;
+
+	if (!psrc || !pdst || !bmp_header || !info) {
+		__wrn("Invalid parameter\n");
+		return -1;
+	}
+	w = (info->var.xres < bmp_header->width) ? info->var.xres : bmp_header->width;
+	h = (bmp_header->height & 0x80000000) ? (-bmp_header->
+						 height) : (bmp_header->height);
+	h = (info->var.yres < h) ? info->var.yres : h;
+
+	srclinesize=w*3 + zero_num;
+	dstlinesize=DISPALIGN(info->var.xres * 4, 4);
+	psrcline = (const unsigned char*)psrc;
+	pdstline = (unsigned char *)pdst;
+
+	if (bmp_header->height & 0x80000000) {
+		for (i = 0; i < h; ++i) {
+			psrcdot = psrcline;
+			pdstdot = pdstline;
+			for (j = 0; j < w; ++j) {
+				*pdstdot++ = psrcdot[j*3];
+				*pdstdot++ = psrcdot[j*3+1];
+				*pdstdot++ = psrcdot[j*3+2];
+				*pdstdot++ = 0xff;
+			}
+			psrcline += srclinesize;
+			pdstline += dstlinesize;
+		}
+	} else {
+		for (i = h - 1; i >= 0; --i) {
+			psrcdot = psrcline;
+			pdstdot = pdstline;
+			for (j = 0; j < w; ++j) {
+				*pdstdot++ = psrcdot[j*3];
+				*pdstdot++ = psrcdot[j*3+1];
+				*pdstdot++ = psrcdot[j*3+2];
+				*pdstdot++ = 0xff;
+			}
+			psrcline -= srclinesize;
+			pdstline += dstlinesize;
+		}
+	}
+
+	return 0;
+}
+
 static int Fb_map_kernel_logo(u32 sel, struct fb_info *info)
 {
 	void *vaddr = NULL;
@@ -1326,7 +1443,7 @@ static int Fb_map_kernel_logo(u32 sel, struct fb_info *info)
 	unsigned int x, y, bmp_bpix, fb_width, fb_height;
 	unsigned int effective_width, effective_height;
 	uintptr_t offset;
-	int i = 0;
+	signed int i = 0;
 
 	paddr = bootlogo_addr;
 	if (paddr == 0) {
@@ -1387,7 +1504,7 @@ static int Fb_map_kernel_logo(u32 sel, struct fb_info *info)
 	/* map the total bmp buffer */
 	vaddr =
 	    (void *)Fb_map_kernel(paddr,
-				  x * y * bmp_bpix + sizeof(struct bmp_header));
+				  (x*bmp_bpix + zero_num) * y  + sizeof(struct bmp_header));
 	if (vaddr == NULL) {
 		__wrn("fb_map_kernel failed, paddr=0x%p,size=0x%x\n",
 		      (void *)paddr,
@@ -1398,60 +1515,82 @@ static int Fb_map_kernel_logo(u32 sel, struct fb_info *info)
 
 	tmp_buffer = (char *)bmp_info->buffer;
 	screen_offset = (void *)bmp_info->buffer;
-	bmp_data = (char *)(vaddr + bmp_header->data_offset);
+	bmp_data = (char *)(vaddr + bmp_header->data_offset + offset);
 	image_offset = (void *)bmp_data;
 	effective_width = (fb_width < x) ? fb_width : x;
 	effective_height = (fb_height < y) ? fb_height : y;
 
 	if (bmp_header->height & 0x80000000) {
-
-		screen_offset =
-		    (void *)((void *__force)info->screen_base +
-			     (fb_width * (abs(fb_height - y) / 2)
-			      + abs(fb_width - x) / 2)
-			      * (info->var.bits_per_pixel >> 3));
-
-		for (i = 0; i < effective_height; i++) {
-			memcpy((void *)screen_offset, image_offset,
-			       effective_width *
-			       (info->var.bits_per_pixel >> 3));
+		if (info->var.bits_per_pixel == 24) {
+			info->var.bits_per_pixel = 32;
 			screen_offset =
-			    (void *)(screen_offset + fb_width *
-				     (info->var.bits_per_pixel >> 3));
-			image_offset =
-			    (void *)image_offset +
-			    x * (info->var.bits_per_pixel >> 3);
+				(void *)((void *__force)info->screen_base +
+					 (fb_width * (abs(fb_height - y) / 2)
+					  + abs(fb_width - x) / 2)
+					 * 4);
+			rgb24_to_rgb32(image_offset, bmp_header,info, screen_offset, zero_num);
+		} else {
+
+			screen_offset =
+				(void *)((void *__force)info->screen_base +
+					 (fb_width * (abs(fb_height - y) / 2)
+					  + abs(fb_width - x) / 2)
+					 * (info->var.bits_per_pixel >> 3));
+
+			for (i = 0; i < effective_height; i++) {
+				memcpy((void *)screen_offset, image_offset,
+				       effective_width *
+				       (info->var.bits_per_pixel >> 3));
+				screen_offset =
+					(void *)(screen_offset + fb_width *
+						 (info->var.bits_per_pixel >> 3));
+				image_offset =
+					(void *)image_offset +
+					x * (info->var.bits_per_pixel >> 3);
+			}
 		}
 	} else {
-
-		screen_offset =
-		    (void *)((void *__force)info->screen_base +
-			     (fb_width * (abs(fb_height - y) / 2)
-			      + abs(fb_width - x) / 2)
-			      * (info->var.bits_per_pixel >> 3));
-		image_offset =
-		    (void *)(image_offset + (x * (abs(y - fb_height) / 2)
-					     + abs(x - fb_width) / 2) *
-			     (info->var.bits_per_pixel >> 3));
-
-		image_offset =
-		    (void *)bmp_data + (effective_height -
-					1) * x *
-		    (info->var.bits_per_pixel >> 3);
-		for (i = effective_height - 1; i >= 0; i--) {
-			memcpy((void *)screen_offset, image_offset,
-			       effective_width *
-			       (info->var.bits_per_pixel >> 3));
+		/* add for support sw_rotation == 1 && BMP.bits == 24 */
+		if (info->var.bits_per_pixel == 24) {
+			info->var.bits_per_pixel = 32;
 			screen_offset =
-			    (void *)(screen_offset +
-				     fb_width *
-				     (info->var.bits_per_pixel >> 3));
+				(void *)((void *__force)info->screen_base +
+					 (fb_width * (abs(fb_height - y) / 2)
+					  + abs(fb_width - x) / 2)
+					 * 4);
+
 			image_offset =
-			    (void *)bmp_data +
-			    i * x * (info->var.bits_per_pixel >> 3);
+				(void *)bmp_data + (effective_height - 1) * (x * 3 + zero_num);
+			rgb24_to_rgb32(image_offset, bmp_header,info, screen_offset,zero_num);
+		} else {
+			screen_offset =
+			    (void *)((void *__force)info->screen_base +
+				     (fb_width * (abs(fb_height - y) / 2)
+				      + abs(fb_width - x) / 2)
+				      * (info->var.bits_per_pixel >> 3));
+			image_offset =
+			    (void *)(image_offset + (x * (abs(y - fb_height) / 2)
+						     + abs(x - fb_width) / 2) *
+				     (info->var.bits_per_pixel >> 3));
+
+			image_offset =
+			    (void *)bmp_data + (effective_height -
+						1) * x *
+			    (info->var.bits_per_pixel >> 3);
+			for (i = effective_height - 1; i >= 0; i--) {
+				memcpy((void *)screen_offset, image_offset,
+				       effective_width *
+				       (info->var.bits_per_pixel >> 3));
+				screen_offset =
+				    (void *)(screen_offset +
+					     fb_width *
+					     (info->var.bits_per_pixel >> 3));
+				image_offset =
+				    (void *)bmp_data +
+				    i * x * (info->var.bits_per_pixel >> 3);
+			}
 		}
 	}
-
 	Fb_unmap_kernel(vaddr);
 	return 0;
 }
@@ -1552,15 +1691,19 @@ static s32 display_fb_request(u32 fb_id, struct disp_fb_create_info *fb_para)
 					      &fb_para->output_height);
 				}
 			}
-
-			config.info.screen_win.width =
-			    (0 ==
-			     fb_para->output_width) ? src_width : fb_para->
-			    output_width;
-			config.info.screen_win.height =
-			    (0 ==
-			     fb_para->output_height) ? src_width : fb_para->
-			    output_height;
+#if defined(CONFIG_DISP2_SUNXI_BOOT_COLORBAR)
+			fb_draw_colorbar((char *__force)g_fbi.fbinfo[0]->screen_base,
+				fb_para->width, fb_para->height * fb_para->buffer_num, &(g_fbi.fbinfo[0]->var));
+#endif
+			if (mgr && mgr->rot_sw &&
+				(ROTATION_SW_90 == mgr->rot_sw->degree ||
+				ROTATION_SW_270 == mgr->rot_sw->degree)) {
+					config.info.screen_win.height = (0 == fb_para->output_width) ? src_width:fb_para->output_width;
+					config.info.screen_win.width = (0 == fb_para->output_height) ? src_width:fb_para->output_height;
+			} else {
+				config.info.screen_win.width = (0 == fb_para->output_width) ? src_width:fb_para->output_width;
+				config.info.screen_win.height = (0 == fb_para->output_height) ? src_width:fb_para->output_height;
+			}
 
 			config.info.mode = LAYER_MODE_BUFFER;
 #ifdef BPI
@@ -1593,9 +1736,20 @@ static s32 display_fb_request(u32 fb_id, struct disp_fb_create_info *fb_para)
 			config.info.fb.size[2].height = fb_para->height;
 			config.info.fb.color_space = DISP_BT601;
 
+			if (mgr && mgr->rot_sw && mgr->rot_sw->apply) {
+				struct disp_rect dirty_rect;
+				dirty_rect.x = config.info.fb.crop.x >> 32;
+				dirty_rect.y = config.info.fb.crop.y >> 32;
+				dirty_rect.width = config.info.fb.crop.width >> 32;
+				dirty_rect.height = config.info.fb.crop.height >> 32;
+
+				mgr->rot_sw->apply(mgr->rot_sw, &config, dirty_rect);
+			}
+
 #if !defined(CONFIG_EINK_PANEL_USED)
-			if (mgr && mgr->set_layer_config)
+			if (mgr && mgr->set_layer_config) {
 				mgr->set_layer_config(mgr, &config, 1);
+			}
 #endif
 		}
 	}
@@ -1847,7 +2001,6 @@ s32 fb_init(struct platform_device *pdev)
 			fb_para.output_width = fb_para.width;
 			fb_para.output_height = fb_para.height;
 #endif
-
 			display_fb_request(i, &fb_para);
 #if defined(CONFIG_DISP2_SUNXI_BOOT_COLORBAR)
 			fb_draw_colorbar((char *__force)g_fbi.fbinfo[i]->

@@ -104,6 +104,88 @@ u32 __sha256_padding(u32 data_size, u8 *text)
 	return size;
 }
 
+static u32 __sha_padding(u32 data_size, u8 *text, u32 hash_mode)
+{
+	u32 i;
+	u32 k, q;
+	u32 size;
+	u32 padding_buf[16];
+	u8 *ptext;
+
+	k = data_size / 64;
+	q = data_size % 64;
+
+	ptext = (u8 *)padding_buf;
+	memset(padding_buf, 0, 16 * sizeof(u32));
+	if (q == 0) {
+		padding_buf[0] = 0x00000080;
+
+		if (hash_mode) {
+			padding_buf[14] = data_size >> 29;
+			padding_buf[15] = data_size << 3;
+			padding_buf[14] = __aw_endian4(padding_buf[14]);
+			padding_buf[15] = __aw_endian4(padding_buf[15]);
+		} else {
+			padding_buf[14] = data_size << 3;
+			padding_buf[15] = data_size >> 29;
+		}
+
+		for (i = 0; i < 64; i++) {
+			text[k * 64 + i] = ptext[i];
+		}
+		size = (k + 1) * 64;
+	} else if (q < 56) {
+		for (i = 0; i < q; i++) {
+			ptext[i] = text[k * 64 + i];
+		}
+		ptext[q] = 0x80;
+
+		if (hash_mode) {
+			padding_buf[14] = data_size >> 29;
+			padding_buf[15] = data_size << 3;
+			padding_buf[14] = __aw_endian4(padding_buf[14]);
+			padding_buf[15] = __aw_endian4(padding_buf[15]);
+		} else {
+			padding_buf[14] = data_size << 3;
+			padding_buf[15] = data_size >> 29;
+		}
+
+		for (i = 0; i < 64; i++) {
+			text[k * 64 + i] = ptext[i];
+		}
+		size = (k + 1) * 64;
+	} else {
+		for (i = 0; i < q; i++) {
+			ptext[i] = text[k * 64 + i];
+		}
+		ptext[q] = 0x80;
+		for (i = 0; i < 64; i++) {
+			text[k * 64 + i] = ptext[i];
+		}
+
+		/*send last 512-bits text to SHA1/MD5*/
+		for (i = 0; i < 16; i++) {
+			padding_buf[i] = 0x0;
+		}
+
+		if (hash_mode) {
+			padding_buf[14] = data_size >> 29;
+			padding_buf[15] = data_size << 3;
+			padding_buf[14] = __aw_endian4(padding_buf[14]);
+			padding_buf[15] = __aw_endian4(padding_buf[15]);
+		} else {
+			padding_buf[14] = data_size << 3;
+			padding_buf[15] = data_size >> 29;
+		}
+
+		for (i = 0; i < 64; i++) {
+			text[(k + 1) * 64 + i] = ptext[i];
+		}
+		size = (k + 2) * 64;
+	}
+
+	return size;
+}
 
 static void __rsa_padding(u8 *dst_buf, u8 *src_buf, u32 data_len, u32 group_len)
 {
@@ -165,8 +247,7 @@ void ss_set_drq(u32 addr)
 
 void ss_ctrl_start(u8 alg_type)
 {
-	writel(alg_type << 8, SS_TLR);
-	writel(readl(SS_TLR) | 0x1, SS_TLR);
+	writel(readl(SS_TLR)|0x1, SS_TLR);
 }
 
 void ss_ctrl_stop(void)
@@ -221,29 +302,22 @@ u32 ss_check_err(void)
 int  sunxi_sha_calc(u8 *dst_addr, u32 dst_len,
 					u8 *src_addr, u32 src_len)
 {
-	u32 total_bit_len = 0;
+	u32 word_len = 0, src_align_len = 0;
 	u32 md_size = 32;
 	task_queue task0 = {0};
-	/* sha256  2word, sha512 4word*/
-	u32 total_package_len[2];
 	ALLOC_CACHE_ALIGN_BUFFER(u8, p_sign, CACHE_LINE_SIZE);
 
 	memset(p_sign, 0, sizeof(CACHE_LINE_SIZE));
 
-	total_bit_len = src_len * 8;
-	total_package_len[0] = total_bit_len;
-	total_package_len[1] = 0;
+	/* CE1.0 */
+	src_align_len = __sha_padding(src_len, (u8 *)src_addr, 1);
+	word_len = src_align_le n >> 2;
 
 	task0.task_id = 0;
-	task0.common_ctl = (ALG_SHA256)|(1 << 15)|(1U << 31);
-	task0.symmetric_ctl = 0;
-	task0.asymmetric_ctl = 0;
-	task0.key_descriptor = (u32)total_package_len;
-	task0.iv_descriptor = 0;
-	task0.ctr_descriptor = 0;
-	task0.data_len = total_bit_len;
+	task0.common_ctl = (ALG_SHA256) | (1U << 31);
+	task0.data_len = word_len;
 	task0.source[0].addr = (uint)src_addr;
-	task0.source[0].length = ALIGN(src_len, 4)/4;
+	task0.source[0].length = word_len;
 	task0.destination[0].addr = (uint)p_sign;
 	task0.destination[0].length = (32 >> 2);
 	task0.next_descriptor = 0;
@@ -289,24 +363,17 @@ s32 sunxi_rsa_calc(u8 *n_addr,   u32 n_len,
 	memset(p_e, 0, mod_size_len_inbytes);
 	memcpy(p_e, e_addr, e_len);
 
+	/* CE1.0 */
 	task0.task_id = 0;
-	task0.common_ctl = (ALG_RSA | (1U << 31));
+	task0.common_ctl = (ALG_RSA | (1U<<31));
 	task0.symmetric_ctl = 0;
-	task0.asymmetric_ctl = (2048 >> 5);
+	task0.asymmetric_ctl = (2<<28); /* rsa2048 */
+	task0.key_descriptor = (uint)p_e;
+	task0.iv_descriptor = (uint)p_n;
 	task0.ctr_descriptor = 0;
-
-	task0.source[0].addr = (uint)p_e;
+	task0.data_len = data_word_len;
+	task0.source[0].addr = (uint)p_src;
 	task0.source[0].length = data_word_len;
-	task0.source[1].addr = (uint)p_n;
-	task0.source[1].length = data_word_len;
-	task0.source[2].addr = (uint)p_src;
-	task0.source[2].length = data_word_len;
-
-	task0.data_len += task0.source[0].length;
-	task0.data_len += task0.source[1].length;
-	task0.data_len += task0.source[2].length;
-	task0.data_len *= 4;
-
 	task0.destination[0].addr = (uint)p_dst;
 	task0.destination[0].length = data_word_len;
 	task0.next_descriptor = 0;

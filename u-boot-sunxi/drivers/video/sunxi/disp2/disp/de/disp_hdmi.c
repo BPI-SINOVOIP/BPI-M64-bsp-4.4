@@ -99,7 +99,8 @@ static s32 hdmi_clk_exit(struct disp_device *hdmi)
 	return 0;
 }
 
-#if defined(CONFIG_ARCH_SUN8IW6P1) || defined(CONFIG_ARCH_SUN8IW12P1)
+#if defined(CONFIG_ARCH_SUN8IW6P1) || defined(CONFIG_ARCH_SUN8IW12P1) ||       \
+    defined(CONFIG_ARCH_SUN8IW16P1)
 static s32 hdmi_clk_config(struct disp_device *hdmi)
 {
 	struct disp_device_private_data *hdmip = disp_hdmi_get_priv(hdmi);
@@ -1085,4 +1086,3 @@ s32 disp_init_hdmi(disp_bsp_init_para * para)
 	return 0;
 }
 #endif
-

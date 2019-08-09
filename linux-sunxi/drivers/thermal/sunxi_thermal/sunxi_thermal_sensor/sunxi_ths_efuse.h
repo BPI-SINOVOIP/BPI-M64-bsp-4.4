@@ -22,21 +22,19 @@
 
 
 
-#if defined(CONFIG_ARCH_SUN50IW3)
+#if defined(CONFIG_ARCH_SUN8IW17)
+#define SENSOR_CP_EUFSE_PER_REG_TO_TEMP (1172)/* this value is 0.1172 */
+#define CONST_MUL			(10)
+#define CONST_DIV			(1000)/* protect one decimal so x10*/
+#else
 #define SENSOR_CP_EUFSE_PER_REG_TO_TEMP (672)/* this value is 0.0672 */
 #define CONST_MUL			(10)
 #define CONST_DIV			(10000)/* protect one decimal so add one zero*/
-#define FT_CALIBRATION_DEVIATION	(0)/* degrees celsius */
-#elif defined(CONFIG_ARCH_SUN50IW6)
-#define SENSOR_CP_EUFSE_PER_REG_TO_TEMP (672)/* this value is 0.0672 */
-#define CONST_MUL			(10)
-#define CONST_DIV			(10000)/* protect one decimal so add one zero*/
+#endif
+
+#if defined(CONFIG_ARCH_SUN50IW6)
 #define FT_CALIBRATION_DEVIATION	(7)/* degrees celsius */
 #else
-/* doesn't exist these Macro */
-#define SENSOR_CP_EUFSE_PER_REG_TO_TEMP (-1UL)
-#define CONST_MUL			(1)
-#define CONST_DIV			(1*CONST_MUL)
 #define FT_CALIBRATION_DEVIATION	(0)/* degrees celsius */
 #endif
 

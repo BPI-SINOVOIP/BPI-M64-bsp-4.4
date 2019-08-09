@@ -111,6 +111,17 @@ config GPIO_74XX_MMIO
 	    8 bits:	74244 (Input), 74273 (Output)
 	    16 bits:	741624 (Input), 7416374 (Output)
 
+
+config GPIO_SUNXI
+	tristate "SUNXI GPIO USER INTERFACE"
+	depends on ARCH_SUNXI
+	default m
+	help
+	This driver export interface node in "/sys/class/gpio_sw/......"
+	operate this node can change pins functions status, resistance
+	status, driver level, and output level in output function.
+	It is used to sunxi family
+
 config GPIO_ALTERA
 	tristate "Altera GPIO"
 	depends on OF_GPIO
@@ -126,11 +137,6 @@ config GPIO_AMDPT
 	help
 	  driver for GPIO functionality on Promontory IOHub
 	  Require ACPI ASL code to enumerate as a platform device.
-
-config GPIO_SUNXI
-	tristate "SUNXI GPIO Support"
-	help
-	  Say yes if need SUNXI GPIO Support
 
 config GPIO_BCM_KONA
 	bool "Broadcom Kona GPIO"

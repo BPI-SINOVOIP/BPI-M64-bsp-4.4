@@ -35,9 +35,12 @@
 #include <sys_partition.h>
 #include <fdt_support.h>
 
-
+extern int sunxi_partition_get_partno_byname(const char *part_name);
 static int sunxi_bmp_probe_info (uint addr);
 static int sunxi_bmp_show(sunxi_bmp_store_t bmp_info);
+int sunxi_advert_display(char *fatname, char *filename);
+int sunxi_advert_logo_load(char *fatname, char *filename);
+
 
 DECLARE_GLOBAL_DATA_PTR;
 /*
@@ -475,7 +478,7 @@ int sunxi_bmp_display(char *name)
 	argv[3] = bmp_head;
 	argv[4] = bmp_name;
 	argv[5] = NULL;
-
+	board_display_layer_close();
 	if (do_fat_fsload(0, 0, 5, argv))
 	{
 		pr_error("unable to open logo file %s\n", argv[4]);
@@ -866,3 +869,4 @@ U_BOOT_CMD(
 	"show default logo",
 	"no args\n"
 );
+

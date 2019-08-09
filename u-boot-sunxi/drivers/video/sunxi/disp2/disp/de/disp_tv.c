@@ -375,8 +375,6 @@ s32 disp_tv_exit(struct disp_device* ptv)
 #endif
 	kfree(ptv);
 	kfree(ptvp);
-	ptv = NULL;
-	ptvp = NULL;
 	return 0;
 }
 
@@ -679,8 +677,8 @@ s32 disp_init_tv(void)//disp_bsp_init_para * para)  //call by disp_display
 	for (hwdev_index = 0; hwdev_index < num_devices; hwdev_index++) {
 		if (!bsp_disp_feat_is_supported_output_types(hwdev_index,
 							DISP_OUTPUT_TYPE_TV)) {
-			DE_WRN("screen %d don't support TV!\n", hwdev_index);
-				continue;
+			DE_INF("screen %d don't support TV!\n", hwdev_index);
+			continue;
 		}
 
 		snprintf(type_name, sizeof(type_name), "tv%d", disp);

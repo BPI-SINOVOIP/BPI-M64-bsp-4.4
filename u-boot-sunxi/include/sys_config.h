@@ -174,5 +174,9 @@ int fdt_set_pin_byname(user_gpio_set_t  *pin_list,int pin_count, const char* pin
 //normal
 int fdt_set_normal_gpio(user_gpio_set_t  *gpio_list, int gpio_count);
 
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+#ifdef CONFIG_SUNXI_GPIO_INT_DEB
+void int_deb_set_gpio(int n, int value);
+#endif
 
 #endif

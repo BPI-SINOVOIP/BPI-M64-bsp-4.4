@@ -32,6 +32,8 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+extern int axp21_probe(void);
+extern int axp809_probe(void);
 
 int enable_smp(void)
 {
@@ -142,8 +144,6 @@ ulong get_spare_head_size(void)
     return (ulong)sizeof(struct spare_boot_head_t);
 }
 
-extern int axp809_probe(void);
-
 /**
  * platform_axp_probe -detect the pmu on  board
  * @sunxi_axp_dev_pt: pointer to the axp array
@@ -154,15 +154,19 @@ extern int axp809_probe(void);
 int platform_axp_probe(sunxi_axp_dev_t  *sunxi_axp_dev_pt[], int max_dev)
 {
 #ifdef CONFIG_SUNXI_MODULE_AXP
-	if (axp809_probe()) {
-		printf("probe axp809 failed\n");
+	if (!axp21_probe()) {
+		/* pmu type AXP21 */
+		sunxi_axp_dev_pt[0] = &sunxi_axp_21;
+		return 1;
+	} else if (!axp809_probe()) {
+		/* pmu type AXP80X */
+		sunxi_axp_dev_pt[0] = &sunxi_axp_809;
+		return 1;
+	} else {
+		printf("probe axp2101 and axp809 failed\n");
 		sunxi_axp_dev_pt[0] = &sunxi_axp_null;
 		return 0;
 	}
-
-	/* pmu type AXP80X */
-	tick_printf("PMU: AXP809 found\n");
-	sunxi_axp_dev_pt[0] = &sunxi_axp_809;
 #else
 	sunxi_axp_dev_pt[0] = &sunxi_axp_null;
 #endif

@@ -23,7 +23,6 @@ int mem_clk_restore(void);
 #else
 #error "please select a platform\n"
 #endif
-#endif
 
 #if defined(CONFIG_ARCH_SUN8I) || defined(CONFIG_ARCH_SUN50I)
 struct ccm_state {
@@ -154,5 +153,6 @@ static inline void mem_pio_clk_src_exit(void)
 
 __u32 mem_clk_get_cpu_freq(void);
 
+#endif
 #endif
 #endif	/* __MEM_CLK_H__ */

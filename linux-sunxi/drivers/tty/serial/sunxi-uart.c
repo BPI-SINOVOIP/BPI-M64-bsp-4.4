@@ -1219,6 +1219,9 @@ static int sw_uart_select_gpio_state(struct pinctrl *pctrl, char *name, u32 no)
 
 static int sw_uart_request_gpio(struct sw_uart_port *sw_uport)
 {
+	if (sw_uport->card_print)
+		return 0;
+
 	sw_uport->pctrl = devm_pinctrl_get(sw_uport->port.dev);
 
 	if (IS_ERR_OR_NULL(sw_uport->pctrl)) {
@@ -1231,6 +1234,9 @@ static int sw_uart_request_gpio(struct sw_uart_port *sw_uport)
 
 static void sw_uart_release_gpio(struct sw_uart_port *sw_uport)
 {
+	if (sw_uport->card_print)
+		return;
+
 	devm_pinctrl_put(sw_uport->pctrl);
 	sw_uport->pctrl = NULL;
 }
@@ -1466,9 +1472,9 @@ static ssize_t sunxi_uart_dev_info_show(struct device *dev,
 	struct sw_uart_pdata *pdata = (struct sw_uart_pdata *)dev->platform_data;
 
 	return snprintf(buf, PAGE_SIZE,
-		"id     = %d \n"
+		"id     = %u \n"
 		"name   = %s \n"
-		"irq    = %d \n"
+		"irq    = %u \n"
 		"io_num = %u \n"
 		"port->mapbase = %pa \n"
 		"port->membase = 0x%p \n"
@@ -1761,6 +1767,8 @@ static int sw_uart_probe(struct platform_device *pdev)
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	int use_dma = 0;
 #endif
+	struct device_node *apk_np = of_find_node_by_name(NULL, "auto_print");
+	const char *apk_sta = NULL;
 
 	pdev->id = of_alias_get_id(np, "serial");
 	if (pdev->id < 0) {
@@ -1869,6 +1877,12 @@ static int sw_uart_probe(struct platform_device *pdev)
 	if (of_property_read_bool(np, "linux,rs485-enabled-at-boot-time"))
 		sw_uport->rs485conf.flags |= SER_RS485_ENABLED;
 
+	if (apk_np && !of_property_read_string(apk_np, "status", &apk_sta)
+						&& !strcmp(apk_sta, "okay"))
+		sw_uport->card_print = true;
+	else
+		sw_uport->card_print = false;
+
 	pdata->used = 1;
 	port->iotype = UPIO_MEM;
 	port->type = PORT_SUNXI;
@@ -1967,7 +1981,9 @@ static int sw_uart_suspend(struct device *dev)
 		uart_suspend_port(&sw_uart_driver, port);
 
 		if (SW_UART_NEED_SUSPEND(port)) {
-			sw_uart_select_gpio_state(sw_uport->pctrl, PINCTRL_STATE_SLEEP, sw_uport->id);
+			if (!sw_uport->card_print)
+				sw_uart_select_gpio_state(sw_uport->pctrl,
+					PINCTRL_STATE_SLEEP, sw_uport->id);
 			sw_uart_regulator_disable(dev->platform_data);
 		}
 	}
@@ -1986,7 +2002,9 @@ static int sw_uart_resume(struct device *dev)
 	if (port) {
 		if (SW_UART_NEED_SUSPEND(port)) {
 			sw_uart_regulator_enable(dev->platform_data);
-			sw_uart_select_gpio_state(sw_uport->pctrl, PINCTRL_STATE_DEFAULT, sw_uport->id);
+			if (!sw_uport->card_print)
+				sw_uart_select_gpio_state(sw_uport->pctrl,
+					PINCTRL_STATE_DEFAULT, sw_uport->id);
 		}
 #ifdef CONFIG_EVB_PLATFORM
 		/* It's used only in super-standby mode.

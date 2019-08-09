@@ -17,7 +17,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include "../vin-video/vin_core.h"
-#include "bsp_isp.h"
+#include "sun8iw12p1/sun8iw12p1_isp_reg_cfg.h"
 
 #include "../vin-stat/vin_ispstat.h"
 #include "../vin-stat/vin_h3a.h"
@@ -42,6 +42,20 @@ struct isp_pix_fmt {
 	u16 flags;
 };
 
+struct isp_table_addr {
+	void *isp_lsc_tbl_vaddr;
+	void *isp_lsc_tbl_dma_addr;
+	void *isp_gamma_tbl_vaddr;
+	void *isp_gamma_tbl_dma_addr;
+	void *isp_linear_tbl_vaddr;
+	void *isp_linear_tbl_dma_addr;
+
+	void *isp_drc_tbl_vaddr;
+	void *isp_drc_tbl_dma_addr;
+	void *isp_saturation_tbl_vaddr;
+	void *isp_saturation_tbl_dma_addr;
+};
+
 struct sunxi_isp_ctrls {
 	struct v4l2_ctrl_handler handler;
 
@@ -60,17 +74,6 @@ struct isp_stat_to_user {
 	void *pltm_buf;
 };
 
-enum isp_3dbuf_flags {
-	ISP_3D_R = 0,
-	ISP_3D_W = 1,
-	ISP_3D_MAX = 2,
-};
-
-struct isp_hw_pingpong {
-	struct vin_mm buf[ISP_3D_MAX];
-	int     flags[ISP_3D_MAX];
-};
-
 struct isp_dev {
 	int use_cnt;
 	struct v4l2_subdev subdev;
@@ -82,20 +85,24 @@ struct isp_dev {
 	int capture_mode;
 	int use_isp;
 	int irq;
-	int first_frame;
 	unsigned int is_empty;
+	unsigned int ptn_isp_cnt;
 	unsigned int load_flag;
-	unsigned int server_run;
+	unsigned int event_lost_cnt;
+	unsigned int f1_after_librun;/*fisrt frame after server run*/
 	unsigned int have_init;
 	unsigned int wdr_mode;
 	unsigned int large_image;/*2:get merge yuv, 1: get pattern raw (save in kernel), 0: normal*/
 	unsigned int left_right;/*0: process left, 1: process right*/
+	unsigned int ptn_type;
 	unsigned int id;
 	spinlock_t slock;
 	struct mutex subdev_lock;
 	struct work_struct isp_isr_bh_task;
 	void __iomem *base;
-	char load_shadow[ISP_LOAD_REG_SIZE];
+	char load_shadow[ISP_LOAD_REG_SIZE*3];
+	char load_lut_tbl[ISP_TABLE_MAPPING1_SIZE*3];
+	char load_drc_tbl[ISP_TABLE_MAPPING2_SIZE*3];
 	struct vin_mm isp_stat;
 	struct vin_mm isp_load;
 	struct vin_mm isp_save;
@@ -108,8 +115,10 @@ struct isp_dev {
 	struct isp_size_settings isp_ob;
 	struct v4l2_mbus_framefmt mf;
 	struct isp_stat h3a_stat;
-	struct isp_hw_pingpong isp_3d_buf;
+	struct vin_mm d3d_pingpong[2];
 	struct vin_mm wdr_pingpong[2];
+	bool reset_flag;
+	bool runtime_flag;
 };
 
 void isp_isr_bh_handle(struct work_struct *work);
@@ -117,6 +126,7 @@ void isp_isr_bh_handle(struct work_struct *work);
 void sunxi_isp_sensor_type(struct v4l2_subdev *sd, int use_isp);
 void sunxi_isp_dump_regs(struct v4l2_subdev *sd);
 void sunxi_isp_debug(struct v4l2_subdev *sd, struct isp_debug_mode *isp_debug);
+void sunxi_isp_ptn(struct v4l2_subdev *sd, unsigned int ptn_type);
 void sunxi_isp_vsync_isr(struct v4l2_subdev *sd);
 void sunxi_isp_frame_sync_isr(struct v4l2_subdev *sd);
 struct v4l2_subdev *sunxi_isp_get_subdev(int id);

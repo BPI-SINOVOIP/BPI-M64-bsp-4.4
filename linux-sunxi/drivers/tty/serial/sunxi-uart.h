@@ -84,8 +84,8 @@ struct sw_uart_port {
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	struct sw_uart_dma *dma;
 	u32 rx_last_pos;
-#define SUNXI_UART_DRQ_RX(ch)		(DRQSRC_UART0RX + ch)
-#define SUNXI_UART_DRQ_TX(ch)		(DRQSRC_UART0RX + ch)
+#define SUNXI_UART_DRQ_RX(ch)		(DRQSRC_UART0_RX + ch)
+#define SUNXI_UART_DRQ_TX(ch)		(DRQSRC_UART0_RX + ch)
 #endif
 
 	/* for debug */
@@ -97,6 +97,7 @@ struct sw_uart_port {
 
 	struct pinctrl *pctrl;
 	struct serial_rs485 rs485conf;
+	bool card_print;
 };
 
 /* register offset define */

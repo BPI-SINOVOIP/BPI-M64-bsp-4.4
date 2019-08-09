@@ -69,3 +69,4 @@ obj-y                           += sunxi-scr/
 obj-$(CONFIG_SUNXI_TIMER_TEST)	+= timer_test/
 obj-$(CONFIG_SUNXI_G2D)		+= sunxi_g2d/
 obj-$(CONFIG_SUNXI_SRAM_A1)	+= sunxi-sram/
+obj-$(CONFIG_SUNXI_IR_CUT)  += sunxi_ir_cut/

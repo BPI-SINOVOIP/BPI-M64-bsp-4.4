@@ -76,7 +76,7 @@ static s32 LCD_open_flow(u32 sel)
 	
 	LCD_OPEN_FUNC(sel, LCD_power_on, 200);   //open lcd power, and delay 50ms
 	LCD_OPEN_FUNC(sel, LCD_panel_init, 200);   //open lcd power, than delay 200ms
-	 LCD_OPEN_FUNC(sel, sunxi_lcd_tcon_enable,500);  	
+	LCD_OPEN_FUNC(sel, sunxi_lcd_tcon_enable,500);  	
 	LCD_OPEN_FUNC(sel, LCD_bl_open, 0);     //open lcd backlight, and delay 0ms
 
 	return 0;

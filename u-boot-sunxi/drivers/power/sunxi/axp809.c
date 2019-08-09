@@ -62,7 +62,12 @@ int axp809_probe(void)
 	if(pmu_type == 0x42)
 	{
 		/* pmu type AXP809 */
-		tick_printf("PMU: AXP809\n");
+        
+#ifdef CONFIG_ARCH_SUN8IW12P1
+		tick_printf("PMU: AXP233\n");
+#else 
+        tick_printf("PMU: AXP809\n");
+#endif
 
 		return 0;
 	}
@@ -167,6 +172,23 @@ int axp809_probe_battery_ratio(void)
 {
 	u8 reg_value;
 
+#ifdef CONFIG_ARCH_SUN8IW12P1
+	if(axp_i2c_read(AXP809_CHIP_ID, BOOT_POWER809_BAT_MAX_CAP1, &reg_value))
+    {
+        return -1;
+    }
+
+    if(axp_i2c_read(AXP809_CHIP_ID, BOOT_POWER809_BAT_MAX_CAP0, &reg_value))
+    {
+        return -1;
+    }
+
+	if(axp_i2c_read(AXP809_CHIP_ID, BOOT_POWER809_FUEL_GAUGE_CTL, &reg_value))
+    {
+        return -1;
+    }
+
+#endif
 	if(axp_i2c_read(AXP809_CHIP_ID, BOOT_POWER809_BAT_PERCEN_CAL, &reg_value))
     {
         return -1;
@@ -278,6 +300,42 @@ int axp809_probe_battery_vol(void)
 
 	return bat_vol;
 }
+
+int axp809_set_led_control(int flag)
+{
+	u8 reg_value;
+
+	if (axp_i2c_read(AXP809_CHIP_ID, BOOT_POWER809_OFF_CTL, &reg_value)) {
+		return -1;
+	}
+
+	if (flag == 0x00) { /*Hi-z ;return controled by charger*/
+		reg_value = reg_value | 0x08;
+		reg_value = reg_value & 0xcf;
+	} else if (flag == 0x01) { /*25%0.5Hz toggle;get led control capacity*/
+		reg_value = reg_value & 0xf7;
+		reg_value = reg_value & 0xcf;
+		reg_value = reg_value | 0x10;
+	} else if (flag == 0x02) { /*25%2Hz toggle;get led control capacity*/
+		reg_value = reg_value & 0xf7;
+		reg_value = reg_value & 0xcf;
+		reg_value = reg_value | 0x20;
+	} else if (flag == 0x02) { /*drive low;get led control capacity*/
+		reg_value = reg_value & 0xf7;
+		reg_value = reg_value & 0xcf;
+		reg_value = reg_value | 0x30;
+	} else {
+		printf("not support model\n");
+		return -1;
+	}
+	if (axp_i2c_write(AXP809_CHIP_ID, BOOT_POWER809_OFF_CTL, reg_value)) {
+	    return -1;
+	}
+
+    return 0;
+}
+
+
 /*
 ************************************************************************************************************
 *

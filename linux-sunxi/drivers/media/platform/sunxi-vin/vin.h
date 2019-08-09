@@ -201,6 +201,8 @@ struct vin_md {
 	struct platform_device *pdev;
 	bool user_subdev_api;
 	spinlock_t slock;
+	bool first_net_app; /*using when vin use int uboot */
+	bool sensor_first_on; /*using when vin use int uboot */
 };
 
 static inline struct vin_md *entity_to_vin_mdev(struct media_entity *me)
@@ -220,6 +222,7 @@ struct vin_pipeline_ops {
 			  bool resume);
 	int (*close)(struct vin_pipeline *p);
 	int (*set_stream)(struct vin_pipeline *p, int state);
+	int (*reset_stream)(struct vin_pipeline *p, int state);
 };
 
 #define vin_pipeline_call(f, op, p, args...)				\

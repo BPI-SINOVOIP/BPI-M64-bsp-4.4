@@ -105,12 +105,14 @@ static int android_image_get_signature(const struct andr_img_hdr *hdr,
 	}
 
 	addr = (unsigned long)hdr;
-
 	addr += hdr->page_size;
 	addr += ALIGN(hdr->kernel_size, hdr->page_size);
-	addr += ALIGN(hdr->ramdisk_size, hdr->page_size);
-	if(hdr->second_size)
+	if (hdr->ramdisk_size)
+		addr += ALIGN(hdr->ramdisk_size, hdr->page_size);
+	if (hdr->second_size)
 		addr += ALIGN(hdr->second_size, hdr->page_size);
+	if (hdr->recovery_dtbo_size)
+		addr += ALIGN(hdr->recovery_dtbo_size, hdr->page_size);
 
 	*sign_data = (ulong)addr;
 	*sign_len = hdr_ex->cert_size;
@@ -140,22 +142,28 @@ int do_boota_linux (void *kernel_addr, void *dtb_base, uint arch_type)
 	sunxi_secondary_cpu_poweroff();
 	sunxi_fdt_reflush_all();
 #endif
+#ifdef CONFIG_OF_LIBUFDT
+	void *dtbo_base = NULL;
+	dtbo_base = sunxi_support_ufdt((void *)gd->fdt_blob, fdt_totalsize(gd->fdt_blob));
+	if (dtbo_base == NULL) {
+		printf("sunxi dto merge fail\n");
+		return -1;
+	}
+	memcpy((void *)dtb_base, dtbo_base, fdt_totalsize(dtbo_base));
+#else
 
 	debug("moving platform.dtb from %lx to: %lx, size 0x%lx\n",
 		(ulong)dtb_base,
 		(ulong)(gd->fdt_blob),gd->fdt_size);
 	//fdt_blob  save the addree of  working_fdt
 	memcpy((void*)dtb_base, gd->fdt_blob,gd->fdt_size);
+#endif
 	if(fdt_check_header(dtb_base) !=0 )
 	{
 		printf("fdt header check error befor boot\n");
 		return -1;
 	}
-#ifdef CONFIG_OF_LIBUFDT
-	if (sunxi_support_ufdt((void *)dtb_base, fdt_totalsize(dtb_base)) < 0) {
-		printf("sunxi dto merge fail\n");
-	}
-#endif
+
 
 	announce_and_cleanup(fake);
 	if (sunxi_probe_secure_monitor()) {
@@ -237,6 +245,14 @@ void update_bootargs(void)
 				verifiedbootstate_info);
 		strcat(cmdline, tmpbuf);
 	}
+
+	if (gd->keybox_installed) {
+		sprintf(tmpbuf, " androidboot.trustchain=%s", "true");
+	} else {
+		sprintf(tmpbuf, " androidboot.trustchain=%s", "false");
+	}
+	strcat(cmdline, tmpbuf);
+
 	setenv("bootargs", cmdline);
 	printf("android.hardware = %s\n", board_hardware_info());
 }
@@ -297,17 +313,19 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("orange state:start to display bootlogo\n");
 			sunxi_bmp_display("bootlogo.bmp");
 		} else {
-			ulong total_len;
+			ulong total_len = 0;
 			ulong sign_data , sign_len;
 			int ret;
-			if (fb_hdr->ramdisk_size) {
-				total_len = ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size) + \
-							ALIGN(fb_hdr->kernel_size, fb_hdr->page_size) + \
-							  fb_hdr->page_size;
-			} else {
-				total_len = ALIGN(fb_hdr->kernel_size, fb_hdr->page_size) + \
-							fb_hdr->page_size;
-			}
+
+			total_len += fb_hdr->page_size;
+			total_len += ALIGN(fb_hdr->kernel_size, fb_hdr->page_size);
+			if (fb_hdr->second_size)
+				total_len += ALIGN(fb_hdr->second_size, fb_hdr->page_size);
+			if (fb_hdr->ramdisk_size)
+				total_len += ALIGN(fb_hdr->ramdisk_size, fb_hdr->page_size);
+			if (fb_hdr->recovery_dtbo_size)
+				total_len += ALIGN(fb_hdr->recovery_dtbo_size, fb_hdr->page_size);
+
 			printf("total_len=%ld\n", total_len);
 
 			if (android_image_get_signature(fb_hdr, &sign_data, &sign_len))
@@ -357,7 +375,6 @@ int do_boota (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			if (ret) {
 				printf("boota: verify the %s failed\n", argv[2]);
 				setenv("verifiedbootstate", "red");
-
 				printf("Your device is corrupt.It can't be truseted and will not boot.\n");
 				sunxi_bmp_display("red_warning.bmp");
 				__msdelay(30000);

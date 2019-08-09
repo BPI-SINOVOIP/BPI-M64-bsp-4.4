@@ -186,7 +186,8 @@ typedef enum __BOOT_POWER_STATE
 	SUNXI_STATE_SHUTDOWN_DIRECTLY = 0,
 	SUNXI_STATE_SHUTDOWN_CHARGE,
 	SUNXI_STATE_ANDROID_CHARGE,
-	SUNXI_STATE_NORMAL_BOOT
+	SUNXI_STATE_NORMAL_BOOT,
+	SUNXI_STATE_SHUTDOWN_WITHOUT_SRC
 }SUNXI_BOOT_POWER_STATE_E;
 
 
@@ -234,8 +235,8 @@ static int sunxi_probe_power_state(void)
 			printf("SUNXI_STATE_ANDROID_CHARGE");
 			return SUNXI_STATE_ANDROID_CHARGE;
 		} else {
-			printf("SUNXI_STATE_SHUTDOWN_DIRECTLY");
-			return SUNXI_STATE_SHUTDOWN_DIRECTLY;
+			printf("SUNXI_STATE_SHUTDOWN_WITHOUT_SRC");
+			return SUNXI_STATE_SHUTDOWN_WITHOUT_SRC;
 		}
 	}
 
@@ -319,6 +320,9 @@ static int sunxi_probe_power_state(void)
 		case SUNXI_STATE_ANDROID_CHARGE:
 			printf("STATE_ANDROID_CHARGE\n");
 			break;
+		case SUNXI_STATE_SHUTDOWN_WITHOUT_SRC:
+			printf("STATE_SHUTDOWN_WITHOUT_SRC\n");
+			break;
 		case SUNXI_STATE_NORMAL_BOOT:
 		default:
 			printf("STATE_NORMAL_BOOT\n");
@@ -371,7 +375,7 @@ int sunxi_secendary_cpu_task(void)
 		gd->chargemode = 1;
 		set_decode_buffer((unsigned char *)
 			(SUNXI_ANDROID_CHARGE_COMPRESSED_LOGO_BUFF));
-	} else if (next_mode == SUNXI_STATE_SHUTDOWN_DIRECTLY) {
+	} else if (next_mode == SUNXI_STATE_SHUTDOWN_DIRECTLY || next_mode == SUNXI_STATE_SHUTDOWN_WITHOUT_SRC) {
 		gd->need_shutdown = 1;
 		set_decode_buffer((unsigned char *)
 			(SUNXI_SHUTDOWN_CHARGE_COMPRESSED_LOGO_BUFF));
@@ -380,7 +384,9 @@ int sunxi_secendary_cpu_task(void)
 	enable_interrupts();
 	sunxi_gic_cpu_interface_init(get_core_pos());
 #ifndef CONFIG_BOOTLOGO_DISABLE
-	initr_sunxi_display();
+	if (next_mode != SUNXI_STATE_SHUTDOWN_WITHOUT_SRC) {
+		initr_sunxi_display();
+	}
 #if defined(ENABLE_ADVERT_PICTURE)
 	ret = script_parser_fetch("target", "advert_enable",
 				  (int *)&advert_enable, sizeof(int) / 4);
@@ -412,7 +418,9 @@ int sunxi_secendary_cpu_task(void)
 		sunxi_bmp_display_mem((unsigned char *)CONFIG_SYS_SDRAM_BASE,
 				      &bmp_info);
 #endif
-		ret = sunxi_bmp_dipslay_screen(bmp_info);
+		if (next_mode != SUNXI_STATE_SHUTDOWN_WITHOUT_SRC) {
+			ret = sunxi_bmp_dipslay_screen(bmp_info);
+		}
 		if (ret != 0)
 			pr_error("sunxi_bmp_dipslay_screen fail\n");
 	}
@@ -421,7 +429,7 @@ int sunxi_secendary_cpu_task(void)
 	mdelay(50);
 #endif
 	/* show low power logo */
-	if (gd->need_shutdown)
+	if (gd->need_shutdown && next_mode != SUNXI_STATE_SHUTDOWN_WITHOUT_SRC)
 		mdelay(3000);
 
 	while (cpu1_quit_flag != CPU_QUIT)

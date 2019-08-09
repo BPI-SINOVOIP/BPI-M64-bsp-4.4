@@ -31,12 +31,11 @@
 #include "../modules/actuator/actuator.h"
 #include "../vin-csi/bsp_csi.h"
 #include "../vin-mipi/bsp_mipi_csi.h"
-#include "../vin-isp/bsp_isp.h"
 #include "../utility/vin_supply.h"
 #include "vin_video.h"
 #include "../vin.h"
 
-#define MAX_FRAME_MEM   (150*1024*1024)
+#define MAX_FRAME_MEM   (500*1024*1024)
 #define MIN_WIDTH       (32)
 #define MIN_HEIGHT      (32)
 #define MAX_WIDTH       (4800)
@@ -73,6 +72,7 @@ struct vin_ptn_cfg {
 	__u32 ptn_h;
 	__u32 ptn_mode;
 	__u32 ptn_dw;
+	__u32 ptn_type;
 	struct vin_mm ptn_buf;
 };
 
@@ -102,7 +102,6 @@ struct vin_core {
 	unsigned int vin_clk;
 	unsigned int fps_ds;
 	unsigned int large_image;/*2:get merge yuv, 1: get pattern raw (save in kernel), 0: normal*/
-	unsigned int merge_cnt;
 	struct isp_debug_mode isp_dbg;
 	struct sensor_exp_gain exp_gain;
 	struct v4l2_device *v4l2_dev;
@@ -111,6 +110,7 @@ struct vin_core {
 	int irq;
 	struct vin_status_info vin_status;
 	struct timer_list timer_for_reset;
+	unsigned int vin_reset_time;
 	struct vin_ptn_cfg ptn_cfg;
 };
 

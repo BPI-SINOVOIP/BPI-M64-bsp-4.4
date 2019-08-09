@@ -849,6 +849,8 @@ int sunxi_auto_update_main(void)
 	uchar  img_mbr[1024 * 1024];
 	sunxi_download_info  dl_map;
 	int mbr_num = SUNXI_MBR_COPY_NUM;
+	int nodeoffset;
+	int processbar_direct = 0;;
 
 	if (uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE || usb_stor_curr_dev == 0) {
 		if (usb_stor_scan(1)) {
@@ -865,6 +867,15 @@ int sunxi_auto_update_main(void)
 			printf("sunxi card update begin\n");
 	}
 
+	tick_printf("sunxi update begin\n");
+	nodeoffset = fdt_path_offset(working_fdt, FDT_PATH_CARD_BOOT);
+	if (nodeoffset >= 0) {
+		if (fdt_getprop_u32(working_fdt, nodeoffset,
+				    "processbar_direct",
+				    (uint32_t *)&processbar_direct) < 0)
+			processbar_direct = 0;
+	}
+
 	production_media = get_boot_storage_type();
 
 	imgname = malloc(strlen(IMG_NAME)+1);
@@ -872,7 +883,7 @@ int sunxi_auto_update_main(void)
 		return -1;
 
 	strcpy(imgname,IMG_NAME);
-	sprite_cartoon_create();
+	sprite_cartoon_create(processbar_direct);
 
 	if (auto_update_firmware_probe(imgname))
 	{

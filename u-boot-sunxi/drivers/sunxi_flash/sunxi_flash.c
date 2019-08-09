@@ -341,6 +341,7 @@ int sunxi_sprite_force_erase(int erase, void *mbr_buffer)
 //-------------------------------------sprite interface end-----------------------------------------------
 
 //sunxi flash boot interface init
+#ifdef CONFIG_ARCH_SUN3IW1P1
 int sunxi_flash_boot_handle(int storage_type,int workmode )
 {
 	int card_no;
@@ -358,7 +359,66 @@ int sunxi_flash_boot_handle(int storage_type,int workmode )
 		case STORAGE_SD:
 		case STORAGE_SD1:
 		case STORAGE_EMMC:
-                case STORAGE_EMMC3:
+        case STORAGE_EMMC3:
+		{
+			//sdmmc handle init
+		        if(storage_type == STORAGE_SD || storage_type == STORAGE_EMMC){
+                                card_no = 0;
+		        }else if(storage_type == STORAGE_SD1 || storage_type == STORAGE_EMMC3){
+					card_no = 1;
+		        }else{
+					printf("not support\n");
+					state = -1;
+					break;
+				}
+	            state = sdmmc_init_for_boot(workmode,card_no);
+		}
+		break;
+
+		case STORAGE_NOR:
+		{
+			state = spinor_init_for_boot(workmode,0);
+		}
+		break;
+
+		default:
+		{
+			printf("not support\n");
+			state = -1;
+		}
+		break;
+
+	}
+
+	if(state != 0)
+	{
+		return -1;
+	}
+
+	//script_parser_patch("target", "storage_type", &storage_type, 1);
+	pr_msg("sunxi flash init ok\n");
+	return  0;
+}
+
+#else
+int sunxi_flash_boot_handle(int storage_type,int workmode )
+{
+	int card_no;
+	int state;
+	switch(storage_type)
+	{
+		case STORAGE_NAND:
+		case STORAGE_SPI_NAND:
+		{
+			//nand handle init
+			state = nand_init_for_boot(workmode);
+		}
+		break;
+
+		case STORAGE_SD:
+		case STORAGE_SD1:
+		case STORAGE_EMMC:
+        case STORAGE_EMMC3:
 		{
 			//sdmmc handle init
 		        if(storage_type == STORAGE_SD)
@@ -397,7 +457,7 @@ int sunxi_flash_boot_handle(int storage_type,int workmode )
 	pr_msg("sunxi flash init ok\n");
 	return  0;
 }
-
+#endif
 int sunxi_flash_sprite_handle(int storage_type,int workmode)
 {
 	int state = 0;
@@ -858,3 +918,62 @@ int sunxi_secstorage_write(int item, unsigned char *buf, unsigned int len)
 	return  sunxi_secstorage_write_pt(item, buf,len);
 }
 
+#ifdef CONFIG_SUNXI_OFFLINE_BURN_KEY
+int sunxi_clean_offline_key(void)
+{
+	int workmode = 0;
+	int storage_type = 0;
+	int ret = 0;
+	int length = 4 * 1024;
+	void *buffer = NULL;
+	void *data = NULL;
+
+	workmode     = get_boot_work_mode();
+	storage_type = get_boot_storage_type();
+
+	printf("%s: workmode = %d,storage type = %d\n", __func__, workmode, storage_type);
+
+	if (workmode == WORK_MODE_BOOT) {
+
+			if ((storage_type == STORAGE_SD) || (storage_type == STORAGE_EMMC)) {
+				buffer = malloc(length);
+				if (buffer == NULL) {
+					printf("%s: malloc fail\n", __func__);
+					return -1;
+				}
+				ret = sunxi_sprite_phyread(BOOT0_SDMMC_BACKUP_START_ADDR, (length + 511) / 512, buffer);
+				if (!ret) {
+					printf("%s: read boot0 fail\n", __func__);
+					free(buffer);
+					return -1;
+				}
+				boot0_file_head_t    *boot0  = (boot0_file_head_t *)buffer;
+				printf("%s\n", boot0->boot_head.magic);
+				if (strncmp((const char *)boot0->boot_head.magic, BOOT0_MAGIC, MAGIC_SIZE)) {
+					printf("%s :the backup not is boot0\n", __func__);
+					free(buffer);
+					return 0;
+				}
+				data = malloc(length);
+				if (data == NULL) {
+					printf("%s: malloc data buf fail\n", __func__);
+					free(buffer);
+					return -1;
+				}
+				memset(data, 0x0, length);
+				ret = sunxi_flash_phywrite(BOOT0_SDMMC_BACKUP_START_ADDR, (length + 511) / 512, data);
+				if (!ret) {
+					printf("%s: write boot0 fail\n", __func__);
+					free(buffer);
+					free(data);
+					return -1;
+				}
+				printf("%s: success\n", __func__);
+				free(buffer);
+				free(data);
+				return 0;
+			}
+	}
+	return 0;
+}
+#endif

@@ -59,7 +59,7 @@ static void __usb_readcomplete(__hdle hUSB, u32 ep_type, u32 complete);
 
 static void __usb_recv_by_dma_isr(void *p_arg);
 static void __usb_send_by_dma_isr(void *p_arg);
-static int __sunxi_udc_set_address(uchar address);
+int __sunxi_udc_set_address(uchar address);
 
 
 static int eptx_send_op(void);
@@ -678,7 +678,7 @@ static int __usb_read_ep0_data(void *buffer, uint data_type)
 *
 *******************************************************************************
 */
-static int __sunxi_udc_set_address(uchar address)
+int __sunxi_udc_set_address(uchar address)
 {
 	USBC_Dev_SetAddress(sunxi_udc_source.usbc_hd, address);
 	if(USBC_Dev_QueryTransferMode(sunxi_udc_source.usbc_hd) == USBC_TS_MODE_HS)

@@ -15,6 +15,7 @@
 			#interrupt-cells = <2>;
 			#size-cells = <0>;
 			#gpio-cells = <6>;
+			int_clk = <PL 0>;
 
 			s_uart0_pins_a: s_uart0@0 {
 				allwinner,pins = "PL2", "PL3";
@@ -37,6 +38,23 @@
 				allwinner,muxsel = <3>;
 				allwinner,drive = <2>;
 				allwinner,pull = <1>;
+			};
+
+			twi4_pins_a: twi4@0 {
+				allwinner,pins = "PL8", "PL9";
+				allwinner,pname = "twi4_scl", "twi4_sda";
+				allwinner,function = "s_twi1";
+				allwinner,muxsel = <2>;
+				allwinner,drive = <1>;
+				allwinner,pull = <0>;
+			};
+
+			twi4_pins_b: twi4@1 {
+				allwinner,pins = "PL8", "PL9";
+				allwainner,function = "io_disabled";
+				allwinner,muxsel = <7>;
+				allwinner,drive = <1>;
+				allwinner,pull = <0>;
 			};
 
 			s_jtag0_pins_a: s_jtag0@0 {
@@ -71,6 +89,7 @@
 			#interrupt-cells = <2>;
 			#size-cells = <0>;
 			#gpio-cells = <6>;
+			int_clk = <PA 0 PB 1 PF 0 PG 0 PH 0>;
 
 			vdevice_pins_a: vdevice@0 {
 				allwinner,pins = "PB1", "PB2";
@@ -559,6 +578,7 @@
 			daudio0_pins_a: daudio0@0 {
 				allwinner,pins = "PB4", "PB5", "PB6",
 						 "PB7", "PB8";
+				allwinner,pname = "i2s_lrclk", "i2s_bclk", "i2s_dout0", "i2s_din", "i2s_mclk";
 				allwinner,function = "pcm0";
 				allwinner,muxsel = <3>;
 				allwinner,drive = <1>;
@@ -574,7 +594,7 @@
 				allwinner,pull = <0>;
 			};
 
-			daudio2_pins_a: daudio1@0 {
+			daudio2_pins_a: daudio2@0 {
 				allwinner,pins = "PG10", "PG11", "PG12", "PG13";
 				allwinner,function = "pcm2";
 				allwinner,muxsel = <3>;
@@ -582,7 +602,7 @@
 				allwinner,pull = <0>;
 			};
 
-			daudio2_pins_b: daudio1_sleep@0 {
+			daudio2_pins_b: daudio2_sleep@0 {
 				allwinner,pins = "PG10", "PG11", "PG12", "PG13";
 				allwinner,function = "io_disabled";
 				allwinner,muxsel = <7>;

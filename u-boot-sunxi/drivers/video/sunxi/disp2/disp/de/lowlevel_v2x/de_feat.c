@@ -1423,7 +1423,7 @@ int de_feat_init(void)
 	de_cur_features = &sun50iw1_de_features;
 #elif defined(CONFIG_ARCH_SUN8IW11P1)
 	de_cur_features = &sun8iw11_de_features;
-#elif defined(CONFIG_ARCH_SUN8IW12P1)
+#elif defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
 	de_cur_features = &sun8iw12_de_features;
 #elif defined(CONFIG_ARCH_SUN8IW17P1)
 	de_cur_features = &sun8iw17_de_features;

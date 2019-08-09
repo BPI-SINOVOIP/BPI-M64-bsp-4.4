@@ -1,3 +1,18 @@
+/**
+ * drivers/video/sunxi/disp2/disp/lcd/panels.h
+ * (C) Copyright 2010-2015
+ * Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+ *
+ * Include file for SUNXI HCI Host Controller Driver
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ *
+ */
+
 #ifndef __PANEL_H__
 #define __PANEL_H__
 #include "../de/bsp_display.h"
@@ -70,6 +85,8 @@ extern int sunxi_disp_get_source_ops(struct sunxi_disp_source_ops *src_ops);
 int lcd_init(void);
 
 extern __lcd_panel_t WilliamLcd_panel;
+extern __lcd_panel_t default_panel;
+extern __lcd_panel_t he0801a068_panel;
 #if defined(CONFIG_ARCH_SUN50IW3P1)
 extern __lcd_panel_t ls029b3sx02_panel;
 extern __lcd_panel_t vr_ls055t1sx01_panel;
@@ -77,13 +94,20 @@ extern __lcd_panel_t lq101r1sx03_panel;
 extern __lcd_panel_t he0801a068_panel;
 extern __lcd_panel_t sl008pn21d_panel;
 #else
-#if defined(CONFIG_ARCH_SUN8IW12P1)
+#if defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
 extern __lcd_panel_t ili9341_panel;
 extern __lcd_panel_t fd055hd003s_panel;
-extern __lcd_panel_t default_panel;
+extern __lcd_panel_t to20t20000_panel;
+extern __lcd_panel_t t30p106_panel;
+extern __lcd_panel_t st7796s_panel;
+extern __lcd_panel_t st7789v_panel;
+extern __lcd_panel_t lh219wq1_panel;
+extern __lcd_panel_t frd450h40014_panel;
+extern __lcd_panel_t h245qbn02_panel;
+extern __lcd_panel_t s2003t46g_panel;
+extern __lcd_panel_t st7701s_panel;
 #else
 extern __lcd_panel_t default_eink;
-extern __lcd_panel_t default_panel;
 extern __lcd_panel_t lt070me05000_panel;
 extern __lcd_panel_t wtq05027d01_panel;
 extern __lcd_panel_t t27p06_panel;
@@ -92,7 +116,6 @@ extern __lcd_panel_t tft720x1280_panel;
 extern __lcd_panel_t S6D7AA0X01_panel;
 extern __lcd_panel_t gg1p4062utsw_panel;
 extern __lcd_panel_t vr_sharp_panel;
-extern __lcd_panel_t he0801a068_panel;
 extern __lcd_panel_t S070WV20_MIPI_RGB_panel;
 #endif /*endif CONFIG_ARCH_SUN8IW12P1 */
 #endif /*endif CONFIG_ARCH_SUN50IW3P1 */

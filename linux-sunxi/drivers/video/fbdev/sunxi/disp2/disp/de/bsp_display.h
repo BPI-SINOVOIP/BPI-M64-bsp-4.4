@@ -33,8 +33,8 @@ struct sunxi_disp_source_ops {
 					unsigned char *para,
 					unsigned int para_num);
 	int (*sunxi_lcd_dsi_clk_enable)(u32 screen_id, u32 en);
-	int (*sunxi_lcd_dsi_open)(unsigned int scree_id);
-	int (*sunxi_lcd_dsi_close)(unsigned int scree_id);
+	int (*sunxi_lcd_dsi_mode_switch)(unsigned int scree_id,
+					 u32 cmd_en, u32 lp_en);
 	int (*sunxi_lcd_backlight_enable)(unsigned int screen_id);
 	int (*sunxi_lcd_backlight_disable)(unsigned int screen_id);
 	int (*sunxi_lcd_pwm_enable)(unsigned int screen_id);
@@ -131,6 +131,7 @@ s32 bsp_disp_lcd_dsi_close(u32 disp);
 s32 bsp_disp_lcd_dsi_clk_enable(u32 disp, u32 en);
 s32 bsp_disp_lcd_dsi_dcs_wr(u32 disp, u8 command, u8 *para, u32 para_num);
 s32 bsp_disp_lcd_dsi_gen_wr(u32 disp, u8 command, u8 *para, u32 para_num);
+s32 bsp_disp_lcd_dsi_mode_switch(u32 screen_id, u32 cmd_en, u32 lp_en);
 
 extern struct disp_manager *disp_get_layer_manager(u32 disp);
 

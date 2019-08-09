@@ -42,30 +42,19 @@
 #define SID_OP_LOCK  (0xAC)
 
 #define EFUSE_CHIPD             (0x00)
-#define EFUSE_OEM_PROGRAM       (0x10)
-#define EFUSE_NV1               (0x14)
-#define EFUSE_NV2               (0x18)
-#define EFUSE_RSK_PUB_HASH      (0x20)
-#define EFUSE_THERMAL_SENSOR    (0x34)
-#define EFUSE_RENEWABILITY      (0x3C)
-#define EFUSE_IN                (0x44)
-#define EFUSE_INDENTIFICATION   (0x5C)
-#define EFUSE_ID                (0x60)
-#define EFUSE_ROTPK             (0x64)
-#define EFUSE_SSK               (0x84)
-#define EFUSE_RSSK              (0x94)
+#define EFUSE_HUK       		(0x10)
+#define EFUSE_SSK               (0x30)
+#define EFUSE_THERMAL_SENSOR    (0x40)
+#define EFUSE_FT_ZONE    		(0x44)
+#define EFUSE_TVOUT    			(0x4C)
+#define EFUSE_RSSK              (0x5C)
+#define EFUSE_HDCP_HASH         (0x7C)
+#define EFUSE_CHIPCONFIG        (0x8C)
+#define EFUSE_CUSTOMER_ID      	(0x90)
 
-#define EFUSE_HDCP_HASH         (0xB4)
-#define EFUSE_EK_HASH           (0xC4)
-#define EFUSE_SN                (0xD4)
-
-#define EFUSE_BACKUP_KEY        (0xEC)
-#define EFUSE_LCJS              (0xF4)
-#define EFUSE_DEBUG             (0xF8)
-#define EFUSE_CHIPCONFIG        (0xFC)
+#define CUSTOMER_ID_BIT_SIZE	(112)
 
 
-extern void sid_set_security_mode(void);
-extern int  sid_probe_security_mode(void);
+extern void sid_write_customer_id(void);
 
 #endif    /*  #ifndef __EFUSE_H__  */

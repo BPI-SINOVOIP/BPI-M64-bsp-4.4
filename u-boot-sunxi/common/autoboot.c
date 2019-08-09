@@ -141,6 +141,8 @@ static int abortboot_keyed(int bootdelay)
 static int menukey;
 #endif
 
+u8 uboot_shell = 0 ;
+
 static int abortboot_normal(int bootdelay)
 {
 	int abort = 0;
@@ -166,7 +168,11 @@ static int abortboot_normal(int bootdelay)
 		}
 	}
 #endif
-
+	if (uboot_shell == 1) {
+		abort = 1;
+		bootdelay = 0;
+		uboot_shell = 0;
+	}
 	while ((bootdelay > 0) && (!abort)) {
 		--bootdelay;
 		/* delay 1000 ms */

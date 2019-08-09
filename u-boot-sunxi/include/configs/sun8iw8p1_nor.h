@@ -451,4 +451,8 @@
 
 /* #define CONFIG_PWM_LED */
 
+/* ifdef this can change GPIO interrupt clock select */
+//Temporarily to modify the XR829 wifi interrupt sampling rate
+#define CONFIG_SUNXI_GPIO_INT_DEB
+
 #endif /* __CONFIG_H */

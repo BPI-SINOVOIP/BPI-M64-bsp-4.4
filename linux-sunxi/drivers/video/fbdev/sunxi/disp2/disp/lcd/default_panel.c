@@ -112,6 +112,9 @@ static void LCD_power_on(u32 sel)
 {
 	/* config lcd_power pin to open lcd power0 */
 	sunxi_lcd_power_enable(sel, 0);
+#ifdef LVDS_VERSION_28
+	sunxi_lcd_power_enable(sel, 1);
+#endif
 	sunxi_lcd_pin_cfg(sel, 1);
 }
 
@@ -120,6 +123,9 @@ static void LCD_power_off(u32 sel)
 	sunxi_lcd_pin_cfg(sel, 0);
 	/* config lcd_power pin to close lcd power0 */
 	sunxi_lcd_power_disable(sel, 0);
+#ifdef LVDS_VERSION_28
+	sunxi_lcd_power_disable(sel, 1);
+#endif
 }
 
 static void LCD_bl_open(u32 sel)

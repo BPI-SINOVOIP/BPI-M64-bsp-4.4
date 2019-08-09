@@ -1151,8 +1151,7 @@ int sunxi_disp_get_source_ops(struct sunxi_disp_source_ops *src_ops)
 	src_ops->sunxi_lcd_dsi_dcs_write = bsp_disp_lcd_dsi_dcs_wr;
 	src_ops->sunxi_lcd_dsi_gen_write = bsp_disp_lcd_dsi_gen_wr;
 	src_ops->sunxi_lcd_dsi_clk_enable = bsp_disp_lcd_dsi_clk_enable;
-	src_ops->sunxi_lcd_dsi_open = bsp_disp_lcd_dsi_open;
-	src_ops->sunxi_lcd_dsi_close = bsp_disp_lcd_dsi_close;
+	src_ops->sunxi_lcd_dsi_mode_switch = bsp_disp_lcd_dsi_mode_switch;
 #endif
 	src_ops->sunxi_lcd_cpu_write = tcon0_cpu_wr_16b;
 	src_ops->sunxi_lcd_cpu_write_data = tcon0_cpu_wr_16b_data;
@@ -2004,6 +2003,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			/* if the display device has already enter blank status,
 			 * DISP_DEVICE_SWITCH request will not be responsed.
 			 */
+			mutex_lock(&g_disp_drv.mlock);
 			if (!(suspend_status & DISPLAY_BLANK))
 				ret =
 				    bsp_disp_device_switch(ubuffer[0],
@@ -2013,6 +2013,7 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #if defined(SUPPORT_TV) && defined(CONFIG_ARCH_SUN50IW2P1)
 			bsp_disp_tv_set_hpd(1);
 #endif
+			mutex_unlock(&g_disp_drv.mlock);
 			break;
 		}
 #if defined(SUPPORT_EINK)
@@ -2167,16 +2168,20 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			return  -EFAULT;
 		}
 
-		/*for (i = 0; (i < lyr_cfg_size) && (i < ubuffer[2]); ++i) {
-			if (lyr_cfg[i].enable == 0) {
-				memset(&(lyr_cfg[i].info), 0,
-					sizeof(lyr_cfg[i].info));
-			}
-		}*/
+        /*
+        for (i = 0; (i < lyr_cfg_size) && (i < ubuffer[2]); ++i) {
+            if (lyr_cfg[i].enable == 0) {
+                memset(&(lyr_cfg[i].info), 0,
+                    sizeof(lyr_cfg[i].info));
+            }
+        }
+        */
 
 #if !defined(CONFIG_EINK_PANEL_USED)
+		mutex_lock(&g_disp_drv.mlock);
 		if (mgr && mgr->set_layer_config)
 			ret = mgr->set_layer_config(mgr, lyr_cfg, ubuffer[2]);
+		mutex_unlock(&g_disp_drv.mlock);
 #endif
 		break;
 	}
@@ -2187,11 +2192,12 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			(void __user *)ubuffer[1],
 			sizeof(struct disp_layer_config) * ubuffer[2]))	{
 			__wrn("copy_from_user fail\n");
-
 			return  -EFAULT;
 		}
+		mutex_lock(&g_disp_drv.mlock);
 		if (mgr && mgr->get_layer_config)
 			ret = mgr->get_layer_config(mgr, lyr_cfg, ubuffer[2]);
+		mutex_unlock(&g_disp_drv.mlock);
 		if (copy_to_user((void __user *)ubuffer[1],
 			lyr_cfg,
 			sizeof(struct disp_layer_config) * ubuffer[2]))	{
@@ -2250,18 +2256,72 @@ long disp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	}
+	case DISP_ROTATION_SW_SET_ROT:
+		{
+			int num_screens = bsp_disp_feat_get_num_screens();
+			u32 degree, chn, lyr_id;
+
+			mutex_lock(&g_disp_drv.mlock);
+			if (mgr == NULL) {
+				printk("mgr is null\n");
+			}
+			if (mgr->rot_sw == NULL) {
+				printk("mgr->rot_sw is null\n");
+			}
+			if (!mgr || !mgr->rot_sw || num_screens <= ubuffer[0]) {
+				ret = -1;
+				mutex_unlock(&g_disp_drv.mlock);
+				break;
+			}
+			degree = ubuffer[3];
+			switch (degree) {
+				case ROTATION_SW_0:
+				case ROTATION_SW_90:
+				case ROTATION_SW_180:
+				case ROTATION_SW_270:
+					chn = ubuffer[1];
+					lyr_id = ubuffer[2];
+					ret = mgr->rot_sw->set_layer_degree(mgr->rot_sw, chn, lyr_id, degree);
+					break;
+				default:
+					ret = -1;
+			}
+			mutex_unlock(&g_disp_drv.mlock);
+			break;
+		}
+
+	case DISP_ROTATION_SW_GET_ROT:
+		{
+			int num_screens = bsp_disp_feat_get_num_screens();
+			u32 chn, lyr_id;
+			mutex_lock(&g_disp_drv.mlock);
+			if (mgr && mgr->rot_sw && num_screens > ubuffer[0]) {
+				chn = ubuffer[1];
+				lyr_id = ubuffer[2];
+				ret = mgr->rot_sw->get_layer_degree(mgr->rot_sw, chn, lyr_id);
+			} else {
+				ret = -1;
+			}
+			mutex_unlock(&g_disp_drv.mlock);
+			break;
+		}
+
 		/* ---- lcd --- */
 	case DISP_LCD_SET_BRIGHTNESS:
 		{
+			mutex_lock(&g_disp_drv.mlock);
 			if (dispdev && (dispdev->type == DISP_OUTPUT_TYPE_LCD))
 				ret = dispdev->set_bright(dispdev, ubuffer[1]);
+			mutex_unlock(&g_disp_drv.mlock);
 			break;
 		}
 
 	case DISP_LCD_GET_BRIGHTNESS:
 		{
+			mutex_lock(&g_disp_drv.mlock);
 			if (dispdev && (dispdev->type == DISP_OUTPUT_TYPE_LCD))
 				ret = dispdev->get_bright(dispdev);
+			mutex_unlock(&g_disp_drv.mlock);
 			break;
 		}
 

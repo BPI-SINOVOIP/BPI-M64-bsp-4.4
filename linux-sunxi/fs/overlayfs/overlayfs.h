@@ -163,6 +163,8 @@ extern const struct file_operations ovl_dir_operations;
 int ovl_check_empty_dir(struct dentry *dentry, struct list_head *list);
 void ovl_cleanup_whiteouts(struct dentry *upper, struct list_head *list);
 void ovl_cache_free(struct list_head *list);
+void ovl_workdir_cleanup(struct inode *dir, struct vfsmount *mnt,
+			 struct dentry *dentry, int level);
 
 /* inode.c */
 int ovl_setattr(struct dentry *dentry, struct iattr *attr);

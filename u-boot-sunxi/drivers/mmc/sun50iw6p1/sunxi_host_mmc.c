@@ -767,6 +767,19 @@ static void mmc_get_para_from_fex(int sdc_no)
 			}
         }
 
+		ret = fdt_getprop_u32(working_fdt, nodeoffset, "set_block_count", (uint32_t *)(&rval));
+		if (ret < 0)
+			MMCDBG("get card2_boot_para:set_block_count failed\n");
+		else {
+			if (rval == 1) {
+				MMCINFO("support CMD23.\n");
+				cfg->platform_caps.emmc_set_block_count = 1;
+			} else {
+				MMCDBG("unsupport CMD23.\n");
+				cfg->platform_caps.emmc_set_block_count = 0;
+			}
+		}
+
         ret = fdt_getprop_u32(working_fdt,nodeoffset,"sdc_odly_50M", (uint32_t*)(&rval));
 		if (ret<0) {
 			MMCDBG("get sdc2 sdc_odly_50M fail.\n");

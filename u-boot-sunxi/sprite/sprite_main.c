@@ -129,12 +129,20 @@ int sunxi_card_sprite_main(int workmode, char *name)
 	int    sprite_next_work;
 	int nodeoffset;
 	int mbr_num = SUNXI_MBR_COPY_NUM;
+	int processbar_direct = 0;;
 
 	tick_printf("sunxi sprite begin\n");
+	nodeoffset = fdt_path_offset(working_fdt, FDT_PATH_CARD_BOOT);
+	if (nodeoffset >= 0) {
+		if (fdt_getprop_u32(working_fdt, nodeoffset,
+				    "processbar_direct",
+				    (uint32_t *)&processbar_direct) < 0)
+			processbar_direct = 0;
+	}
 	//获取当前是量产介质是nand或者卡
 	production_media = get_boot_storage_type();
 	//启动动画显示
-	sprite_cartoon_create();
+	sprite_cartoon_create(processbar_direct);
 	//检查固件合法性
 	if(sprite_card_firmware_probe(name))
 	{
@@ -219,12 +227,6 @@ int sunxi_card_sprite_main(int workmode, char *name)
 	__msdelay(3000);
 	//处理烧写完成后的动作
 
-	nodeoffset =  fdt_path_offset(working_fdt,FDT_PATH_CARD_BOOT);
-	if(nodeoffset < 0 )
-	{
-		printf("get card_boot para fail\n");
-		return -1;
-	}
 	if(fdt_getprop_u32(working_fdt, nodeoffset,"next_work",(uint32_t *) &sprite_next_work)< 0)
 	//if(script_parser_fetch("card_boot", "next_work", &sprite_next_work, 1))
 	{
@@ -257,4 +259,3 @@ int sunxi_card_sprite_main(int workmode, char *name)
 
 	return 0;
 }
-

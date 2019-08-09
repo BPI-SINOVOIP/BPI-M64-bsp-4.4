@@ -40,6 +40,9 @@ const char *pm_states[PM_SUSPEND_MAX];
 unsigned int pm_suspend_global_flags;
 EXPORT_SYMBOL_GPL(pm_suspend_global_flags);
 
+unsigned int sunxi_suspend_flag;
+EXPORT_SYMBOL_GPL(sunxi_suspend_flag);
+
 static const struct platform_suspend_ops *suspend_ops;
 static const struct platform_freeze_ops *freeze_ops;
 static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
@@ -563,6 +566,7 @@ int pm_suspend(suspend_state_t state)
 		return -EINVAL;
 
 	pm_suspend_marker("entry");
+	sunxi_suspend_flag  = 1;
 	error = enter_state(state);
 	if (error) {
 		suspend_stats.fail++;
@@ -570,6 +574,7 @@ int pm_suspend(suspend_state_t state)
 	} else {
 		suspend_stats.success++;
 	}
+	sunxi_suspend_flag = 0;
 	pm_suspend_marker("exit");
 	return error;
 }

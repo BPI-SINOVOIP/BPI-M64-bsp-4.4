@@ -475,11 +475,16 @@ void set_apb(void)
 
 void set_pll_dma(void)
 {
+	u32 tmp;
+
 	/*dma reset*/
 	writel(readl(CCMU_DMA_BGR_REG)  | (1 << 16), CCMU_DMA_BGR_REG);
 	__usdelay(20);
 	/*gating clock for dma pass*/
 	writel(readl(CCMU_DMA_BGR_REG) | (1 << 0), CCMU_DMA_BGR_REG);
+
+	tmp = readl(CCMU_MBUS_MST_CLK_GATING_REG) | (1<<0);
+	writel(tmp, CCMU_MBUS_MST_CLK_GATING_REG);
 }
 
 void set_pll_mbus(void)

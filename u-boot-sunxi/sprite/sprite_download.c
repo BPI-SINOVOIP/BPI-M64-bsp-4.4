@@ -130,7 +130,7 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 	int ret;
 	int storage_type = 0;
 	int mbr_num = SUNXI_MBR_COPY_NUM;
-
+	int work_mode = get_boot_work_mode();
 	if (get_boot_storage_type() == STORAGE_NOR)
 	{
 		  mbr_num = 1;
@@ -142,13 +142,12 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 
 		return -1;
 	}
-	if(sunxi_sprite_init(0))
-	{
-		printf("sunxi sprite init fail when downlaod mbr\n");
-
-		return -1;
+	if (work_mode != WORK_MODE_BOOT) {
+		if (sunxi_sprite_init(0)) {
+			printf("sunxi sprite init fail when downlaod mbr\n");
+			return -1;
+		}
 	}
-
 	storage_type = get_boot_storage_type();
 #ifdef CONFIG_SUNXI_GPT
 	/*write sunxi mbr for compatible*/
@@ -177,7 +176,8 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 
 		ret = -1;
 	}
-	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type || STORAGE_SD1 == storage_type)
+
+	if(STORAGE_EMMC == storage_type || STORAGE_EMMC3 == storage_type || STORAGE_SD1 == storage_type || STORAGE_SD == storage_type)
 	{
 		printf("begin to write standard mbr\n");
 		if(card_download_standard_mbr(buffer))
@@ -193,11 +193,11 @@ int sunxi_sprite_download_mbr(void *buffer, uint buffer_size)
 		printf("sunxi_sprite_verify_mbr_from_flash fail\n");
 		ret = -1;
 	}
-	if(sunxi_sprite_exit(0))
-	{
-		printf("sunxi sprite exit fail when downlaod mbr\n");
-
-		return -1;
+	if (work_mode != WORK_MODE_BOOT) {
+		if (sunxi_sprite_exit(0)) {
+			printf("sunxi sprite exit fail when downlaod mbr\n");
+			return -1;
+		}
 	}
 
 	return ret;
@@ -371,6 +371,12 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 					return -1;
 				}
 			}
+			else if (production_media == STORAGE_SD) {
+				if (mmc_write_info(0,(void *)boot0->prvt_head.storage_data,STORAGE_BUFFER_SIZE)) {
+					printf("add sdmmc0 private info fail!\n");
+					return -1;
+				}
+			}
 		}
 		if (uboot_spare_head.boot_data.work_mode != WORK_MODE_SPRITE_RECOVERY)
 		{
@@ -410,6 +416,7 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 		{
 			return card_download_boot0(boot0->boot_head.length, buffer,production_media);
 		}
+		printf("storage type = %d\n", production_media);
 	}
 	else
 	{
@@ -472,7 +479,8 @@ int sunxi_sprite_download_boot0(void *buffer, int production_media)
 
 		//update dram param
 		if (uboot_spare_head.boot_data.work_mode == WORK_MODE_CARD_PRODUCT ||
-			uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE)
+			uboot_spare_head.boot_data.work_mode == WORK_MODE_UDISK_UPDATE ||
+			uboot_spare_head.boot_data.work_mode == WORK_MODE_BOOT)
 		{
 			memcpy((void *)toc0_config->dram_para, (void *)(uboot_spare_head.boot_data.dram_para), 32 * 4);
 			//toc0_config->dram_para[4] += toc0_config->secure_dram_mbytes;
@@ -858,6 +866,11 @@ int sunxi_mbr_convert_to_gpt(void *sunxi_mbr_buf, char *gpt_buf,int storage_type
 		if(i == sunxi_mbr->PartCount-1)
 		{
 			pgpt_entry->ending_lba = gpt_head->last_usable_lba - 1;
+			if (storage_type != STORAGE_NOR || storage_type != STORAGE_SPI_NAND) {
+				if ((pgpt_entry->ending_lba + 1) & 0x7) {
+					pgpt_entry->ending_lba = (((pgpt_entry->ending_lba) & ~(0x7)) - 1);
+				}
+			}
 		}
 
 		printf("GPT:%-12s: %-12llx  %-12llx\n", sunxi_mbr->array[i].name, pgpt_entry->starting_lba, pgpt_entry->ending_lba);

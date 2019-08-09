@@ -33,14 +33,11 @@ void sunxi_lcd_tcon_enable(u32 screen_id);
 /**
  * sunxi_lcd_dsi_close - stop dsi transition
  * @screen_id: The index of screen.
+ * @cmd_en: enable cmd mode
+ * @lp_en: enable low power mode
  */
-void sunxi_lcd_dsi_close(u32 screen_id);
+void sunxi_lcd_dsi_mode_switch(u32 screen_id, u32 cmd_en, u32 lp_en);
 
-/**
- * sunxi_lcd_dsi_open - start dsi transition
- * @screen_id: The index of screen.
- */
-void sunxi_lcd_dsi_open(u32 screen_id);
 /**
  * sunxi_lcd_tcon_disable - disable timing controller.
  * @screen_id: The index of screen.

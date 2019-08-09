@@ -36,6 +36,7 @@ extern void boot0_jmp_other(unsigned int addr);
 
 static u32 before_crc;
 static u32 after_crc;
+static pm_dram_para_t soc_dram_state;
 
 extended_standby_t *pextended_standby = (extended_standby_t *)(STANDBY_SPACE_BASE_ADDR + EXTENDED_STANDBY_BASE_OFFSET);
 
@@ -200,7 +201,17 @@ static int probe_super_standby_flag(void)
 void handler_super_standby(void)
 {
 	if (probe_super_standby_flag()) {
-		ppm_dram_para = (pm_dram_para_t *)(&(pextended_standby->soc_dram_state));
+		/* high 28 bits for magic number, low 4 bits for enable */
+		if ((readl(DRAM_CRC_EN_REG) & (~0xf)) != DRAM_CRC_MAGIC)
+			ppm_dram_para = (pm_dram_para_t *)
+				(&(pextended_standby->soc_dram_state));
+		else {
+			soc_dram_state.crc_en = readl(DRAM_CRC_EN_REG) & 0xf;
+			soc_dram_state.crc_start = readl(DRAM_CRC_START_REG);
+			soc_dram_state.crc_len = readl(DRAM_CRC_LEN_REG);
+			ppm_dram_para = &soc_dram_state;
+		}
+
 		if (standby_dram_crc_enable (ppm_dram_para)) {
 			before_crc = readl (DRAM_CRC_REG_ADDR);
 			after_crc = standby_dram_crc (ppm_dram_para);

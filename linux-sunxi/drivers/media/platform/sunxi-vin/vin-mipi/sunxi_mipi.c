@@ -66,6 +66,30 @@ static struct combo_format sunxi_mipi_formats[] = {
 	}, {
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
 		.bit_width = RAW12,
+	}, {
+		.code = MEDIA_BUS_FMT_UYVY8_2X8,
+		.bit_width = RAW8,
+	}, {
+		.code = MEDIA_BUS_FMT_VYUY8_2X8,
+		.bit_width = RAW8,
+	}, {
+		.code = MEDIA_BUS_FMT_YUYV8_2X8,
+		.bit_width = RAW8,
+	}, {
+		.code = MEDIA_BUS_FMT_YVYU8_2X8,
+		.bit_width = RAW8,
+	}, {
+		.code = MEDIA_BUS_FMT_UYVY10_2X10,
+		.bit_width = RAW10,
+	}, {
+		.code = MEDIA_BUS_FMT_VYUY10_2X10,
+		.bit_width = RAW10,
+	}, {
+		.code = MEDIA_BUS_FMT_YUYV10_2X10,
+		.bit_width = RAW10,
+	}, {
+		.code = MEDIA_BUS_FMT_YVYU10_2X10,
+		.bit_width = RAW10,
 	}
 };
 
@@ -257,8 +281,15 @@ static enum pkt_fmt get_pkt_fmt(u32 code)
 	case MEDIA_BUS_FMT_RGB565_2X8_BE:
 		return MIPI_RGB565;
 	case MEDIA_BUS_FMT_UYVY8_1X16:
+	case MEDIA_BUS_FMT_UYVY8_2X8:
+	case MEDIA_BUS_FMT_VYUY8_2X8:
+	case MEDIA_BUS_FMT_YVYU8_2X8:
+	case MEDIA_BUS_FMT_YUYV8_2X8:
 		return MIPI_YUV422;
+	case MEDIA_BUS_FMT_UYVY10_2X10:
+	case MEDIA_BUS_FMT_VYUY10_2X10:
 	case MEDIA_BUS_FMT_YUYV10_2X10:
+	case MEDIA_BUS_FMT_YVYU10_2X10:
 		return MIPI_YUV422_10;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
 	case MEDIA_BUS_FMT_SGBRG8_1X8:
@@ -499,7 +530,7 @@ static int sunxi_mipi_s_mbus_config(struct v4l2_subdev *sd,
 			mipi->cmb_cfg.lane_num = 4;
 			mipi->cmb_cfg.lvds_ln = LVDS_4LANE;
 		}
-	} else if (cfg->type == V4L2_MBUS_PARALLEL) {
+	} else {
 		memcpy(mipi->if_name, "combo_parallel", sizeof("combo_parallel"));
 		mipi->if_type = V4L2_MBUS_PARALLEL;
 	}

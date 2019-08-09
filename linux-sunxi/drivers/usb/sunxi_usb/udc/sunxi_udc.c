@@ -74,18 +74,6 @@ static struct platform_device *g_udc_pdev;
 
 static __u32 dma_working;
 
-atomic_t vfs_read_flag;
-EXPORT_SYMBOL_GPL(vfs_read_flag);
-
-atomic_t vfs_write_flag;
-EXPORT_SYMBOL_GPL(vfs_write_flag);
-
-unsigned int vfs_amount;
-EXPORT_SYMBOL_GPL(vfs_amount);
-
-loff_t vfs_file_offset;
-EXPORT_SYMBOL_GPL(vfs_file_offset);
-
 #define	DMA_ADDR_INVALID	(~(dma_addr_t)0)
 
 static u8 crq_bRequest;
@@ -1747,13 +1735,6 @@ static irqreturn_t sunxi_udc_irq(int dummy, void *_dev)
 	/* RESET */
 	if (usb_irq & USBC_INTUSB_RESET) {
 		DMSG_INFO_UDC("IRQ: reset\n");
-
-		DMSG_INFO_UDC("(1:star,2:end): vfs_read:%d, vfs_write:%d,dma_working:%d,amount:%u,file_offset:%llu\n",
-			atomic_read(&vfs_read_flag),
-			atomic_read(&vfs_write_flag),
-			dma_working,
-			vfs_amount,
-			(unsigned long long)vfs_file_offset);
 
 		USBC_INT_ClearMiscPending(g_sunxi_udc_io.usb_bsp_hdle,
 				USBC_INTUSB_RESET);
@@ -3587,9 +3568,6 @@ static int udc_init(void)
 	int retval = 0;
 
 	usb_connect = 0;
-
-	atomic_set(&vfs_read_flag, 0);
-	atomic_set(&vfs_write_flag, 0);
 
 	/* driver register */
 	retval = platform_driver_register(&sunxi_udc_driver);

@@ -16,6 +16,7 @@ typedef struct _pmu_info
 
 sunxi_pmu_info g_pmu_info[] =\
 {
+	{"axp21x", (0x68>>1)},
 	{"axp22x", (0x68>>1)},
 	{"axp81X", 0x11},
 	{"axp809", 0x12},

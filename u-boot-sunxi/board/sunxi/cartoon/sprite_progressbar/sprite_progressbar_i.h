@@ -41,6 +41,11 @@ typedef struct  _progressbar_t
 	int  frame_color;			//边框颜色
 	int  progress_color;		//内部颜色
 	int  progress_ratio;		//当前进度百分比
+	/*0:left to right*/
+	/*1:right to left*/
+	/*2:up to down*/
+	/*3:down to up*/
+	int direction_option;
 }
 progressbar_t;
 

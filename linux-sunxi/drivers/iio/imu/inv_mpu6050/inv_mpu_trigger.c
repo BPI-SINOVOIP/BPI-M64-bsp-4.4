@@ -13,6 +13,44 @@
 
 #include "inv_mpu_iio.h"
 
+#if defined(CONFIG_MPU_ALLWINNER)
+struct inv_mpu6050_state *st_shadow;
+extern int inv_irq;
+#endif
+
+static void inv_mpu6050_work(struct work_struct *work)
+{
+	struct inv_mpu6050_state *st = container_of(work,
+		struct inv_mpu6050_state, work.work);
+
+	iio_trigger_generic_data_rdy_poll(st->client->irq, st->trig);
+#ifdef POLL_WORK
+	schedule_work(&st->work);
+#else
+	if (st->irq_is_disable) {
+		enable_irq(inv_irq);
+		st->irq_is_disable = 0;
+	}
+#endif
+}
+
+
+#ifndef POLL_WORK
+irqreturn_t mpu6050_irq_handler(int irq, void *private)
+{
+	/*struct inv_mpu6050_state *st = container_of((struct iio_trigger *)private,
+		struct inv_mpu6050_state, trig);*/
+
+	if (!st_shadow->irq_is_disable) {
+		st_shadow->irq_is_disable = 1;
+		disable_irq_nosync(inv_irq);
+	}
+	schedule_delayed_work(&st_shadow->work, st_shadow->poll_time_jiffies);
+	return IRQ_HANDLED;
+}
+#endif
+
+
 static void inv_scan_query(struct iio_dev *indio_dev)
 {
 	struct inv_mpu6050_state  *st = iio_priv(indio_dev);
@@ -103,7 +141,17 @@ static int inv_mpu6050_set_enable(struct iio_dev *indio_dev, bool enable)
 static int inv_mpu_data_rdy_trigger_set_state(struct iio_trigger *trig,
 						bool state)
 {
-	return inv_mpu6050_set_enable(iio_trigger_get_drvdata(trig), state);
+	struct iio_dev *indio_dev = iio_trigger_get_drvdata(trig);
+#if defined(POLL_WORK)
+	struct inv_mpu6050_state *st = iio_priv(indio_dev);
+
+	if (state == true) {
+		schedule_delayed_work(&st->work, st->poll_time_jiffies);
+	} else {
+		cancel_delayed_work_sync(&st->work);
+	}
+#endif
+	return inv_mpu6050_set_enable(indio_dev, state);
 }
 
 static const struct iio_trigger_ops inv_mpu_trigger_ops = {
@@ -111,11 +159,16 @@ static const struct iio_trigger_ops inv_mpu_trigger_ops = {
 	.set_trigger_state = &inv_mpu_data_rdy_trigger_set_state,
 };
 
+
 int inv_mpu6050_probe_trigger(struct iio_dev *indio_dev)
 {
 	int ret;
 	struct inv_mpu6050_state *st = iio_priv(indio_dev);
 
+#if defined(CONFIG_MPU_ALLWINNER)
+	if (inv_irq == -1)
+		return 0;
+#endif
 	st->trig = devm_iio_trigger_alloc(&indio_dev->dev,
 					  "%s-dev%d",
 					  indio_dev->name,
@@ -123,13 +176,23 @@ int inv_mpu6050_probe_trigger(struct iio_dev *indio_dev)
 	if (!st->trig)
 		return -ENOMEM;
 
+#if !defined(POLL_WORK)
+	st->irq_is_disable = 0;
+	st->poll_time_jiffies = msecs_to_jiffies(0);
+	INIT_DELAYED_WORK(&st->work, inv_mpu6050_work);
+	st_shadow = st;
+
 	ret = devm_request_irq(&indio_dev->dev, st->client->irq,
-			       &iio_trigger_generic_data_rdy_poll,
+			       mpu6050_irq_handler,
 			       IRQF_TRIGGER_RISING,
 			       "inv_mpu",
 			       st->trig);
 	if (ret)
 		return ret;
+#else
+	st->poll_time_jiffies = msecs_to_jiffies(10);
+	INIT_DELAYED_WORK(&st->work, inv_mpu6050_work);
+#endif
 
 	st->trig->dev.parent = &st->client->dev;
 	st->trig->ops = &inv_mpu_trigger_ops;

@@ -924,7 +924,7 @@ static ssize_t iio_buffer_store_enable(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	mutex_lock(&indio_dev->mlock);
+	/*mutex_lock(&indio_dev->mlock);*/
 
 	/* Find out if it is in the list */
 	inlist = iio_buffer_is_active(indio_dev->buffer);
@@ -940,7 +940,7 @@ static ssize_t iio_buffer_store_enable(struct device *dev,
 					 NULL, indio_dev->buffer);
 
 done:
-	mutex_unlock(&indio_dev->mlock);
+	/*mutex_unlock(&indio_dev->mlock);*/
 	return (ret < 0) ? ret : len;
 }
 

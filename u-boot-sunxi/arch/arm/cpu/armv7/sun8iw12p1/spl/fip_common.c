@@ -153,25 +153,40 @@ int load_fip(int *use_monitor)
 #endif
 		printf("Entry_name        = %s\n",   toc1_item->name);
 
-		if(strncmp(toc1_item->name, ITEM_UBOOT_NAME, sizeof(ITEM_UBOOT_NAME)) == 0)
-		{
-			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)CONFIG_SYS_TEXT_BASE);
-		}
-		else if(strncmp(toc1_item->name, ITEM_MONITOR_NAME, sizeof(ITEM_MONITOR_NAME)) == 0)
-		{
-			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)BL31_BASE);
+		if (strncmp(toc1_item->name, ITEM_UBOOT_NAME,
+			    sizeof(ITEM_UBOOT_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset / 512,
+					(toc1_item->data_len + 511) / 512,
+					(void *)CONFIG_SYS_TEXT_BASE);
+		} else if (strncmp(toc1_item->name, ITEM_OPTEE_NAME,
+				   sizeof(ITEM_OPTEE_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset / 512,
+					(toc1_item->data_len + 511) / 512,
+					(void *)OPTEE_BASE);
 			*use_monitor = 1;
-		}
-		else if(strncmp(toc1_item->name, ITEM_SCP_NAME, sizeof(ITEM_SCP_NAME)) == 0)
-		{
-			toc1_flash_read(toc1_item->data_offset/512, CONFIG_SYS_SRAMA2_SIZE/512, (void *)SCP_SRAM_BASE);
-			toc1_flash_read((toc1_item->data_offset+0x18000)/512, SCP_DRAM_SIZE/512, (void *)SCP_DRAM_BASE);
-			memcpy((void *)(SCP_SRAM_BASE+HEADER_OFFSET+SCP_DRAM_PARA_OFFSET),dram_para_addr,SCP_DARM_PARA_NUM * sizeof(int));
+		} else if (strncmp(toc1_item->name, ITEM_MONITOR_NAME,
+				   sizeof(ITEM_MONITOR_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset / 512,
+					(toc1_item->data_len + 511) / 512,
+					(void *)BL31_BASE);
+			*use_monitor = 1;
+		} else if (strncmp(toc1_item->name, ITEM_SCP_NAME,
+				   sizeof(ITEM_SCP_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset / 512,
+					CONFIG_SYS_SRAMA2_SIZE / 512,
+					(void *)SCP_SRAM_BASE);
+			toc1_flash_read(
+			    (toc1_item->data_offset + SCP_CODE_DRAM_OFFSET) /
+				512,
+			    SCP_DRAM_SIZE / 512, (void *)SCP_DRAM_BASE);
+			memcpy((void *)(SCP_SRAM_BASE + HEADER_OFFSET +
+					SCP_DRAM_PARA_OFFSET),
+			       dram_para_addr, SCP_DARM_PARA_NUM * sizeof(int));
 		}
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
 		else if (strncmp(toc1_item->name, ITEM_LOGO_NAME,
-				sizeof(ITEM_LOGO_NAME)) == 0) {
-				addr = SUNXI_LOGO_COMPRESSED_LOGO_SIZE_ADDR;
+				 sizeof(ITEM_LOGO_NAME)) == 0) {
+			addr = SUNXI_LOGO_COMPRESSED_LOGO_SIZE_ADDR;
 			*(uint *)addr = toc1_item->data_len;
 			toc1_flash_read(toc1_item->data_offset/512,
 				(toc1_item->data_len+511)/512,
@@ -218,6 +233,5 @@ int load_fip(int *use_monitor)
 	}
 	return 0;
 }
-
 
 

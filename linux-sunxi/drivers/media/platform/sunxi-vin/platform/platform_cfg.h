@@ -16,6 +16,7 @@
 
 /*#define FPGA_VER*/
 #define SUNXI_MEM
+/* #define VIN_IN_UBOOT */
 
 #ifndef FPGA_VER
 #include <linux/clk.h>
@@ -47,25 +48,26 @@
 
 #if defined CONFIG_ARCH_SUN50IW1P1
 #include "sun50iw1p1_vfe_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_SUN50IW1P1
 #elif defined CONFIG_ARCH_SUN8IW11P1
 #include "sun8iw11p1_vfe_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_NUM
 #elif defined CONFIG_ARCH_SUN50IW3P1
 #include "sun50iw3p1_vin_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_NUM
 #define CROP_AFTER_SCALER
 #elif defined CONFIG_ARCH_SUN50IW6P1
 #include "sun50iw6p1_vin_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_NUM
 #define CROP_AFTER_SCALER
 #elif defined CONFIG_ARCH_SUN8IW12P1
 #include "sun8iw12p1_vin_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_SUN8IW12P1
 #elif defined CONFIG_ARCH_SUN8IW17P1
-#include "sun8iw17p1_vin_cfg.h"
-#define SUNXI_PLATFORM_ID ISP_PLATFORM_SUN8IW17P1
+#include "sun8iw12p1_vin_cfg.h"
 #endif
+
+#define ALIGN_4K(x)	(((x) + (4095)) & ~(4095))
+#define ALIGN_32B(x)	(((x) + (31)) & ~(31))
+#define ALIGN_16B(x)	(((x) + (15)) & ~(15))
+#define MAX(a, b)	(((a) > (b)) ? (a) : (b))
+#define MIN(a, b)	(((a) < (b)) ? (a) : (b))
+#define CLIP(a, i, s)	(((a) > (s)) ? (s) : MAX(a, i))
 
 struct mbus_framefmt_res {
 	u32 res_pix_fmt;

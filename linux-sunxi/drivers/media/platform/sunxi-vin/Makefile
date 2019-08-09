@@ -20,9 +20,7 @@ vin_v4l2-y					+= vin-mipi/sunxi_mipi.o
 vin_v4l2-y					+= vin-mipi/bsp_mipi_csi_null.o
 vin_v4l2-y					+= vin-mipi/combo_rx/combo_rx_reg.o
 vin_v4l2-y					+= vin-isp/sunxi_isp.o
-vin_v4l2-y					+= vin-isp/bsp_isp.o \
-							vin-isp/sun8iw12p1/sun8iw12p1_isp_reg_cfg.o \
-							vin-isp/isp_platform_drv.o
+vin_v4l2-y					+= vin-isp/sun8iw12p1/sun8iw12p1_isp_reg_cfg.o
 
 vin_v4l2-y					+= vin-vipp/sunxi_scaler.o
 vin_v4l2-y					+= vin-vipp/vipp_reg.o

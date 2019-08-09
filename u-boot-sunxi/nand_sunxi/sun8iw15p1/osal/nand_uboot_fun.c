@@ -334,6 +334,24 @@ int  NAND_EraseBootBlocks(void)
 	return 0;
 }
 
+/* #define FORCE_ERASE_ALL_INCLUDE_UBOOT_BLOCKS */
+
+#ifdef FORCE_ERASE_ALL_INCLUDE_UBOOT_BLOCKS
+int  NAND_EraseUbootBlocks(void)
+{
+	int i, uboot_start_block, uboot_end_block;
+
+	uboot_start_block = get_uboot_start_block();
+	uboot_end_block = get_uboot_next_block();
+	NAND_Print("clear uboot from %d to %d.\n", uboot_start_block, uboot_end_block);
+	for (i = uboot_start_block; i < uboot_end_block; i++) {
+		nand_physic_erase_block(0, i);
+	}
+	NAND_Print("has cleared the uboot blocks.\n");
+	return 0;
+}
+#endif
+
 
 int  NAND_EraseChip(void)
 {
@@ -342,6 +360,7 @@ int  NAND_EraseChip(void)
 
 int  NAND_EraseChip_force(void)
 {
+	NAND_Print("force erase all chip\n");
 	return nand_uboot_erase_all_chip(1);
 }
 
@@ -386,6 +405,12 @@ int NAND_UbootProbe(void)
 	int ret = 0;
 
 	NAND_Print_DBG("NAND_UbootProbe start\n");
+#ifdef FORCE_ERASE_ALL_INCLUDE_UBOOT_BLOCKS
+	NAND_Print_DBG("erase all begin\n");
+	NAND_Uboot_Erase(1);
+	NAND_Print_DBG("erase all end and just return FAIL directly\n");
+	return -1;
+#endif
 
 	/* logic init */
 	ret = NAND_PhyInit();
@@ -420,8 +445,13 @@ int NAND_Uboot_Erase(int erase_flag)
 	{
 		NAND_Print("erase by flag %d\n", erase_flag);
 		NAND_EraseBootBlocks();
+#ifndef FORCE_ERASE_ALL_INCLUDE_UBOOT_BLOCKS
 		NAND_EraseChip();
 		NAND_UpdatePhyArch();
+#else
+		NAND_EraseChip_force();
+		NAND_EraseUbootBlocks();
+#endif
 		nand_erased = 1;
 	}
 	else

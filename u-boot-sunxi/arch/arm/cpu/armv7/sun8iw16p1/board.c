@@ -75,7 +75,7 @@ int power_source_init(void)
 	}
 
 	if (axp_exist) {
-		/* set_sunxi_gpio_power_bias(); */
+		set_sunxi_gpio_power_bias();
 		axp_set_charge_vol_limit();
 		axp_set_all_limit();
 		axp_set_hardware_poweron_vol();

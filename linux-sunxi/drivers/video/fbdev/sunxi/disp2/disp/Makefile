@@ -11,7 +11,7 @@ disp-objs += de/disp_display.o de/disp_features.o de/disp_device.o \
 	     de/disp_hdmi.o de/disp_tv.o de/disp_vdevice.o \
 	     de/disp_eink_manager.o de/eink_buffer_manager.o \
 	     de/eink_pipeline_manager.o de/disp_format_convert.o de/disp_vga.o \
-	     de/disp_vdpo.o de/disp_edp.o
+	     de/disp_vdpo.o de/disp_edp.o de/disp_rotation_sw.o
 
 disp-objs += lcd/panels.o lcd/lcd_source.o lcd/default_panel.o \
 		lcd/lt070me05000.o lcd/wtq05027d01.o lcd/t27p06.o \
@@ -19,5 +19,6 @@ disp-objs += lcd/panels.o lcd/lcd_source.o lcd/default_panel.o \
 		lcd/default_eink.o lcd/cpu_gg1p4062utsw.o lcd/ls029b3sx02.o \
 		lcd/he0801a068.o lcd/inet_dsi_panel.o lcd/lq101r1sx03.o \
 		lcd/WilliamLcd.o lcd/tm_dsi_panel.o lcd/S070WV20_MIPI_RGB.o \
-		lcd/ili9881c.o
+		lcd/ili9881c.o lcd/ili9341.o lcd/fd055hd003s.o lcd/lh219wq1.o \
+		lcd/h245qbn02.o lcd/eagle_1_720_1280.o
 disp-objs += $(obj_low)

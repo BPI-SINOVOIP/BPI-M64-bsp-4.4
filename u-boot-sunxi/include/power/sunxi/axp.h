@@ -44,6 +44,7 @@
 
 #define  SUNXI_AXP_NULL                  null
 #define  SUNXI_AXP_20X                   20
+#define  SUNXI_AXP_21X                   21
 #define  SUNXI_AXP_22X                   22
 #define  SUNXI_AXP_15X                   15
 #define  SUNXI_AXP_809                   809
@@ -53,6 +54,7 @@
 #define  SUNXI_AXP_858					858
 #define  SUNXI_AXP_2585                  2585
 
+#define  RSB_SADDR_AXP21X	         	(0x3A3)
 #define  RSB_SADDR_AXP22X	         	(0x3A3)
 #define  RSB_SADDR_AXP809		        (0x3A3)
 #define  RSB_SADDR_AXP806		        (0x745)
@@ -86,6 +88,9 @@ typedef struct
 	int (* set_coulombmeter_onoff)(int onoff);
 
 	int (* probe_battery_vol)(void);
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+	int (*set_led_control)(int);
+#endif
 	int (* probe_battery_ratio)(void);
 	int (* probe_battery_exist)(void);
 
@@ -108,6 +113,47 @@ typedef struct
 sunxi_axp_dev_t;
 
 
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+#define  __sunxi_axp_module_init(type, name)						\
+			sunxi_axp_dev_t sunxi_axp_##name =				\
+			{												\
+				type,										\
+				axp##name##_set_supply_status,				\
+				axp##name##_set_supply_status_byname,		\
+				axp##name##_probe_supply_status,			\
+				axp##name##_probe_supply_status_byname,		\
+															\
+				axp##name##_set_next_sys_mode,				\
+				axp##name##_probe_pre_sys_mode,				\
+				axp##name##_probe_this_poweron_cause,		\
+															\
+				axp##name##_probe_power_status,				\
+				axp##name##_set_coulombmeter_onoff,   		\
+															\
+				axp##name##_probe_battery_vol,				\
+				axp##name##_set_led_control,				\
+				axp##name##_probe_battery_ratio,			\
+				axp##name##_probe_battery_exist,			\
+															\
+				axp##name##_probe_key,						\
+															\
+				axp##name##_set_power_off,					\
+				axp##name##_set_power_onoff_vol,			\
+															\
+				axp##name##_set_charge_control,				\
+				axp##name##_set_vbus_cur_limit,				\
+				axp##name##_probe_vbus_cur_limit,           \
+                axp##name##_set_vbus_vol_limit,				\
+				axp##name##_set_charge_current,				\
+				axp##name##_probe_charge_current,			\
+															\
+				axp##name##_probe_int_pending,				\
+				axp##name##_probe_int_enable,				\
+				axp##name##_set_int_enable					\
+			}
+
+
+#else
 #define  __sunxi_axp_module_init(type, name)						\
 			sunxi_axp_dev_t sunxi_axp_##name =				\
 			{												\
@@ -136,7 +182,7 @@ sunxi_axp_dev_t;
 				axp##name##_set_charge_control,				\
 				axp##name##_set_vbus_cur_limit,				\
 				axp##name##_probe_vbus_cur_limit,           \
-                axp##name##_set_vbus_vol_limit,				\
+				axp##name##_set_vbus_vol_limit,				\
 				axp##name##_set_charge_current,				\
 				axp##name##_probe_charge_current,			\
 															\
@@ -145,6 +191,7 @@ sunxi_axp_dev_t;
 				axp##name##_set_int_enable					\
 			}
 
+#endif
 #define  sunxi_axp_module_init(type, name)  __sunxi_axp_module_init(type, name)
 
 
@@ -160,6 +207,10 @@ sunxi_axp_module_ext(SUNXI_AXP_NULL);
 
 #if defined(CONFIG_SUNXI_AXP81X)
 	sunxi_axp_module_ext(SUNXI_AXP_81X);
+#endif
+
+#if defined(CONFIG_SUNXI_AXP21)
+	sunxi_axp_module_ext(SUNXI_AXP_21X);
 #endif
 
 #if defined(CONFIG_SUNXI_AXP22)
@@ -225,11 +276,15 @@ static inline int axp_i2c_write(unsigned char chip, unsigned char addr, unsigned
 static inline int axp_i2c_config(unsigned int chip, unsigned char slave_id)
 {
 #if defined(CONFIG_AXP_USE_RSB)
+#if defined(CONFIG_SUNXI_AXP21)
+	if (chip == SUNXI_AXP_21X) {
+		sunxi_rsb_config(slave_id, RSB_SADDR_AXP21X);
+	}
+#endif
 #if defined(CONFIG_SUNXI_AXP22)
-    if(chip == SUNXI_AXP_22X)
-    {
-        sunxi_rsb_config(slave_id, RSB_SADDR_AXP22X);
-    }
+	if (chip == SUNXI_AXP_22X) {
+		sunxi_rsb_config(slave_id, RSB_SADDR_AXP22X);
+	}
 #endif
 #if defined(CONFIG_SUNXI_AXP806)
     if(chip == SUNXI_AXP_806)

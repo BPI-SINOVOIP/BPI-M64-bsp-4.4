@@ -1,3 +1,10 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ */
+
 #include <common.h>
 //#include <asm/arch/drv_display.h>
 #include <sys_config.h>
@@ -58,7 +65,16 @@ static void EnterNormalShutDownMode(void)
 
 static void EnterLowPowerShutDownMode(void)
 {
+
 	printf("battery ratio is low without  dc or ac, should be ShowDown\n");
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+	/*use pmu led and 2Hz frequency*/
+	axp_set_led_control(0x02);
+	__msdelay(3000);
+	/*close pmu led */
+	axp_set_led_control(0x00);
+	__msdelay(1000);
+#else
 	#ifdef CONFIG_EINK_PANEL_USED
 	board_display_eink_update("bat\\low_pwr.bmp", 0x04);
 	#else
@@ -67,6 +83,7 @@ static void EnterLowPowerShutDownMode(void)
 	#endif
 	#endif
 	__msdelay(3000);
+#endif
 	sunxi_board_shutdown();
 	for(;;);
 }
@@ -88,6 +105,15 @@ static void EnterShutDownWithChargeMode(void)
 
 static void EnterAndroidChargeMode(void)
 {
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR) || defined(CONFIG_SUN8IW16P1_AXP2101_NOR)
+	printf("startup system with ac or vubs\n");
+	int ret = -1;
+#if defined(CONFIG_SUNXI_LOAD_JPEG)
+	ret = sunxi_load_jpeg("bootlogo.jpg");
+#endif
+	if (ret)
+		ret = read_bmp_to_kernel("bootlogo");
+#else
 	printf("sunxi_bmp_charger_display\n");
 	#ifdef CONFIG_EINK_PANEL_USED
 	board_display_eink_update("bat\\battery_charge.bmp", 0x04);
@@ -96,6 +122,7 @@ static void EnterAndroidChargeMode(void)
 	sunxi_bmp_display("bat\\battery_charge.bmp");
 	#endif
 	#endif
+#endif
 
 	UpdateChargeVariable();
 }
@@ -106,11 +133,19 @@ static void EnterNormalBootMode(void)
 	#ifdef CONFIG_EINK_PANEL_USED
 	board_display_eink_update("bootlogo.bmp", 0x04);
 	#else
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR) || defined(CONFIG_SUN8IW16P1_AXP2101_NOR)
+	int ret = -1;
+#if defined(CONFIG_SUNXI_LOAD_JPEG)
+	ret = sunxi_load_jpeg("bootlogo.jpg");
+#endif
+	if (ret)
+		ret = read_bmp_to_kernel("bootlogo");
+#else
 	#if defined(CONFIG_SUNXI_DISPLAY)
 	sunxi_bmp_display("bootlogo.bmp");
 	#endif
+#endif
 	#endif
-
 }
 
 
@@ -198,17 +233,31 @@ static BOOT_POWER_STATE_E GetStateOnLowBatteryRatio(int PowerBus,int LowVoltageF
 			break;
 		}
 
-		//low voltage
-		if(LowVoltageFlag)
-		{
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR) || defined(CONFIG_SUN8IW16P1_AXP2101_NOR)
+		/*sdv product: you should startup when ac or vbus exist*/
+		if (LowVoltageFlag) {
+			/*checking exist or not*/
+			if (PowerBus != 0)
+				BootPowerState = STATE_NORMAL_BOOT;
+			else
+				BootPowerState = STATE_SHUTDOWN_DIRECTLY;
+		} else { /*high voltage*/
+			/*checking acin exist ,open it*/
+			if (PowerBus != 0)
+				BootPowerState = STATE_ANDROID_CHARGE;
+			else
+				BootPowerState = STATE_NORMAL_BOOT;
+		}
+#else
+		/*low voltage*/
+		if (LowVoltageFlag) {
 			BootPowerState = STATE_SHUTDOWN_CHARGE;
+		} else { /*high voltage*/
+			BootPowerState =
+			    (PowerOnCause == AXP_POWER_ON_BY_POWER_TRIGGER) ? \
+				    STATE_ANDROID_CHARGE:STATE_SHUTDOWN_CHARGE;
 		}
-		//high voltage
-		else
-		{
-			BootPowerState = (PowerOnCause == AXP_POWER_ON_BY_POWER_TRIGGER) ? \
-				STATE_ANDROID_CHARGE:STATE_SHUTDOWN_CHARGE;
-		}
+#endif
 	}while(0);
 	return BootPowerState;
 }

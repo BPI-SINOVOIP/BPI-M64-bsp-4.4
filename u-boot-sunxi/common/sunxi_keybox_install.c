@@ -142,6 +142,7 @@ int sunxi_keymaster_keybox_install(void)
 	char key_name[][16] = {{"ec_key"}, {"rsa_key"}, {"ec_cert1"}, {"ec_cert2"},
 		{"ec_cert3"}, {"rsa_cert1"}, {"rsa_cert2"}, {"rsa_cert3"} };
 
+	gd->keybox_installed = 0;
 	workmode =  get_boot_work_mode();
 	if (workmode != WORK_MODE_BOOT)
 		return 0;
@@ -172,6 +173,7 @@ int sunxi_keymaster_keybox_install(void)
 			pr_error("key install %s success\n", key_name[i]);
 	}
 	pr_msg("keymasters key install finish\n");
+	gd->keybox_installed = 1;
 	return 0;
 out:
 	pr_error("keymaster keys install fail !!!\n");

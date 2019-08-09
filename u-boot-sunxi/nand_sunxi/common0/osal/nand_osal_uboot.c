@@ -35,8 +35,8 @@ DECLARE_GLOBAL_DATA_PTR;
 //#define get_wvalue(addr)	(*((volatile unsigned long  *)(addr)))
 
 #define  NAND_DRV_VERSION_0		0x03
-#define  NAND_DRV_VERSION_1		0x6013
-#define  NAND_DRV_DATE			0x20171208
+#define  NAND_DRV_VERSION_1		0x6018
+#define  NAND_DRV_DATE			0x20190510
 #define  NAND_DRV_TIME			0x17191449
 /*
  *1719--AW1917--A63
@@ -659,6 +659,32 @@ __s32 NAND_PIORequest(__u32 nand_index)
 
 
 #endif
+	return 0;
+}
+__s32 NAND_3DNand_Request(void)
+{
+	u32 cfg;
+
+	cfg = *(volatile __u32 *)(NAND_PIO_BASE_ADDR + 0x340);
+	cfg |= 0x4;
+	*(volatile __u32 *)(NAND_PIO_BASE_ADDR + 0x340) = cfg;
+	printf("Change PC_Power Mode Select to 1.8V\n");
+
+
+	return 0;
+}
+
+__s32 NAND_Check_3DNand(void)
+{
+	u32 cfg;
+
+	cfg = *(volatile __u32 *)(NAND_PIO_BASE_ADDR + 0x340);
+	if ((cfg >> 2) == 0) {
+		cfg |= 0x4;
+		*(volatile __u32 *)(NAND_PIO_BASE_ADDR + 0x340) = cfg;
+		printf("Change PC_Power Mode Select to 1.8V\n");
+	}
+
 	return 0;
 }
 

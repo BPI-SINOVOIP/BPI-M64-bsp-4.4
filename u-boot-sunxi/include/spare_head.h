@@ -66,6 +66,7 @@
 #define SUNXI_SYS_RECOVERY_FLAG         (0x5D)
 #define SUNXI_USB_RECOVERY_FLAG         (0x5E)
 #define SUNXI_FASTBOOT_FLAG             (0x5F)
+#define SUNXI_UBOOT_FLAG                (0x60)
 
 #define SUNXI_VBUS_UNKNOWN                      (0)
 #define SUNXI_VBUS_EXIST                        (1)

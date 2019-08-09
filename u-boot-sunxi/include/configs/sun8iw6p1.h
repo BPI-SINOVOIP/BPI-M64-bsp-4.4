@@ -273,7 +273,7 @@
 #define CONFIG_SYS_PROMPT		"sunxi#"
 #define CONFIG_SYS_CBSIZE	256			/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384			/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	32			/* max number of command args */
+#define CONFIG_SYS_MAXARGS	64			/* max number of command args */
 
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE			CONFIG_SYS_CBSIZE
@@ -346,7 +346,7 @@
 #define CONFIG_USBD_HS
 #define BOARD_LATE_INIT		      /* init the fastboot partitions */
 #define CONFIG_SUNXI_KEY_BURN
-#define CONFIG_DETECT_RTC_BOOT_MODE
+/* #define CONFIG_DETECT_RTC_BOOT_MODE */
 
 //#define CONFIG_USE_SECURE_I2C
 //#define CONFIG_SUNXI_I2C

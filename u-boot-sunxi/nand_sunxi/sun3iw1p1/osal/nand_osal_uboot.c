@@ -37,9 +37,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SPI_RX_IO_DATA                  (SPIC0_BASE + 0x300)
 
 #define  NAND_DRV_VERSION_0             0x03
-#define  NAND_DRV_VERSION_1             0x6016
-#define  NAND_DRV_DATE                  0x20181022
-#define  NAND_DRV_TIME                  0x1503
+#define  NAND_DRV_VERSION_1             0x6019
+#define  NAND_DRV_DATE                  0x20181104
+#define  NAND_DRV_TIME                  0x1256
 
 #define NAND_CLK_BASE_ADDR              (0x01c20000)
 #define NAND_PIO_BASE_ADDR              (0x0300B000)

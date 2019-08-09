@@ -3586,20 +3586,20 @@ static int sensor_power(struct v4l2_subdev *sd, int on)
 	switch (on) {
 	case STBY_ON:
 		sensor_dbg("STBY_ON!\n");
-		cci_lock(sd);
+		/*cci_lock(sd);*/
 		vin_gpio_write(sd, PWDN, CSI_GPIO_HIGH);
 		vin_set_mclk(sd, OFF);
-		cci_unlock(sd);
+		/*cci_unlock(sd);*/
 		break;
 	case STBY_OFF:
 		sensor_dbg("STBY_OFF!\n");
-		cci_lock(sd);
+		/*cci_lock(sd);*/
 		vin_set_mclk_freq(sd, MCLK);
 		vin_set_mclk(sd, ON);
 		usleep_range(10000, 12000);
 		vin_gpio_write(sd, PWDN, CSI_GPIO_LOW);
 		usleep_range(10000, 12000);
-		cci_unlock(sd);
+		/*cci_unlock(sd);*/
 		ret = sensor_s_sw_stby(sd, CSI_GPIO_LOW);
 		if (ret < 0)
 			sensor_err("soft stby off falied!\n");
@@ -3608,7 +3608,7 @@ static int sensor_power(struct v4l2_subdev *sd, int on)
 		break;
 	case PWR_ON:
 		sensor_dbg("PWR_ON!\n");
-		cci_lock(sd);
+		/*cci_lock(sd);*/
 		vin_gpio_set_status(sd, PWDN, 1);	/*set the gpio to output */
 		vin_gpio_set_status(sd, RESET, 1);	/*set the gpio to output */
 		vin_gpio_write(sd, RESET, CSI_GPIO_HIGH);
@@ -3631,13 +3631,14 @@ static int sensor_power(struct v4l2_subdev *sd, int on)
 		vin_set_mclk_freq(sd, MCLK);
 		vin_set_mclk(sd, ON);
 		usleep_range(10000, 12000);
-		cci_unlock(sd);
+		/*cci_unlock(sd);*/
 		break;
 
 	case PWR_OFF:
 
 		sensor_dbg("PWR_OFF!\n");
-		cci_lock(sd);
+#if 0
+		/*cci_lock(sd);*/
 		vin_gpio_set_status(sd, PWDN, 1);	/*set the gpio to output */
 		vin_gpio_set_status(sd, RESET, 1);	/*set the gpio to output */
 		vin_gpio_write(sd, RESET, CSI_GPIO_LOW);
@@ -3651,8 +3652,8 @@ static int sensor_power(struct v4l2_subdev *sd, int on)
 		vin_set_pmu_channel(sd, AFVDD, OFF);	/*1.2V  CVDD_12 */
 		vin_gpio_set_status(sd, RESET, 0);	/*set the gpio to input */
 		vin_gpio_set_status(sd, PWDN, 0);	/*set the gpio to input */
-		cci_unlock(sd);
-
+		/*cci_unlock(sd);*/
+#endif
 		break;
 	default:
 		return -EINVAL;

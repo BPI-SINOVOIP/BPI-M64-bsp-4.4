@@ -14,7 +14,7 @@
 #include <private_boot0.h>
 #include <sunxi_cfg.h>
 
-#define HEADER_OFFSET     (0x4000)
+#define HEADER_OFFSET (0x4000)
 
 extern const boot0_file_head_t BT0_head;
 
@@ -35,10 +35,11 @@ extern const boot0_file_head_t BT0_head;
 ************************************************************************************************************
 */
 
-
 int toc1_flash_read(u32 start_sector, u32 blkcnt, void *buff)
 {
-	memcpy_align16(buff, (void *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + 512 * start_sector), 512 * blkcnt);
+	memcpy_align16(buff, (void *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE +
+				      512 * start_sector),
+		       512 * blkcnt);
 
 	return blkcnt;
 }
@@ -110,17 +111,22 @@ int load_fip(int *use_monitor)
 
 	void *dram_para_addr = (void *)BT0_head.prvt_head.dram_para;
 
-	struct sbrom_toc1_head_info  *toc1_head = NULL;
-	struct sbrom_toc1_item_info  *item_head = NULL;
-	struct sbrom_toc1_item_info  *toc1_item = NULL;
+	struct sbrom_toc1_head_info *toc1_head = NULL;
+	struct sbrom_toc1_item_info *item_head = NULL;
+	struct sbrom_toc1_item_info *toc1_item = NULL;
 	__maybe_unused u32 addr;
 
-	toc1_head = (struct sbrom_toc1_head_info *)CONFIG_BOOTPKG_STORE_IN_DRAM_BASE;
-	item_head = (struct sbrom_toc1_item_info *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE + sizeof(struct sbrom_toc1_head_info));
+	toc1_head =
+	    (struct sbrom_toc1_head_info *)CONFIG_BOOTPKG_STORE_IN_DRAM_BASE;
+	item_head =
+	    (struct sbrom_toc1_item_info *)(CONFIG_BOOTPKG_STORE_IN_DRAM_BASE +
+					    sizeof(
+						struct sbrom_toc1_head_info));
 
 #ifdef BOOT_DEBUG
-	printf("*******************TOC1 Head Message*************************\n");
-	printf("Toc_name          = %s\n",   toc1_head->name);
+	printf(
+	    "*******************TOC1 Head Message*************************\n");
+	printf("Toc_name          = %s\n", toc1_head->name);
 	printf("Toc_magic         = 0x%x\n", toc1_head->magic);
 	printf("Toc_add_sum	      = 0x%x\n", toc1_head->add_sum);
 
@@ -130,7 +136,8 @@ int load_fip(int *use_monitor)
 	printf("Toc_items_nr      = 0x%x\n", toc1_head->items_nr);
 	printf("Toc_valid_len     = 0x%x\n", toc1_head->valid_len);
 	printf("TOC_MAIN_END      = 0x%x\n", toc1_head->end);
-	printf("***************************************************************\n\n");
+	printf("***************************************************************"
+	       "\n\n");
 #endif
 	/* init */
 	toc1_item = item_head;
@@ -157,8 +164,11 @@ int load_fip(int *use_monitor)
 			toc1_flash_read(toc1_item->data_offset / 512,
 					(toc1_item->data_len + 511) / 512,
 					(void *)CONFIG_SYS_TEXT_BASE);
-		} else if (strncmp(toc1_item->name, ITEM_OPTEE_NAME, sizeof(ITEM_OPTEE_NAME)) == 0) {
-			toc1_flash_read(toc1_item->data_offset/512, (toc1_item->data_len+511)/512, (void *)OPTEE_BASE);
+		} else if (strncmp(toc1_item->name, ITEM_OPTEE_NAME,
+				   sizeof(ITEM_OPTEE_NAME)) == 0) {
+			toc1_flash_read(toc1_item->data_offset / 512,
+					(toc1_item->data_len + 511) / 512,
+					(void *)OPTEE_BASE);
 			*use_monitor = 1;
 		} else if (strncmp(toc1_item->name, ITEM_SCP_NAME,
 				   sizeof(ITEM_SCP_NAME)) == 0) {
@@ -166,11 +176,13 @@ int load_fip(int *use_monitor)
 					CONFIG_SYS_SRAMA2_SIZE / 512,
 					(void *)SCP_SRAM_BASE);
 			toc1_flash_read(
-			    (toc1_item->data_offset + SCP_CODE_DRAM_OFFSET) / 512,
+			    (toc1_item->data_offset + SCP_CODE_DRAM_OFFSET) /
+				512,
 			    SCP_DRAM_SIZE / 512, (void *)SCP_DRAM_BASE);
 			memcpy((void *)(SCP_SRAM_BASE + HEADER_OFFSET +
 					SCP_DRAM_PARA_OFFSET),
 			       dram_para_addr, SCP_DARM_PARA_NUM * sizeof(int));
+			sunxi_deassert_arisc();
 		}
 #ifdef CONFIG_SUNXI_MULITCORE_BOOT
 		else if (strncmp(toc1_item->name, ITEM_LOGO_NAME,
@@ -203,9 +215,15 @@ int load_fip(int *use_monitor)
 #endif
 		else if (strncmp(toc1_item->name, ITEM_DTB_NAME,
 				 sizeof(ITEM_DTB_NAME)) == 0) {
+#ifdef CONFIG_BOOT0_JUMP_KERNEL
+			toc1_flash_read(toc1_item->data_offset / 512,
+					(toc1_item->data_len + 511) / 512,
+					(void *)CONFIG_SUNXI_FDT_ADDR);
+#else
 			toc1_flash_read(toc1_item->data_offset / 512,
 					(toc1_item->data_len + 511) / 512,
 					(void *)CONFIG_DTB_STORE_IN_DRAM_BASE);
+#endif
 		} else if (strncmp(toc1_item->name, ITEM_SOCCFG_NAME,
 				   sizeof(ITEM_SOCCFG_NAME)) == 0) {
 			toc1_flash_read(

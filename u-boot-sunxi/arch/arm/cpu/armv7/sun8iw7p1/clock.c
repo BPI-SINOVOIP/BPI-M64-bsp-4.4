@@ -27,6 +27,20 @@
 #include <asm/arch/ccmu.h>
 #include <asm/arch/platform.h>
 
+
+#define set_wbit(addr, v) (*((unsigned long *)(addr)) \
+		|=  (unsigned long)(v))
+#define clr_wbit(addr, v) (*((unsigned long *)(addr)) \
+		&= ~(unsigned long)(v))
+
+/* #define CCM_DEBUG */
+#ifdef CCM_DEBUG
+#define ccm_debug(fmt, args...)	printf(fmt, ##args)
+#else
+#define ccm_debug(fmt, args...) do {} while (0)
+#endif
+
+
 struct core_pll_freq_tbl {
     int FactorN;
     int FactorK;
@@ -379,6 +393,59 @@ static struct core_pll_freq_tbl pll1_table[] = {
 static int clk_get_pll_para(struct core_pll_freq_tbl *factor, int rate);
 int sunxi_clock_get_pll6(void);
 
+void ccm_module_disable(u32 clk_id)
+{
+	switch (clk_id >> 8) {
+	case AHB1_BUS0:
+		clr_wbit(CCMU_AHB1_RST_REG0, 0x1U << (clk_id&0xff));
+		ccm_debug("\nread CCM_AHB1_RST_REG0[0x%x]\n",
+				readl(CCMU_AHB1_RST_REG0));
+		break;
+	}
+}
+
+void ccm_module_enable(u32 clk_id)
+{
+	switch (clk_id >> 8) {
+	case AHB1_BUS0:
+		set_wbit(CCMU_AHB1_RST_REG0, 0x1U << (clk_id&0xff));
+		ccm_debug("\nread enable CCM_AHB1_RST_REG0[0x%x]\n",
+				readl(CCMU_AHB1_RST_REG0));
+		break;
+	default:
+		break;
+	}
+}
+
+void ccm_clock_enable(u32 clk_id)
+{
+	switch (clk_id >> 8) {
+	case AXI_BUS:
+		set_wbit(CCMU_AHB2_CFG_GREG, 0x1U << (clk_id&0xff));
+		break;
+	case AHB1_BUS0:
+		set_wbit(CCMU_BUS_CLK_GATING_REG0, 0x1U << (clk_id&0xff));
+		ccm_debug("read s CCM_AHB1_GATE0_CTRL[0x%x]\n",
+				readl(CCMU_BUS_CLK_GATING_REG0));
+		break;
+	}
+}
+
+void ccm_clock_disable(u32 clk_id)
+{
+	switch (clk_id >> 8) {
+	case AXI_BUS:
+		clr_wbit(CCMU_AHB2_CFG_GREG, 0x1U << (clk_id&0xff));
+		break;
+	case AHB1_BUS0:
+		clr_wbit(CCMU_BUS_CLK_GATING_REG0, 0x1U << (clk_id&0xff));
+		ccm_debug("read dis CCM_AHB1_GATE0_CTRL[0x%x]\n",
+				readl(CCMU_BUS_CLK_GATING_REG0));
+	break;
+	}
+}
+
+
 /*
 ************************************************************************************************************
 *
@@ -675,7 +742,10 @@ int sunxi_clock_set_corepll(int frequency, int core_vol)
     /* 回写PLL1 */
     reg_val = readl(CCMU_PLL_CPUX_CTRL_REG);
     reg_val &= ~((0x03 << 16) | (0x1f << 8) | (0x03 << 4) | (0x03 << 0));
-	reg_val |=  (pll_factor.FactorP << 16) | (pll_factor.FactorN<<8) | (pll_factor.FactorK<<4) | (0 << 0) ;
+	reg_val |=  (pll_factor.FactorP << 16)
+				| (pll_factor.FactorN<<8)
+				| (pll_factor.FactorK<<4)
+				| (0 << 0);
     writel(reg_val, CCMU_PLL_CPUX_CTRL_REG);
     /* 延时，等待时钟稳定 */
 #ifndef FPGA_PLATFORM
@@ -720,3 +790,16 @@ int sunxi_clock_get_pll6(void)
 	pll6 = 24 * factor_n * factor_k/2;
 	return pll6;
 }
+
+u32 ccm_get_pll_periph_clk(void)
+{
+	return sunxi_clock_get_pll6();
+}
+
+void ccm_module_reset(u32 clk_id)
+{
+	ccm_module_disable(clk_id);
+	ccm_module_enable(clk_id);
+}
+
+

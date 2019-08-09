@@ -100,10 +100,28 @@ __s32 dsi_start(__u32 sel, enum __dsi_start_t func)
 
 __s32 dsi_open(__u32 sel, struct disp_panel_para *panel)
 {
-	dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = 0;
-	dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = 1;
-	dsi_dev[sel]->dsi_cfg1.bits.dpi_src = 1;
-
+	if (panel->lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE) {
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_0p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_1p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_2p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_0p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_1p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_2p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sw_0p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sw_1p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sr_0p_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.max_rd_pkg_size_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.gen_lw_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_lw_tx_lp = 0;
+		dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = 1;
+		dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = 0;
+		dsi_dev[sel]->dsi_cfg1.bits.dpi_src = 0;
+		dsi_dev[sel]->dsi_cfg2.bits.dbi_src = 1;
+	} else {
+		dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = 0;
+		dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = 1;
+		dsi_dev[sel]->dsi_cfg1.bits.dpi_src = 1;
+	}
 	return 0;
 }
 
@@ -122,23 +140,30 @@ __s32 dsi_close(__u32 sel)
 /**
  * @name       dsi_mode_switch
  * @brief      switch dsi mode between cmd and video mode
- * @param[IN]  sel: dsi module index; en:1-->video mode
- *             0--> cmd mode
- * @return	   alway return 0
+ * @param[IN]  sel: dsi module index; cmd_en:1-->cmd mode
+ *             0--> video mode
+ * @return     alway return 0
  */
-__s32 dsi_mode_switch(__u32 sel, __u32 en)
+__s32 dsi_mode_switch(__u32 sel, __u32 cmd_en, __u32 lp_en)
 {
-	if (en == 1) {
-		dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = 0;
-		dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = 1;
-		dsi_dev[sel]->dsi_cfg1.bits.dpi_src = 1;
-	} else {
-		dsi_dev[sel]->dsi_cfg1.bits.dpi_src = 0;
-		dsi_delay_ms(16);
-		dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = 0;
-		dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = 1;
-		dsi_hs_clk(sel, 0);
-	}
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_0p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_1p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sw_2p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_0p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_1p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_sr_2p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sw_0p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sw_1p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_sr_0p_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.max_rd_pkg_size_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.gen_lw_tx_lp = lp_en;
+	dsi_dev[sel]->dsi_cmd_ctl.bits.dcs_lw_tx_lp = lp_en;
+
+	dsi_dev[sel]->dsi_cmd_ctl.bits.cmd_mode_en = cmd_en;
+	dsi_dev[sel]->dsi_cfg2.bits.dbi_src = cmd_en;
+	dsi_dev[sel]->dsi_vid_ctl0.bits.video_mode_en = !cmd_en;
+	dsi_dev[sel]->dsi_cfg1.bits.dpi_src = !cmd_en;
+	dsi_delay_ms(16);
 	return 0;
 }
 
@@ -655,7 +680,7 @@ static __s32 dsi_dphy_cfg(__u32 sel, struct disp_panel_para *panel)
 	dsi_dev[sel]->dsi_cfg3.bits.reg_snk = 2;
 	dsi_dev[sel]->dsi_cfg3.bits.reg_rint = 2;
 	dsi_delay_ms(1);
-	dsi_dev[sel]->dsi_cfg3.bits.reg_rext = 1;
+	dsi_dev[sel]->dsi_cfg3.bits.enrext = 1;
 	dsi_delay_ms(1);
 
 	dsi_dev[sel]->dsi_phy_ctl3.bits.phy_cfg_clr = 1;
@@ -667,8 +692,10 @@ static __s32 dsi_dphy_cfg(__u32 sel, struct disp_panel_para *panel)
 	dsi_dev[sel]->dsi_phy_ctl3.bits.phy_cfg_clr = 0;
 	dsi_delay_ms(1);
 
-	dsi_dphy_cfg_1data(sel, 0x20, 0xcd);
-	dsi_dphy_cfg_1data(sel, 0x22, 0x42);
+	if (panel->lcd_dsi_if != LCD_DSI_IF_COMMAND_MODE) {
+		dsi_dphy_cfg_1data(sel, 0x20, 0xcd);
+		dsi_dphy_cfg_1data(sel, 0x22, 0x42);
+	}
 
 	if (LCD_DSI_IF_VIDEO_MODE == mode || LCD_DSI_IF_BURST_MODE == mode) {
 		dsi_dphy_cfg_hsfrq(sel,
@@ -684,16 +711,15 @@ static __s32 dsi_dphy_cfg(__u32 sel, struct disp_panel_para *panel)
 	}
 
 	dsi_delay_ms(1);
-	dsi_dev[sel]->dsi_ctl1.bits.phy_en = 1;
-	dsi_delay_ms(1);
 	dsi_dev[sel]->dsi_ctl1.bits.phy_rst = 1;
-	dsi_delay_ms(1);
-	dsi_dev[sel]->dsi_phy_ctl1.dwval =
-	    ((dsi_dev[sel]->dsi_phy_ctl1.dwval) & (~0xff)) | 1;
-	dsi_dev[sel]->dsi_ctl1.bits.phy_lane_num = lane - 1;
 	dsi_delay_ms(1);
 	dsi_dev[sel]->dsi_ctl1.bits.phy_clk_gating = 1;
 	dsi_delay_ms(1);
+	dsi_dev[sel]->dsi_ctl1.bits.phy_en = 1;
+	dsi_delay_ms(1);
+	dsi_dev[sel]->dsi_phy_ctl1.bits.phy_stop_set = 1;
+
+	dsi_dev[sel]->dsi_ctl1.bits.phy_lane_num = lane - 1;
 
 	return 0;
 }
@@ -751,12 +777,12 @@ static __s32 dsi_basic_cfg(__u32 sel, struct disp_panel_para *panel)
 		    0xff;
 	} else {
 		dsi_dev[sel]->dsi_ctl2.dwval =
-		    ((dclk * 6 * dsi_bits_per_pixel[format] + 4 * lane * 10) /
+		    ((dclk * 36) /
 		     (8 * lane * 10)) &
 		    0xff;
 		dsi_delay_ms(100);
 		dsi_dev[sel]->dsi_to_ctl0.dwval =
-		    ((dclk * 6 * dsi_bits_per_pixel[format] + 4 * lane * 10) /
+		    ((dclk * 36) /
 		     (8 * lane * 10)) &
 		    0xff;
 	}
@@ -765,12 +791,14 @@ static __s32 dsi_basic_cfg(__u32 sel, struct disp_panel_para *panel)
 	dsi_dev[sel]->dsi_pkg_ctl2.bits.bta_en = 0;
 	dsi_dev[sel]->dsi_pkg_ctl2.bits.ecc_rx_en = 1;
 	dsi_dev[sel]->dsi_pkg_ctl2.bits.crc_rx_en = 1;
-	dsi_dev[sel]->dsi_pkg_ctl2.bits.vid_rx = 1;
-	dsi_dev[sel]->dsi_vid_ctl2.dwval = 0x00400000;
-	dsi_dev[sel]->dsi_phy_ctl1.dwval =
-	    ((dsi_dev[sel]->dsi_phy_ctl1.dwval) & (~0x7fff0000)) | (50 << 16);
+	dsi_dev[sel]->dsi_pkg_ctl2.bits.vid_rx = 0;
+	dsi_dev[sel]->dsi_vid_ctl2.bits.lpcmd_time_outvact = 64;
+	dsi_dev[sel]->dsi_vid_ctl2.bits.lpcmd_time_invact = 64;
+	dsi_dev[sel]->dsi_phy_ctl1.bits.max_rd_set = 50;
 
-	dsi_dev[sel]->dsi_phy_ctl0.dwval = 0x00140014;
+	dsi_dev[sel]->dsi_phy_ctl0.bits.phy_lp2hs_set = 20;
+	dsi_dev[sel]->dsi_phy_ctl0.bits.phy_hs2lp_set = 20;
+
 	dsi_dev[sel]->dsi_to_ctl1.dwval = 0x0;
 
 	dsi_dev[sel]->dsi_cfg0.bits.force_rx_0 = 0;

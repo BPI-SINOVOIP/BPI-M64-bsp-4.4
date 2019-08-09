@@ -1,3 +1,17 @@
+/**
+ * drivers/usb/host/sunxi_hci.h
+ * (C) Copyright 2010-2015
+ * Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+ *
+ * Include file for SUNXI HCI Host Controller Driver
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ */
+
 #ifndef _DE_FEAT_H_
 #define _DE_FEAT_H_
 
@@ -78,7 +92,7 @@
 #define DE_WB_RESET_SHARE
 /* #define LVDS_REVERT */
 #define TCON_POL_CORRECT
-#elif defined(CONFIG_ARCH_SUN8IW12P1)
+#elif defined(CONFIG_ARCH_SUN8IW12P1) || defined(CONFIG_ARCH_SUN8IW16P1)
 
 /* features for sun8iw12 */
 
@@ -91,7 +105,7 @@
 #define LAYER_NUM_PER_CHN_PER_UI_CHN	4
 #define LAYER_MAX_NUM_PER_CHN 4
 
-#ifndef CONFIG_SUN8IW12P1_NOR
+#if !defined(CONFIG_SUN8IW12P1_NOR) || !defined(CONFIG_SUN8IW16P1_NOR) || !defined(CONFIG_SUN8IW16P1_AXP2101_NOR)
 #define SUPPORT_SMBL
 #define SUPPORT_DSI
 #define SUPPORT_HDMI

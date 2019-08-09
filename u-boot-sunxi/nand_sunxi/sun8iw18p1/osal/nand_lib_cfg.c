@@ -10,14 +10,14 @@
 Single channel
 1.support two-plane
 2.support vertical_interleave
-3.if superpage>32k，two-plane not supported
+3.if superpage>32k, two-plane not supported
 4.vertical_interleave chip pairing with different rb in the channel
 
 Dual channel
 1.support two-plane
 2.support dual_channel
 3.support vertical_interleave
-4.if superpage>32k，two-plane not supported
+4.if superpage>32k, two-plane not supported
 5.dual_channel chip pairing with same chip number between the channel
 6.vertical_interleave chip pairing with different rb in the channel
 *****************************************************************************/

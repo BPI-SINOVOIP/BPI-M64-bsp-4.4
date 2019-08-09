@@ -673,12 +673,12 @@ void check_user_data(void)
 		}
 		temp_name[i] = '\0';
 		if (i != 0) {
-			for (j = 0; j < sizeof(IGNORE_ENV_VARIABLE) / sizeof(char*); j++) {
+			for (j = 0; j < sizeof(IGNORE_ENV_VARIABLE) / sizeof(IGNORE_ENV_VARIABLE[0]); j++) {
 				if (!strcmp(IGNORE_ENV_VARIABLE[j], temp_name)) {			//查词典库，排除系统的环境变量，得到用户的数据
 					break;
 				}
 			}
-			if (j >= sizeof(IGNORE_ENV_VARIABLE) / sizeof(char*)) {
+			if (j >= sizeof(IGNORE_ENV_VARIABLE) / sizeof(IGNORE_ENV_VARIABLE[0])) {
 				if (!strcmp(temp_name, "mac_addr")) {						//处理mac_addr和mac不相等的情况（特殊情况）
 					strcpy(USER_DATA_NAME[USER_DATA_NUM], "mac");
 				}

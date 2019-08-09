@@ -727,6 +727,7 @@ struct kobject *kobject_create(void)
 	return kobj;
 }
 
+EXPORT_SYMBOL_GPL(kobject_create);
 /**
  * kobject_create_and_add - create a struct kobject dynamically and register it with sysfs
  *

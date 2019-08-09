@@ -44,7 +44,7 @@
 #include <sunxi_board.h>
 
 #define  SPRITE_CARD_HEAD_BUFF		   (32 * 1024)
-#if defined (CONFIG_SUNXI_SPINOR)
+#if defined (CONFIG_SUNXI_SPINOR) || defined (CONFIG_SUN8IW7P1_LITE)
 #define  SPRITE_CARD_ONCE_DATA_DEAL    (2 * 1024 * 1024)
 #else
 #define  SPRITE_CARD_ONCE_DATA_DEAL    (16 * 1024 * 1024)
@@ -1290,7 +1290,7 @@ int card_download_boot0(uint length, void *buffer, uint storage_type)
 		}
 #endif
 	}
-	else //for card3
+	else if (storage_type == STORAGE_EMMC3)//for card3
 	{
 #ifdef PLATFORM_SUPPORT_EMMC3
 		printf("card3 download boot0\n");
@@ -1322,7 +1322,37 @@ int card_download_boot0(uint length, void *buffer, uint storage_type)
 		}
 #endif
 	}
+	else if (storage_type == STORAGE_SD){
+		printf("card0 download boot0\n");
+		//write boot0 bankup copy firstly
+		ret = sunxi_sprite_phywrite(BOOT0_SDMMC_BACKUP_START_ADDR, length/512, buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_SDMMC_BACKUP_START_ADDR);
+			goto ERR_OUT;
+		}
+		ret = sunxi_sprite_phywrite(BOOT0_SDMMC_START_ADDR, length/512, buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_SDMMC_START_ADDR);
+			goto ERR_OUT;
+		}
 
+#ifdef PLATFORM_SUPPORT_EMMC3
+		ret = sunxi_sprite_phywrite(BOOT0_EMMC3_START_ADDR, length/512, erase_buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_EMMC3_START_ADDR);
+			goto ERR_OUT;
+		}
+		ret = sunxi_sprite_phywrite(BOOT0_EMMC3_BACKUP_START_ADDR, length/512, erase_buffer);
+		if(!ret)
+		{
+			printf("%s: write boot0 from %d fail\n", __func__, BOOT0_EMMC3_BACKUP_START_ADDR);
+			goto ERR_OUT;
+		}
+#endif
+	}
 ERR_OUT:
 	if (erase_buffer != NULL)
 		free(erase_buffer);

@@ -231,6 +231,13 @@ int  axp_probe_battery_vol(void)
 	return sunxi_axp_dev[CHARGER_PMU]->probe_battery_vol();
 }
 
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+int  axp_set_led_control(int value)
+{
+	return sunxi_axp_dev[CHARGER_PMU]->set_led_control(value);
+}
+#endif
+
 int  axp_probe_rest_battery_capacity(void)
 {
 	return sunxi_axp_dev[CHARGER_PMU]->probe_battery_ratio();
@@ -281,7 +288,7 @@ int axp_set_vbus_limit_pc(void)
 int axp_set_all_limit(void)
 {
 
-	axp_set_vbus_limit_dc();
+	axp_set_vbus_limit_pc();
 
 	return 0;
 }
@@ -315,7 +322,7 @@ int axp_set_charge_vol_limit(void)
 	debug("pmu_runtime_chgcur=%ld\n", gd->pmu_runtime_chgcur);
 	debug("pmu_suspend_chgcur=%ld\n", gd->pmu_suspend_chgcur);
 
-	axp_set_suspend_chgcur();
+	axp_set_runtime_chgcur();
 
 	return 0;
 }

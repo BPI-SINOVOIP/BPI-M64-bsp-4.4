@@ -22,7 +22,19 @@
 #include "asm/arch/timer.h"
 #include "asm/arch/archdef.h"
 #include <sunxi_board.h>
+#include "asm/arch/efuse.h"
 
+void set_cache_para(void)
+{
+	__u32 reg_val;
+
+	reg_val = readl(SID_EFUSE + EFUSE_TF_ZONE);
+	if (reg_val & (0x1 << 0)) {
+		writel(0x002c002c, CACHE_CFG_REG);
+		reg_val = readl(CACHE_CFG_REG);
+		printf("set cahce_cfg_reg = 0x%X", reg_val);
+	}
+}
 void set_pll_cpux_axi(void)
 {
 	__u32 reg_val;
@@ -242,6 +254,7 @@ static void set_platform_config(void)
 {
 	set_dcxo();
 	set_circuits_analog();
+	set_cache_para();
 }
 
 static void set_modules_clock(void)

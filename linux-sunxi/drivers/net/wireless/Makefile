@@ -68,3 +68,4 @@ obj-$(CONFIG_XRADIO)    += xradio/
 
 obj-$(CONFIG_CW1200)	+= cw1200/
 obj-$(CONFIG_RSI_91X)	+= rsi/
+obj-$(CONFIG_RTL8189FS)    += rtl8189fs/

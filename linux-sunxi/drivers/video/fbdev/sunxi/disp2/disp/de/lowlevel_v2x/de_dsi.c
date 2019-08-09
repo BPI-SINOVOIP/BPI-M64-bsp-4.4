@@ -190,11 +190,11 @@ s32 dsi_close(u32 sel)
 /**
  * @name       dsi_mode_switch
  * @brief      switch dsi mode between cmd and video mode
- * @param[IN]  sel: dsi module index; en:1-->video mode
- *             0--> cmd mode
+ * @param[IN]  sel: dsi module index; cmd_en:1-->cmd mode
+ *             0--> video mode
  * @return     alway return 0
  */
-__s32 dsi_mode_switch(__u32 sel, __u32 en)
+__s32 dsi_mode_switch(__u32 sel, __u32 cmd_en, __u32 lp_en)
 {
 	return 0;
 }

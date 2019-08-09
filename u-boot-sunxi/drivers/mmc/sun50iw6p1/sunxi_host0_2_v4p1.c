@@ -5,6 +5,8 @@
  * Description: MMC  driver for  mmc controller operations of sun50iw2p1
  * Author: WenJiaqiang
  * Date: 2016/3/15 20:35:00
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <asm/io.h>
@@ -981,7 +983,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		cmdval |= (1 << 9) | (1 << 13);
 		if (data->flags & MMC_DATA_WRITE)
 			cmdval |= (1 << 10);
-		if (data->blocks > 1&&!(cmd->flags&MMC_CMD_MANUAL))
+		if ((IS_SD(mmc) || (mmc->cfg->platform_caps.emmc_set_block_count == 0)) && (data->blocks > 1) && !(cmd->flags&MMC_CMD_MANUAL))
 			cmdval |= (1 << 12);
 		writel(data->blocksize, &reg->blksz);
 		writel(data->blocks * data->blocksize, &reg->bytecnt);
@@ -1067,7 +1069,8 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 				goto out;
 			}
 
-			if ((data->blocks > 1)&&!(cmd->flags&MMC_CMD_MANUAL))//not wait auto stop when MMC_CMD_MANUAL is set
+			if ((IS_SD(mmc) || (mmc->cfg->platform_caps.emmc_set_block_count == 0)) && (data->blocks > 1) && !(cmd->flags&MMC_CMD_MANUAL))
+			/*not wait auto stop when MMC_CMD_MANUAL is set*/
 			{
 				if (usedma)
 					done = ((status & (1<<14)) && (readl(&reg->idst) & 0x3)) ? 1 : 0;
@@ -1161,8 +1164,8 @@ out:
 			timeout = 1000;
 			MMCMSG(mmc, "Read remain data\n");
 			while (readl(&reg->bbcr)<512) {
-				unsigned int tmp = readl(mmchost->database);
-				tmp = tmp;
+				/*unsigned int tmp = readl(mmchost->database);
+				tmp = tmp;*/
 				MMCDBG("Read data 0x%x, bbcr 0x%x\n", tmp, readl(&reg->bbcr));
 				__usdelay(1);
 				if (!(timeout--)) {

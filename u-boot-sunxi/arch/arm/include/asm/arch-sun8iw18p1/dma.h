@@ -35,7 +35,7 @@
 
 
 #define  DMAC_DMATYPE_NORMAL      0
-#define DMAC_CFG_TYPE_SPI0                      (23)
+#define DMAC_CFG_TYPE_SPI0                      (22)
 #define	DMAC_CFG_TYPE_DRAM		    	   		(1)
 #define DMAC_CFG_TYPE_SRAM                      (0)
 
@@ -120,14 +120,14 @@ sunxi_dma_start_t;
 
 
 typedef struct {
-    unsigned int      src_drq_type:5;            /* 源地址存储类型，如DRAM, SPI,NAND等，参见  __ndma_drq_type_t */
-    unsigned int      src_addr_mode:2;            /* 原地址类型 0:递增模式  1:保持不变 */
+    unsigned int      src_drq_type:6;            /* 源地址存储类型，如DRAM, SPI,NAND等，参见  __ndma_drq_type_t */
     unsigned int      src_burst_length:2;            /* 发起一次burst宽度 0:1   1:4   2:8 */
+    unsigned int      src_addr_mode:1;            /* 原地址类型 0:递增模式  1:保持不变 */
     unsigned int      src_data_width:2;            /* 数据传输宽度，0:一次传输8bit，1:一次传输16bit，2:一次传输32bit，3:保留 */
     unsigned int      reserved0:5;
-    unsigned int      dst_drq_type:5;            /* 目的地址存储类型，如DRAM, SPI,NAND等 */
-    unsigned int      dst_addr_mode:2;            /* 目的地址类型，如递增，或者不变  0:递增模式  1:保持不变 */
+    unsigned int      dst_drq_type:6;            /* 目的地址存储类型，如DRAM, SPI,NAND等 */
     unsigned int      dst_burst_length:2;            /* 发起一次burst宽度 填0对应于1，填1对应于4, */
+    unsigned int      dst_addr_mode:1;            /* 目的地址类型，如递增，或者不变  0:递增模式  1:保持不变 */
     unsigned int      dst_data_width:2;            /* 数据传输宽度，0:一次传输8bit，1:一次传输16bit，2:一次传输32bit，3:保留 */
     unsigned int      reserved1:5;
 }

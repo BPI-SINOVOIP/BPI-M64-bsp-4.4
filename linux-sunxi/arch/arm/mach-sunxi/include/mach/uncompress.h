@@ -26,7 +26,8 @@
 #include <asm/barrier.h>
 #include <linux/bitops.h>
 
-#define SUNXI_UART0_PBASE	0x01c28000
+#ifdef CONFIG_DEBUG_LL
+#define SUNXI_UART0_PBASE	CONFIG_DEBUG_UART_PHYS
 #define UART_TF		(*(volatile unsigned long*)(SUNXI_UART0_PBASE + 0x00))
 #define UART_SR		(*(volatile unsigned long*)(SUNXI_UART0_PBASE + 0x7C))
 #define TX_BUSY		BIT(1)
@@ -35,12 +36,13 @@
  */
 static inline void putc(int c)
 {
-#if 0
 	while (!(UART_SR & TX_BUSY))
 		cpu_relax();
 	UART_TF = c;
-#endif
 }
+#else
+static inline void putc(int c){}
+#endif
 static inline void flush(void) {}
 static inline void arch_decomp_setup(void) {}
 

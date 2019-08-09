@@ -85,7 +85,7 @@
 
 #define DMAC_CFG_DEST_TYPE_NAND					(5)
 
-#define	DMAC_CFG_DEST_TYPE_CODEC	    		(15)
+#define	DMAC_CFG_DEST_TYPE_CODEC	    		(6)
 
 #define	DMAC_CFG_DEST_TYPE_OTG_EP1	    		(17)
 #define	DMAC_CFG_DEST_TYPE_OTG_EP2	    		(18)
@@ -98,7 +98,7 @@
 
 #define DMAC_CFG_SRC_TYPE_NAND					(5)
 
-#define	DMAC_CFG_SRC_TYPE_CODEC	    			(15)
+#define	DMAC_CFG_SRC_TYPE_CODEC	    			(6)
 
 #define	DMAC_CFG_SRC_TYPE_OTG_EP1	    		(17)
 #define	DMAC_CFG_SRC_TYPE_OTG_EP2	    		(18)
@@ -122,14 +122,14 @@ sunxi_dma_start_t;
 
 typedef struct
 {
-    unsigned int      src_drq_type     : 5;            //源地址存储类型，如DRAM, SPI,NAND等，参见  __ndma_drq_type_t
-    unsigned int      src_addr_mode    : 2;            //原地址类型 0:递增模式  1:保持不变
+    unsigned int      src_drq_type     : 6;            //源地址存储类型，如DRAM, SPI,NAND等，参见  __ndma_drq_type_t
     unsigned int      src_burst_length : 2;            //发起一次burst宽度 0:1   1:4   2:8
+    unsigned int      src_addr_mode    : 1;            //原地址类型 0:递增模式  1:保持不变
     unsigned int      src_data_width   : 2;            //数据传输宽度，0:一次传输8bit，1:一次传输16bit，2:一次传输32bit，3:保留
     unsigned int      reserved0        : 5;
-    unsigned int      dst_drq_type     : 5;            //目的地址存储类型，如DRAM, SPI,NAND等
-    unsigned int      dst_addr_mode    : 2;            //目的地址类型，如递增，或者不变  0:递增模式  1:保持不变
+    unsigned int      dst_drq_type     : 6;            //目的地址存储类型，如DRAM, SPI,NAND等
     unsigned int      dst_burst_length : 2;            //发起一次burst宽度 填0对应于1，填1对应于4,
+    unsigned int      dst_addr_mode    : 1;            //目的地址类型，如递增，或者不变  0:递增模式  1:保持不变
     unsigned int      dst_data_width   : 2;            //数据传输宽度，0:一次传输8bit，1:一次传输16bit，2:一次传输32bit，3:保留
     unsigned int      reserved1        : 5;
 }
@@ -147,6 +147,8 @@ sunxi_dma_setting_t;
 
 extern    void          sunxi_dma_init(void);
 extern    void          sunxi_dma_exit(void);
+
+extern    unsigned long     sunxi_dma_request_from_last(unsigned int dmatype);
 
 extern    unsigned long 	sunxi_dma_request			(unsigned int dmatype);
 extern    int 			sunxi_dma_release			(unsigned long hdma);
@@ -212,7 +214,7 @@ enum {DMA_SECURITY, DMA_NONSECURITY};
 #define DMA_TYPE_TCON1          (12)      /* port 12 */
 #define DMA_TYPE_HDMIDDC        (13)      /* port 13 */
 #define DMA_TYPE_HDMIAUDIO      (14)      /* port 14 */
-#define DMA_TYPE_CODEC          (15)      /* port 15 */
+#define DMA_TYPE_CODEC          (6)      /* port 15 */
 #define DMA_TYPE_SS             (16)      /* port 16 */
 #define DMA_TYPE_OTG_EP1        (17)      /* port 17 */
 #define DMA_TYPE_OTG_EP2        (18)      /* port 18 */
@@ -313,10 +315,10 @@ enum {DMA_SECURITY, DMA_NONSECURITY};
 #define DMA_CFG_DST_BST8_WIDTH16    ((DMA_CFG_BST8 << 23) | (DMA_CFG_WID16<< 25))
 #define DMA_CFG_DST_BST8_WIDTH32    ((DMA_CFG_BST8 << 23) | (DMA_CFG_WID32<< 25))
 /* IO mode */
-#define DMA_CFG_SRC_LINEAR			(DMA_LINEAR << 5)
-#define DMA_CFG_SRC_IO				(DMA_IO << 5)
-#define DMA_CFG_DST_LINEAR			(DMA_LINEAR << 21)
-#define DMA_CFG_DST_IO				(DMA_IO << 21)
+#define DMA_CFG_SRC_LINEAR			(DMA_LINEAR << 8)
+#define DMA_CFG_SRC_IO				(DMA_IO << 8)
+#define DMA_CFG_DST_LINEAR			(DMA_LINEAR << 24)
+#define DMA_CFG_DST_IO				(DMA_IO << 24)
 /* DMA security */
 #define DMA_CFG_SRC_SECURITY        (DMA_SECURITY << 12)
 #define DMA_CFG_SRC_NONSECURITY     (DMA_NONSECURITY << 12)

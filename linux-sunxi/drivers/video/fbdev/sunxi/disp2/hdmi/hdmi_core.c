@@ -27,7 +27,7 @@ static s32 audio_config_internal(u8 audio_reset);
 u32	hdmi_print;
 /* 0x10: force unplug; 0x11: force plug; 0x1xx: unreport hpd state */
 u32 hdmi_hpd_mask;
-static u32 hdmi_detect_time = 200;/* ms */
+static u32 hdmi_detect_time = 20;/* ms */
 static bool hdmi_cec_enable;
 
 static s32 video_config(u32 vic);

@@ -52,13 +52,20 @@
 #define SPINOR_OP_RDID		0x9f	/* Read JEDEC ID */
 #define SPINOR_OP_RDCR		0x35	/* Read configuration register */
 #define SPINOR_OP_RDFSR		0x70	/* Read flag status register */
+#define SPINOR_OP_DIESEL	0xc2	/* Software Die Select */
 
 /* 4-byte address opcodes - used on Spansion and some Macronix flashes. */
 #define SPINOR_OP_READ4		0x13	/* Read data bytes (low frequency) */
 #define SPINOR_OP_READ4_FAST	0x0c	/* Read data bytes (high frequency) */
 #define SPINOR_OP_READ4_1_1_2	0x3c	/* Read data bytes (Dual SPI) */
+#define SPINOR_OP_READ4_1_2_2	0xbc	/* Read data bytes (Dual I/O SPI) */
 #define SPINOR_OP_READ4_1_1_4	0x6c	/* Read data bytes (Quad SPI) */
+#define SPINOR_OP_READ4_1_4_4	0xec	/* Read data bytes (Quad I/O SPI) */
 #define SPINOR_OP_PP_4B		0x12	/* Page program (up to 256 bytes) */
+#define SPINOR_OP_PP_1_1_4_4B	0x34	/* Quad page program */
+#define SPINOR_OP_PP_1_4_4_4B	0x3e	/* Quad page program */
+#define SPINOR_OP_BE_4K_4B	0x21	/* Erase 4KiB block */
+#define SPINOR_OP_BE_32K_4B	0x5c	/* Erase 32KiB block */
 #define SPINOR_OP_SE_4B		0xdc	/* Sector erase (usually 64KiB) */
 
 /* Used for SST flashes only. */
@@ -120,6 +127,12 @@ enum spi_nor_option_flags {
 struct mtd_info;
 
 /**
+ * struct flash_info - Forward declaration of a structure used internally by
+ *		       spi_nor_scan()
+ */
+struct flash_info;
+
+/**
  * struct spi_nor - Structure for defining a the SPI NOR layer
  * @mtd:		point to a mtd_info structure
  * @lock:		the lock for the read/write/erase/lock/unlock operations
@@ -155,9 +168,11 @@ struct spi_nor {
 	struct mtd_info		mtd;
 	struct mutex		lock;
 	struct device		*dev;
+	const struct flash_info	*info;
 	struct device_node	*flash_node;
 	u32			page_size;
 	u8			addr_width;
+	u32			n_banks;
 	u8			erase_opcode;
 	u8			read_opcode;
 	u8			read_dummy;
@@ -181,6 +196,7 @@ struct spi_nor {
 	int (*flash_lock)(struct spi_nor *nor, loff_t ofs, uint64_t len);
 	int (*flash_unlock)(struct spi_nor *nor, loff_t ofs, uint64_t len);
 	int (*flash_is_locked)(struct spi_nor *nor, loff_t ofs, uint64_t len);
+	int (*flash_select_bank)(struct spi_nor *nor, loff_t ofs, u32 ids);
 
 	void *priv;
 };
@@ -200,5 +216,11 @@ struct spi_nor {
  * Return: 0 for success, others for failure.
  */
 int spi_nor_scan(struct spi_nor *nor, const char *name, enum read_mode mode);
+
+/**
+ * spi_nor_restore_addr_mode() - restore the status of SPI NOR
+ * @nor:	the spi_nor structure
+ */
+void spi_nor_restore(struct spi_nor *nor);
 
 #endif

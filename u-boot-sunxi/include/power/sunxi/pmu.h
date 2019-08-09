@@ -89,6 +89,7 @@ typedef enum _VBUS_TYPE
 #define PMU_SUPPLY_MISC_TYPE    (0x00080000)
 #define PMU_SUPPLY_DC5LDO		(0x00080001)
 #define PMU_SUPPLY_DC1SW	    (0x00080002)
+#define PMU_SUPPLY_DC4LDO		(0x00080003)
 
 #define PMU_SUPPLY_GPIO_TYPE	(0x00090000)
 #define PMU_SUPPLY_GPIO0		(0x00090000)
@@ -119,6 +120,9 @@ extern int axp_probe_key(void);
 extern int axp_probe_dcin_exist(void);
 extern int axp_probe_battery_exist(void);
 extern int axp_probe_battery_vol(void);
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+extern int axp_set_led_control(int);
+#endif
 
 extern int axp_probe_charge_current(void);
 extern int axp_set_charge_current(int current);

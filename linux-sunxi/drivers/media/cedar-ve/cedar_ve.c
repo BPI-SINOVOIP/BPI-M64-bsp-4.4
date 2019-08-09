@@ -1487,6 +1487,7 @@ static const struct file_operations ve_debugfs_fops = {
 	.release = ve_debugfs_release,
 };
 
+#if (defined CONFIG_DEBUG_FS)
 int sunxi_ve_debug_register_driver(void)
 {
 	struct dentry *dent;
@@ -1511,7 +1512,14 @@ int sunxi_ve_debug_register_driver(void)
 
 	return 0;
 }
+#else
+int sunxi_ve_debug_register_driver(void)
+{
+	return 0;
+}
+#endif
 
+#if (defined CONFIG_DEBUG_FS)
 void sunxi_ve_debug_unregister_driver(void)
 {
 	if (ve_debugfs_root == NULL)
@@ -1519,6 +1527,9 @@ void sunxi_ve_debug_unregister_driver(void)
 	debugfs_remove_recursive(ve_debugfs_root);
 	ve_debugfs_root = NULL;
 }
+#else
+void sunxi_ve_debug_unregister_driver(void){}
+#endif
 
 static int cedardev_init(struct platform_device *pdev)
 {

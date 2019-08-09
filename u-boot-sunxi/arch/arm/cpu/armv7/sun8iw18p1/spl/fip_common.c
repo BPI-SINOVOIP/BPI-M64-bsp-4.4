@@ -221,7 +221,7 @@ int load_fip(int *use_monitor)
 		/* Obtain a reference to the image by querying the platform
 		 * layer */
 		header = (struct spare_boot_head_t *)CONFIG_SYS_TEXT_BASE;
-		header->boot_data.monitor_exist = 1;
+		header->boot_data.secureos_exist = 1;
 	}
 	return 0;
 }

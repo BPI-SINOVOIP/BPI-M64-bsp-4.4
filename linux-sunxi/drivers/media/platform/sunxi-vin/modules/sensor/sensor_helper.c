@@ -146,8 +146,10 @@ static struct sensor_win_size *sensor_find_frame_size(struct v4l2_subdev *sd,
 	/*judge if sensor have wdr command win*/
 	if (info->isp_wdr_mode == ISP_COMANDING_MODE) {
 		for (i = 0; i < info->win_size_num; ++i) {
-			if (ws->wdr_mode == ISP_COMANDING_MODE)
+			if (ws->wdr_mode == ISP_COMANDING_MODE) {
+				best_ws = ws;
 				break;
+			}
 			++ws;
 		}
 		if (i == info->win_size_num)
@@ -158,8 +160,10 @@ static struct sensor_win_size *sensor_find_frame_size(struct v4l2_subdev *sd,
 	ws = info->win_pt;
 	if (info->isp_wdr_mode == ISP_DOL_WDR_MODE) {
 		for (i = 0; i < info->win_size_num; ++i) {
-			if (ws->wdr_mode == ISP_DOL_WDR_MODE)
+			if (ws->wdr_mode == ISP_DOL_WDR_MODE) {
+				best_ws = ws;
 				break;
+			}
 			++ws;
 		}
 		if (i == info->win_size_num)
@@ -172,6 +176,7 @@ static struct sensor_win_size *sensor_find_frame_size(struct v4l2_subdev *sd,
 		for (i = 0; i < info->win_size_num; ++i) {
 			if ((ws->fps_fixed == info->tpf.denominator) &&
 			   (ws->wdr_mode == ISP_COMANDING_MODE)) {
+				best_ws = ws;
 				fps_flag = 1;
 				break;
 			}
@@ -181,6 +186,7 @@ static struct sensor_win_size *sensor_find_frame_size(struct v4l2_subdev *sd,
 		for (i = 0; i < info->win_size_num; ++i) {
 			if ((ws->fps_fixed == info->tpf.denominator) &&
 			   (ws->wdr_mode == ISP_DOL_WDR_MODE)) {
+				best_ws = ws;
 				fps_flag = 1;
 				break;
 			}
@@ -190,6 +196,7 @@ static struct sensor_win_size *sensor_find_frame_size(struct v4l2_subdev *sd,
 		for (i = 0; i < info->win_size_num; ++i) {
 			if ((ws->fps_fixed == info->tpf.denominator) &&
 			   (ws->wdr_mode == ISP_NORMAL_MODE)) {
+				best_ws = ws;
 				fps_flag = 1;
 				break;
 			}

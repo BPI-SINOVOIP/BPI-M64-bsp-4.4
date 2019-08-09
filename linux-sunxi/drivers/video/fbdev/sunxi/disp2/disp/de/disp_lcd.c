@@ -543,7 +543,10 @@ static s32 lcd_clk_config(struct disp_device *lcd)
 	clk_set_rate(lcdp->clk, lcd_rate_set);
 	lcd_rate_set = clk_get_rate(lcdp->clk);
 	if (lcdp->panel_info.lcd_if == LCD_IF_DSI) {
-		dsi_rate_set = pll_rate_set / clk_info.dsi_div;
+		if (lcdp->panel_info.lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE)
+			dsi_rate_set = pll_rate_set;
+		else
+			dsi_rate_set = pll_rate_set / clk_info.dsi_div;
 		dsi_rate_set =
 		    (clk_info.dsi_rate == 0) ? dsi_rate_set : clk_info.dsi_rate;
 		dsi_num = (lcdp->panel_info.lcd_tcon_mode == DISP_TCON_DUAL_DSI)
@@ -1240,6 +1243,29 @@ static s32 disp_lcd_get_panel_info(struct disp_device *lcd,
 	return 0;
 }
 
+static char lcd_drv_name[32];
+static struct disp_lcd_private_data *g_lcdp;
+extern void lcd_reflush_lh219wq1(u32 sel);
+static spinlock_t g_reflush_lock;
+
+static void reflush_work_func(struct work_struct *work)
+{
+	static int interval_fps;
+	unsigned long flags = 0;
+
+	if (interval_fps < 100) {
+		interval_fps++;
+	} else {
+		interval_fps = 0;
+		spin_lock_irqsave(&g_reflush_lock, flags);
+		lcd_reflush_lh219wq1(0);
+		spin_unlock_irqrestore(&g_reflush_lock, flags);
+	}
+	sync_event_proc(0, false);
+	disp_al_lcd_tri_start(0, &g_lcdp->panel_info);
+}
+static DECLARE_WORK(lcd_reflush_work, reflush_work_func);
+
 #if defined(__LINUX_PLAT__)
 static s32 disp_lcd_event_proc(int irq, void *parg)
 #else
@@ -1273,7 +1299,6 @@ static s32 disp_lcd_event_proc(void *parg)
 	if (disp_al_lcd_query_irq
 	    (hwdev_index, LCD_IRQ_TCON0_VBLK, &lcdp->panel_info)) {
 #if defined(SUPPORT_EINK) && defined(CONFIG_EINK_PANEL_USED)
-
 		eink_display_one_frame(eink_manager);
 #else
 		int cur_line =
@@ -1316,8 +1341,13 @@ static s32 disp_lcd_event_proc(void *parg)
 			return DISP_IRQ_RETURN;
 
 		if (lcdp->tri_finish_fail == 0) {
-			sync_event_proc(mgr->disp, false);
-			disp_al_lcd_tri_start(hwdev_index, &lcdp->panel_info);
+			g_lcdp = lcdp;
+			if (strcmp(lcd_drv_name, "lh219wq1") == 0)
+				schedule_work(&lcd_reflush_work);
+			else {
+				sync_event_proc(0, false);
+				disp_al_lcd_tri_start(0, &g_lcdp->panel_info);
+			}
 		} else
 			sync_event_proc(mgr->disp, true);
 	}
@@ -1874,8 +1904,7 @@ static s32 disp_lcd_set_panel_funs(struct disp_device *lcd, char *name,
 	ret =
 	    disp_sys_script_get_item(primary_key, "lcd_driver_name",
 				     (int *)drv_name, 2);
-	DE_INF("lcd %d, driver_name %s,  panel_name %s\n", lcd->disp, drv_name,
-	       name);
+	strcpy(lcd_drv_name, drv_name);
 	if ((ret == 2) && !strcmp(drv_name, name)) {
 		memset(&lcdp->lcd_panel_fun,
 		       0,

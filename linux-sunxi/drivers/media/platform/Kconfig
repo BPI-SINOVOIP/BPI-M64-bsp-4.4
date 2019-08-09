@@ -335,3 +335,4 @@ endif #DVB_PLATFORM_DRIVERS
 source "drivers/media/platform/sunxi-eve/Kconfig"
 source "drivers/media/platform/sunxi-ise/Kconfig"
 source "drivers/media/platform/sunxi-cve/Kconfig"
+source "drivers/media/platform/sunxi-aio/Kconfig"

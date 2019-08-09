@@ -175,7 +175,7 @@ int do_efuse_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	memset(buffer, 0, 32);
 	printf("buffer addr=0x%x\n", (u32)buffer);
 	ret = arm_svc_efuse_read(efuse_name, buffer);
-	if(ret)
+	if (ret <= 0)
 	{
 		printf("read efuse key [%s] failed\n", efuse_name);
 	}

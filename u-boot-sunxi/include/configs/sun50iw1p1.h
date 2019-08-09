@@ -43,8 +43,8 @@
 #endif
 #define CONFIG_ARCH_SUN50IW1P1
 #define CONFIG_ARM_A53
-
-
+/*enable burn key for offbline*/
+/*#define CONFIG_SUNXI_OFFLINE_BURN_KEY*/
 /*********************************************************************
  *platform memory map
  **********************************************************************/
@@ -70,8 +70,8 @@
 #define CONFIG_BOOT0_RET_ADDR            (CONFIG_SYS_SRAM_BASE)
 #define CONFIG_TOC0_RET_ADDR             (0)
 #define CONFIG_FES1_RET_ADDR             (CONFIG_SYS_SRAMC_BASE + 0x7210)
-
-#define CONFIG_NORMAL_BOOT_STACK         (CONFIG_SYS_SRAM_BASE+CONFIG_SYS_SRAM_SIZE)
+#define CONFIG_BOOT0_SIZE_LIMIT			(64 << 20)
+#define CONFIG_NORMAL_BOOT_STACK         (CONFIG_SYS_SRAM_BASE + 0x10000)
 #define CONFIG_SECURE_BOOT_STACK         (CONFIG_SYS_SRAMC_BASE+CONFIG_SYS_SRAMC_SIZE)
 
 #define CONFIG_STORAGE_MEDIA_NAND

@@ -431,7 +431,9 @@ s32 rsb_init(u32 saddr, u32 rtaddr)
 
 	/*  rsb clk = 400Khz */
 	rsb_set_clk(400000);
-	ret = rsb_send_initseq(0x00, 0x3e, 0x7c);
+
+	/* use pmu i2c_addr(0x34) change i2c to rsb by simulate way */
+	ret = rsb_send_initseq(0x34, 0x1d, 0x7c);
 	if (ret) {
 		return ret;
 	}
@@ -440,6 +442,16 @@ s32 rsb_init(u32 saddr, u32 rtaddr)
 	printf("rsb_send_initseq: rsb clk 400Khz -> 3Mhz\n");
 	/*  rsb runtime addr */
 	ret = set_run_time_addr(saddr, rtaddr);
+	if (ret != 0) {
+		/* use pmu i2c_broadcast_addr(0x0) change i2c to rsb by broadcast way */
+		ret = rsb_send_initseq(0x0, 0x3e, 0x7c);
+		if (ret) {
+			return ret;
+		}
+		/*  rsb clk = 3Mhz */
+		rsb_set_clk(RSB_SCK);
+		ret = set_run_time_addr(saddr, rtaddr);
+	}
 	return ret;
 }
 

@@ -142,6 +142,7 @@ extern    void          sunxi_dma_init(void);
 extern    void          sunxi_dma_exit(void);
 
 extern    unsigned long     sunxi_dma_request       (unsigned int dmatype);
+extern    unsigned long     sunxi_dma_request_from_last(unsigned int dmatype);
 extern    int           sunxi_dma_release           (unsigned long hdma);
 extern    int           sunxi_dma_setting           (unsigned long hdma, sunxi_dma_setting_t *cfg);
 extern    int           sunxi_dma_start             (unsigned long hdma, unsigned int saddr, unsigned int daddr, unsigned int bytes);

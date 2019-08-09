@@ -1,27 +1,22 @@
 
-/*
- ******************************************************************************
- *
- * sun8iw12p1_isp_reg.h
- *
- * Hawkview ISP - sun8iw12p1_isp_reg.h module
- *
- * Copyright (c) 2014 by Allwinnertech Co., Ltd.  http:
- *
- * Version		  Author         Date		    Description
- *
- *   2.0		  Yang Feng   	2014/06/30	      Second Version
- *
- ******************************************************************************
- */
+ /*
+  * sun8iw12p1_isp_reg.h
+  *
+  * Copyright (c) 2007-2017 Allwinnertech Co., Ltd.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+  * may be copied, distributed, and modified under those terms.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  */
 
-#ifndef __REG20__ISP__H__
-#define __REG20__ISP__H__
-
-#ifdef __cplusplus
-extern "C" {
-
-#endif
+#ifndef __ISP500__H__
+#define __ISP500__H__
 
 /*FOR SUN8IW12P1 ISP*/
 
@@ -264,7 +259,8 @@ typedef union {
 		unsigned int input_fmt:3;
 		unsigned int res0:5;
 		unsigned int wdr_mode:1;
-		unsigned int res1:2;
+		unsigned int wdr_dol_mode:1;
+		unsigned int res1:1;
 		unsigned int wdr_cmp_mode:1;
 		unsigned int res2:4;
 		unsigned int otf_dpc_mode:2;
@@ -309,9 +305,5 @@ typedef union {
 		unsigned int res1:3;
 	} bits;
 } SUN8IW12P1_ISP_OB_VALID_START_REG_t;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

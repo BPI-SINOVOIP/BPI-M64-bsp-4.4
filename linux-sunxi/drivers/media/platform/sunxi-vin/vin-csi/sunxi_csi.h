@@ -57,6 +57,8 @@ struct csi_dev {
 	struct prs_output_size out_size;
 	struct csi_format *csi_fmt;
 	struct prs_ncsi_if_cfg ncsi_if;
+	struct mutex reset_lock;
+	unsigned int reset_time;
 };
 
 void sunxi_csi_dump_regs(struct v4l2_subdev *sd);

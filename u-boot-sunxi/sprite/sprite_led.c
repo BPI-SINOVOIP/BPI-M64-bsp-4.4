@@ -166,6 +166,8 @@ int sprite_led_exit(int status)
 		TIMER0.function = sprite_timer_func;
 		//init_timer(&TIMER0);
 		add_timer(&TIMER0);
+	} else {
+		gpio_write_one_pin_value(sprite_led_hd, 0, "sprite_gpio0");
 	}
 
 	return 0;

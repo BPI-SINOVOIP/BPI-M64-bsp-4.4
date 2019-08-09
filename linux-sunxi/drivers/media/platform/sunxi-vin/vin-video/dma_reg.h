@@ -109,7 +109,7 @@ enum dma_int_sel {
 	DMA_INT_VSYNC_TRIG = 0X80,
 	DMA_INT_FBC_OVHD_WRDDR_FULL = 0X100,
 	DMA_INT_FBC_DATA_WRDDR_FULL = 0X200,
-	DMA_INT_ALL = 0XFF,
+	DMA_INT_ALL = 0X3FF,
 };
 
 /*register data struct*/

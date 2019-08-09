@@ -578,15 +578,15 @@ static s32 disp_lyr_dump(struct disp_layer *lyr, char *buf)
 
 	count += sprintf(buf + count, " %5s ", (data.config.info.mode == LAYER_MODE_BUFFER)? "BUF":"COLOR");
 	count += sprintf(buf + count, " %8s ", (data.config.enable==1)?"enable":"disable");
-	count += sprintf(buf + count, "ch[%1d] ", data.config.channel);
-	count += sprintf(buf + count, "lyr[%1d] ", data.config.layer_id);
+	count += sprintf(buf + count, "ch[%1u] ", data.config.channel);
+	count += sprintf(buf + count, "lyr[%1u] ", data.config.layer_id);
 	count += sprintf(buf + count, "z[%1d] ", data.config.info.zorder);
 	count += sprintf(buf + count, "prem[%1s] ", (data.config.info.fb.pre_multiply)? "Y":"N");
 	count += sprintf(buf + count, "a[%5s %3d] ", (data.config.info.alpha_mode)? "globl":"pixel", data.config.info.alpha_value);
 	count += sprintf(buf + count, "fmt[%3d] ", data.config.info.fb.format);
 	count += sprintf(buf + count, "fb[%4d,%4d;%4d,%4d;%4d,%4d] ", data.config.info.fb.size[0].width, data.config.info.fb.size[0].height,
 		data.config.info.fb.size[1].width, data.config.info.fb.size[1].height, data.config.info.fb.size[2].width, data.config.info.fb.size[2].height);
-	count += sprintf(buf + count, "crop[%4d,%4d,%4d,%4d] ", (unsigned int)(data.config.info.fb.crop.x>>32), (unsigned int)(data.config.info.fb.crop.y>>32),
+	count += sprintf(buf + count, "crop[%4u,%4u,%4u,%4u] ", (unsigned int)(data.config.info.fb.crop.x>>32), (unsigned int)(data.config.info.fb.crop.y>>32),
 		(unsigned int)(data.config.info.fb.crop.width>>32), (unsigned int)(data.config.info.fb.crop.height>>32));
 	count += sprintf(buf + count, "frame[%4d,%4d,%4d,%4d] ", data.config.info.screen_win.x, data.config.info.screen_win.y, data.config.info.screen_win.width, data.config.info.screen_win.height);
 	count += sprintf(buf + count, "addr[%8llx,%8llx,%8llx] ", data.config.info.fb.addr[0], data.config.info.fb.addr[1], data.config.info.fb.addr[2]);
@@ -777,10 +777,26 @@ static s32 disp_mgr_clk_enable(struct disp_manager *mgr)
 {
 	struct disp_manager_private_data *mgrp = disp_mgr_get_priv(mgr);
 	int ret = 0;
+	unsigned long de_freq = 0;
 
 	if ((NULL == mgr) || (NULL == mgrp)) {
 		DE_WRN("NULL hdl!\n");
 		return -1;
+	}
+
+	if (mgr->get_clk_rate && mgrp->clk) {
+		DE_INF("set DE rate to %u\n", mgr->get_clk_rate(mgr));
+		de_freq = mgr->get_clk_rate(mgr);
+		clk_set_rate(mgrp->clk, de_freq);
+		if (de_freq != clk_get_rate(mgrp->clk)) {
+			if (mgrp->clk_parent)
+				clk_set_rate(mgrp->clk_parent, de_freq);
+			clk_set_rate(mgrp->clk, de_freq);
+			if (de_freq != clk_get_rate(mgrp->clk)) {
+				DE_WRN("Set DE clk fail\n");
+				return -1;
+			}
+		}
 	}
 
 	DE_INF("mgr %d clk enable\n", mgr->disp);
@@ -824,6 +840,13 @@ static s32 disp_mgr_get_clk_rate(struct disp_manager *mgr)
 		DE_WRN("NULL hdl!\n");
 		return 0;
 	}
+
+#if defined(CONFIG_ARCH_SUN8IW16)
+	if (mgr->device && mgr->device->type != DISP_OUTPUT_TYPE_HDMI)
+		mgrp->cfg->config.de_freq = 216000000;
+	else
+		mgrp->cfg->config.de_freq = 432000000;
+#endif
 
 	return mgrp->cfg->config.de_freq;
 }
@@ -1654,4 +1677,3 @@ s32 disp_init_mgr(disp_bsp_init_para * para)
 	disp_init_lyr(para);
 	return 0;
 }
-

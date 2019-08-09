@@ -157,6 +157,15 @@ int axpnull_probe_battery_vol(void)
 	//printf("%s %d %s\n", __FILE__, __LINE__, __func__);
     return 0;
 }
+
+#if defined(CONFIG_SUN8IW12P1_NOR) || defined(CONFIG_SUN8IW16P1_NOR)
+int axpnull_set_led_control(int value)
+{
+	/*printf("%s %d %s\n", __FILE__, __LINE__, __func__);*/
+	return 0;
+}
+#endif
+
 /*
 ************************************************************************************************************
 *
