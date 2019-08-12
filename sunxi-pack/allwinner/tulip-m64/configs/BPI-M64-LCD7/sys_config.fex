@@ -324,13 +324,13 @@ spi1_miso       = port:PD3<4><default><default><default>
 ;reg               --- chip select
 ;optional properties: spi-cpha, spi-cpol, spi-cs-high
 ;----------------------------------------------------------------------------------
-;[spi0/spi_board0]
-;compatible        =
-;spi-max-frequency =
-;reg               =
-;spi-cpha
-;spi-cpol
-;spi-cs-high
+[spi1/spi_board0]
+compatible        = "Allwinnertech,spidev"
+spi-max-frequency = 0x2faf080
+reg               = 0x0
+spi-cpha
+spi-cpol
+spi-cs-high
 
 ;----------------------------------------------------------------------------------
 ;resistance tp configuration
