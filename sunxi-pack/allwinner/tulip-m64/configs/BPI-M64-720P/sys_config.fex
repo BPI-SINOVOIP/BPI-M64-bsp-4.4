@@ -120,6 +120,11 @@ jtag_ck         = port:PB1<4><default><default><default>
 jtag_do         = port:PB2<4><default><default><default>
 jtag_di         = port:PB3<4><default><default><default>
 
+[boot_init_gpio]
+boot_init_gpio_used = 1
+gpio0               =  port:PE14<1><default><default><1>
+gpio1               =  port:PE15<1><default><default><1>
+
 ;----------------------------------------------------------------------------------
 ;
 ;LED support

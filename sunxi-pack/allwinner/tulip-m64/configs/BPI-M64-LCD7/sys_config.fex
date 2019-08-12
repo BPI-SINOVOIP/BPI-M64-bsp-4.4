@@ -1223,6 +1223,10 @@ ir_protocol_used    = 0
 ir_power_key_code   = 116
 ir_addr_code        = 0x17c612
 
+[boot_init_gpio]
+boot_init_gpio_used = 1
+gpio0               =  port:PE14<1><default><default><1>
+gpio1               =  port:PE15<1><default><default><1>
 
 ;-------------------------------------------------------------------------------
 ;userspace gpio interface for android
