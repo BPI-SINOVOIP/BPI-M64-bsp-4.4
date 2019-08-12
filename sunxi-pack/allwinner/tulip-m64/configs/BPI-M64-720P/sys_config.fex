@@ -1603,38 +1603,28 @@ Vdevice_1           = port:PB02<4><1><2><default>
 
 ;----------------------------------------------------------------------------------
 ;GPU parameters
-;regulator_id     : the regulator id GPU used.
-;dvfs_status      : dvfs status, if this is enabled, DVFS will work.
+;dvfs_status      : dvfs status, if this is enabled, GPU DVFS will work. Actually, GPU
+;                   DVFS functionality depends on some kernel features such as devfreq.
 ;temp_ctrl_status : temperature control status, if this is enabled, the gpu frequency
 ;                   will drop down if the temperature of gpu is too high.
 ;scene_ctrl_status: scene control status, if this is enabled, android layer can ask
 ;                   gpu driver to change frequency in certain scene.
-;max_level        : maximum level, which is used when thermal system does not restrict
-;                    GPU power consumption.
+;max_level        : maximum level.
 ;begin_level      : the corresponding frequency and voltage will be used during GPU
 ;                    initialization.
 ;lv<x>_freq       : frequency in MHz of certain level.
-;lv<x>_volt       : voltage in mV of certain level.
+;lv<x>_volt       : voltage in mV of certain level, 0 means GPU power is not independent.
 ;----------------------------------------------------------------------------------
 [gpu]
 dvfs_status       = 0
 temp_ctrl_status  = 1
-scene_ctrl_status = 1
+scene_ctrl_status = 0
 
-max_level   = 3
-begin_level = 3
+max_level   = 0
+begin_level = 0
 
-lv0_freq = 144
-lv0_volt = 1100
-
-lv1_freq = 264
-lv1_volt = 1100
-
-lv2_freq = 384
-lv2_volt = 1100
-
-lv3_freq = 456
-lv3_volt = 1100
+lv0_freq = 456
+lv0_volt = 0
 
 ;----------------------------------------------------------------------------------
 [secure]
