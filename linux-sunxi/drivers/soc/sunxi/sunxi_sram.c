@@ -266,7 +266,6 @@ static int sunxi_sram_probe(struct platform_device *pdev)
 
 static const struct of_device_id sunxi_sram_dt_match[] = {
 	{ .compatible = "allwinner,sun4i-a10-sram-controller" },
-	{ .compatible = "allwinner,sram_ctrl" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, sunxi_sram_dt_match);
