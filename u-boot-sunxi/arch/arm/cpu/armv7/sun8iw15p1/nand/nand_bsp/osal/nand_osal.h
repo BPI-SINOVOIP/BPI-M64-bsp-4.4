@@ -19,6 +19,8 @@
 
 extern void *NAND_IORemap(unsigned int base_addr, unsigned int size);
 
+extern int _change_ndfc_clk_v1(__u32 nand_index, __u32 dclk_src_sel,
+		__u32 dclk, __u32 cclk_src_sel, __u32 cclk);
 //USE_SYS_CLK
 extern int NAND_ClkRequest(unsigned int nand_index);
 extern void NAND_ClkRelease(unsigned int nand_index);

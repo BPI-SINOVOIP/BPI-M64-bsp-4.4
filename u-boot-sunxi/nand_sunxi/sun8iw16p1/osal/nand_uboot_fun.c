@@ -25,12 +25,13 @@
 #include <malloc.h>
 #include "../../nand_interface/nand_bsp.h"
 
-#define OOB_BUF_SIZE 64
-#define NAND_BOOT0_BLK_START 0
-#define NAND_BOOT0_BLK_CNT 2
-#define NAND_UBOOT_BLK_START (NAND_BOOT0_BLK_START + NAND_BOOT0_BLK_CNT)
-#define NAND_UBOOT_BLK_CNT 6
-#define NAND_BOOT0_PAGE_CNT_PER_COPY 64
+
+#define OOB_BUF_SIZE					64
+#define NAND_BOOT0_BLK_START			0
+#define NAND_BOOT0_BLK_CNT				2
+#define NAND_UBOOT_BLK_START			(NAND_BOOT0_BLK_START+NAND_BOOT0_BLK_CNT)
+#define NAND_UBOOT_BLK_CNT				6
+#define NAND_BOOT0_PAGE_CNT_PER_COPY	64
 
 static char nand_para_store[256];
 static int flash_scaned;
@@ -105,7 +106,7 @@ int NAND_LogicInit(int boot_mode)
 	__s32 ret = -1;
 	__s32 i, nftl_num, capacity_level;
 	struct _nand_info *nand_info;
-	/* char* mbr;*/
+	 /*char* mbr;*/
 
 	NAND_Print("NB1: enter NAND_LogicInit\n");
 

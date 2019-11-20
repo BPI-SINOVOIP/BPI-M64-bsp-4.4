@@ -1,3 +1,12 @@
+/*
+ * Allwinner SoCs hdmi driver.
+ *
+ * Copyright (C) 2019 Allwinner.
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2.  This program is licensed "as is" without any
+ * warranty of any kind, whether express or implied.
+ */
 #include "hdmi_core.h"
 
 static s32		hdmi_state = HDMI_State_Idle;
@@ -319,6 +328,9 @@ s32 hdmi_core_set_hdcp_enable(u32 enable)
 {
 	hdcp_enable = enable;
 
+#ifdef CONFIG_ARCH_SUN8IW7P1
+	bsp_hdcp_enable(hdcp_enable, &glb_video_para);
+#endif
 	return 0;
 }
 

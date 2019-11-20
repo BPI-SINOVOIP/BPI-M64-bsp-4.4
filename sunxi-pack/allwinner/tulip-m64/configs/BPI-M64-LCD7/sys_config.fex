@@ -1265,6 +1265,7 @@ gpio_pin_27	=  port:PL7<1><default><default><0>
 gpio_pin_28	=  port:PL8<1><default><default><0>
 
 ;-------------------------------------------------------------------------------------
+;compatible                  ---pmu0 name, support:axp803
 ;used                        ---0:not used,1:used
 ;pmu_id                      ---0:axp19x,1:axp209,2:axp22x,3:axp806,4:axp808,5:axp809,6:axp803,7:axp813
 ;reg                         ---pmu0 twi slave address

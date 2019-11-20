@@ -22,16 +22,23 @@
  */
 
 #include <common.h>
+#include <sunxi_board.h>
 
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	puts ("resetting ...\n");
 
 	udelay (50000);				/* wait 50 ms */
-
+/*
+*Saveenv must call sunxi_flash_flush
+*to synchronize the data in the FIFO
+*/
+#if 1
+	sunxi_board_restart(0);
+#else
 	disable_interrupts();
 	reset_cpu(0);
-
+#endif
 	/*NOTREACHED*/
 	return 0;
 }

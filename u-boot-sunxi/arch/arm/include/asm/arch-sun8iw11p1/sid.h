@@ -50,11 +50,8 @@
 #define EFUSE_RSSK              (0x5C)
 #define EFUSE_HDCP_HASH         (0x7C)
 #define EFUSE_CHIPCONFIG        (0x8C)
-#define EFUSE_CUSTOMER_ID      	(0x90)
+#define EFUSE_RESERVE			(0x90)
 
-#define CUSTOMER_ID_BIT_SIZE	(112)
-
-
-extern void sid_write_customer_id(void);
+#define CUSTOMER_RESERVE_SIZE	(112)
 
 #endif    /*  #ifndef __EFUSE_H__  */

@@ -1,30 +1,19 @@
 /*
- * (C) Copyright 2007-2016
- * Allwinnertech Technology Co., Ltd <www.allwinnertech.com>
- *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- */
+ *  * Copyright 2000-2009
+ *   * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *    *
+ *     * SPDX-License-Identifier:	GPL-2.0+
+ *     */
 
-#include <asm/arch/intc.h>
-#include <asm/arch/platform.h>
+
 #include <common.h>
-#include <fdt_support.h>
+#include <asm/arch/platform.h>
+#include <asm/arch/intc.h>
 #include <sys_config.h>
+#include <fdt_support.h>
 
-#include "asm/arch/timer.h"
 #include "sunxi-ir.h"
+#include "asm/arch/timer.h"
 #include <sys_config_old.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -193,6 +182,7 @@ static int ir_raw_event_store(struct ir_raw_buffer *ir_raw,
 
 extern int ir_boot_recovery_mode_detect(void);
 extern int ir_nec_decode(struct ir_raw_buffer *ir_raw, struct ir_raw_event ev);
+extern int get_ir_work_mode(int *cnt);
 unsigned long ir_packet_handle(struct ir_raw_buffer *ir_raw)
 {
 	int i = 0, ret = 0;
@@ -219,12 +209,16 @@ unsigned long ir_packet_handle(struct ir_raw_buffer *ir_raw)
 		del_timer(&ir_timer_t);
 		ir_disable();
 		gd->ir_detect_status = IR_DETECT_OK;
-		ret =
-		    script_parser_fetch("ir_boot_recovery", "ir_work_mode",
-					(int *)&ir_work_mode, sizeof(int) / 4);
+#if 1
+		ret = script_parser_fetch("ir_boot_recovery", "ir_work_mode",
+					  (int *)&ir_work_mode,
+					  sizeof(int) / 4);
 		if (ret) {
-			printf("ir_work_mode not set, use default mode: "
-			       "android recovery mode.\n");
+#else
+		ir_work_mode = get_ir_work_mode(&ret);
+		if (ret == ir_work_mode) {
+#endif
+			printf("ir_work_mode not set, use default mode: android recovery mode.\n");
 			gd->key_pressd_value = BOOT_RECOVERY_VALUE;
 		} else {
 			switch (ir_work_mode) {
@@ -243,6 +237,8 @@ unsigned long ir_packet_handle(struct ir_raw_buffer *ir_raw)
 			}
 		}
 	}
+	pr_notice("line:%d gd->key_pressd_value=0x%x\n", __LINE__,
+		  gd->key_pressd_value);
 	return 0;
 }
 
@@ -277,7 +273,7 @@ void ir_recv_irq_service(void *data)
 			} else {
 				if (is_receiving) {
 					rawir.duration *= IR_SIMPLE_UNIT;
-					print_debug("pusle :%u, dur: %u ns\n",
+					print_debug("pusle :%d, dur: %u ns\n",
 						    rawir.pulse,
 						    rawir.duration);
 					ir_raw_event_store(&sunxi_ir_raw,
@@ -314,7 +310,7 @@ void ir_recv_irq_service(void *data)
 	if (intsta & IR_RXINTS_RXPE) { /* Packet End */
 		if (rawir.duration) {
 			rawir.duration *= IR_SIMPLE_UNIT;
-			print_debug("pusle :%u, dur: %u ns\n", rawir.pulse,
+			print_debug("pusle :%d, dur: %u ns\n", rawir.pulse,
 				    rawir.duration);
 			ir_raw_event_store(&sunxi_ir_raw, &rawir);
 		}

@@ -35,11 +35,12 @@
 #include "./firmware/imagefile_new.h"
 #include <sys_config.h>
 #include <fdt_support.h>
+#include <sunxi_flash.h>
 
 extern uint img_file_start;
 extern int sunxi_sprite_deal_part_from_sysrevoery(sunxi_download_info *dl_map);
 extern int __imagehd(HIMAGE tmp_himage);
-extern int char8_char16_compare(const char *char8, const efi_char16_t *char16, size_t char16_len);
+extern int sunxi_partition_get_info_byname(const char *part_name, uint *part_offset, uint *part_size);
 
 
 typedef struct tag_IMAGE_HANDLE
@@ -120,79 +121,39 @@ _img_open_fail_:
 
 int card_part_info(__u32 *part_start, __u32 *part_size, const char *str)
 {
-#ifdef CONFIG_GPT_SUPPORT
-	char *part_buff = NULL;
-	gpt_header *gpt_head;
-	gpt_entry *entry;
-	uint partition_logic_offset = 0;
-	int part_buff_size = SUNXI_GPT_SIZE;
-	int storage_type = 0;
-	int i = 0;
-
-	part_buff = malloc(part_buff_size);
-
-	if (!part_buff) {
-		printf("%s:malloc fail\n", __func__);
-		return -1;
-	}
-
-	memset(part_buff, 0x0, part_buff_size);
-
-	/* read partition table */
-	if (!sunxi_flash_read(0, part_buff_size >> 9, part_buff)) {
-		printf("read gpt failed\n");
-		return -1;
-	}
-
-	gpt_head = (gpt_header *)(part_buff + GPT_HEAD_OFFSET);
-	entry = (gpt_entry *)(part_buff + GPT_ENTRY_OFFSET);
-
-	storage_type = get_boot_storage_type();
-	if (storage_type == STORAGE_EMMC || storage_type == STORAGE_EMMC3 ||
-	    storage_type == STORAGE_SD) {
-		partition_logic_offset = CONFIG_MMC_LOGICAL_OFFSET;
-	}
-
-	for (i = 0; i < gpt_head->num_partition_entries; i++) {
-		if (!char8_char16_compare(str, entry[i].partition_name,
-					  PARTNAME_SZ)) {
-			*part_start = (uint)(entry[i].starting_lba -
-					     partition_logic_offset);
-			*part_size = (uint)(entry[i].ending_lba -
-					    entry[i].starting_lba + 1);
-			return 0;
+	char   buffer[SUNXI_MBR_SIZE] = {0};
+	sunxi_mbr_t    *mbr;
+	int    i;
+	int offest = 0;
+	for (i = 0; i < 4; i++) {
+		if (!sunxi_flash_read (offest, SUNXI_MBR_SIZE >> 9, (void *)buffer)) {
+			pr_notice("read mbr failed\n");
 		}
+		mbr = (sunxi_mbr_t *)buffer;
+		if (!strncmp((const char *)mbr->magic, SUNXI_MBR_MAGIC, 8)) {
+			break;
+		}
+		offest += SUNXI_MBR_SIZE >> 9;
 	}
-	return -1;
-#else
-	char buffer[SUNXI_MBR_SIZE];
-	sunxi_mbr_t *mbr;
-	int i;
-
-	if (!sunxi_flash_read(0, SUNXI_MBR_SIZE / 512, buffer)) {
-		printf("read mbr failed\n");
-
+	if (i == 4) {
+		pr_notice("read mbr failed\n");
 		return -1;
 	}
-	mbr = (sunxi_mbr_t *)buffer;
 
 	for (i = 0; i < mbr->PartCount; i++) {
-		printf("part name  = %s\n", mbr->array[i].name);
-		printf("part start = %d\n", mbr->array[i].addrlo);
-		printf("part size  = %d\n", mbr->array[i].lenlo);
-	}
-
-	for (i = 0; i < mbr->PartCount; i++) {
+		pr_notice("part name  = %s\n", mbr->array[i].name);
+		pr_notice("part start = %d\n", mbr->array[i].addrlo);
+		pr_notice("part size  = %d\n", mbr->array[i].lenlo);
 		if (!strcmp(str, (char *)mbr->array[i].name)) {
 			*part_start = mbr->array[i].addrlo;
-			*part_size = mbr->array[i].lenlo;
-
+			*part_size  = mbr->array[i].lenlo;
 			return 0;
 		}
 	}
+
 	return -1;
-#endif
 }
+
 
 int sprite_form_sysrecovery(void)
 {
@@ -203,20 +164,9 @@ int sprite_form_sysrecovery(void)
 	char        *src_buf = NULL;
 	int         ret = -1;
 	int production_media = get_boot_storage_type();
-	int nodeoffset;
-	int processbar_direct = 0;;
 
-	nodeoffset = fdt_path_offset(working_fdt, FDT_PATH_CARD_BOOT);
-	if (nodeoffset >= 0) {
-		if (fdt_getprop_u32(working_fdt, nodeoffset,
-				    "processbar_direct",
-				    (uint32_t *)&processbar_direct) < 0)
-			processbar_direct = 0;
-	}
-
-	printf("sunxi sprite begin\n");
-
-	sprite_cartoon_create(processbar_direct);
+	pr_notice("sunxi sprite begin\n");
+	sprite_cartoon_create(0);
 
 	src_buf = (char *)malloc(1024 * 1024);
 	if (!src_buf)
@@ -224,12 +174,10 @@ int sprite_form_sysrecovery(void)
 		printf("sprite update error: fail to get memory for tmpdata\n");
 		goto _update_error_;
 	}
-
-	ret = card_part_info(&img_start, &part_size, "sysrecovery");
-	if (ret)
-	{
-		printf("sprite update error: read image start error\n");
-    	goto _update_error_;
+	ret = sunxi_partition_get_info_byname("sysrecovery", &img_start, &part_size);
+	if (ret) {
+			pr_error("sprite update error: read image start error\n");
+			goto _update_error_;
 	}
 	printf("part start = %d\n", img_start);
 	imghd = Img_Open_from_sysrecovery(img_start);
@@ -242,14 +190,11 @@ int sprite_form_sysrecovery(void)
 
 	sprite_cartoon_upgrade(10);
 
-	//erase the data partition.
-	ret = card_part_info(&img_start, &part_size, "data");
-	if (ret)
-	{
-		printf("sprite update error: no data part found\n");
-	}
-	else
-	{
+	/* //erase the data partition. */
+	ret = sunxi_partition_get_info_byname("data", &img_start, &part_size);
+	if (ret) {
+		pr_notice("sprite update error: no data part found\n");
+	} else {
 		__u32 tmp_size;
 		__u32 tmp_start;
 
@@ -263,7 +208,7 @@ int sprite_form_sysrecovery(void)
 	}
 
 	dl_info = (sunxi_download_info  *)malloc(sizeof(sunxi_download_info ));
-	if (!dl_info) 
+	if (!dl_info)
 	{
 		printf("sprite update error: fail to get memory for download map\n");
 		goto _update_error_;
@@ -305,7 +250,7 @@ int sprite_form_sysrecovery(void)
 
 	sunxi_board_restart(0);
 	return 0;
-	
+
 _update_error_:
 	if (dl_info)
 	{

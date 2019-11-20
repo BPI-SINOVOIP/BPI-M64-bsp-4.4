@@ -204,6 +204,9 @@ struct geth_extra_stats {
 	unsigned long poll_n;
 	unsigned long sched_timer_n;
 	unsigned long normal_irq_n;
+
+	/* This variable must be at the last */
+	void *ex_stats;
 };
 
 int sunxi_mdio_read(void *,  int, int);

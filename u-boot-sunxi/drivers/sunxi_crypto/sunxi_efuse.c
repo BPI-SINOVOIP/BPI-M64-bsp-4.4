@@ -285,6 +285,27 @@ void sid_set_security_mode(void)
 	return;
 }
 
+int sunxi_check_rotpk_hash(void)
+{
+	#ifdef EFUSE_ROTPK
+	uint chipid_index = EFUSE_ROTPK;
+	uint id_length = 32;
+	uint i = 0;
+	uint val = 0;
+
+	printf("%s entry\n", __func__);
+
+	for (i = 0; i < id_length ; i += 4) {
+		val = sid_read_key(chipid_index + i);
+		if (val != 0) {
+			printf("rotpk[0x%X] = 0x%X\n", chipid_index + i, val);
+			return -1;
+		}
+	}
+	#endif
+	return 0;
+}
+
 int sid_probe_security_mode(void)
 {
 	#ifdef EFUSE_LCJS

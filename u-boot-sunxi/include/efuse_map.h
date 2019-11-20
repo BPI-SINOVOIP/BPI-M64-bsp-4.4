@@ -101,6 +101,8 @@ int sunxi_efuse_read(void *key_name, void *rd_buf, int *len);
  */
 int sunxi_efuse_get_rotpk_status(void);
 
+int sunxi_check_rotpk_hash(void);
+
 /*reference this struct when call api:sunxi_efuse_write*/
 typedef struct
 {

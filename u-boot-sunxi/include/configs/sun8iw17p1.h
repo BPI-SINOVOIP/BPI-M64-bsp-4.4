@@ -470,5 +470,10 @@
 
 #define CONFIG_OPTEE25
 //#define CONFIG_SYS_DCACHE_OFF
-
+/*#define CONFIG_A_B_SYSTEM*/
+#ifdef CONFIG_A_B_SYSTEM
+#define SYSTEM_B 1
+#define SYSTEM_A 0
+#define MISC_SIZE 4096
+#endif
 #endif /* __CONFIG_H */

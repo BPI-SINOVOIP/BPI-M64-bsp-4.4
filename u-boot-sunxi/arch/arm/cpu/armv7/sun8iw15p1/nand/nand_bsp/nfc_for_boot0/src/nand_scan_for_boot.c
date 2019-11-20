@@ -141,7 +141,6 @@ __s32 _CheckNandID(__u8 *pNandID)
 __s32  BOOT_AnalyzeNandSystem(void)
 {
 	__s32 result;
-	__u8  tmpChipID[8];
 	boot_nand_para_t nand_info;
 
 	if( BOOT_NandGetPara( &nand_info, sizeof(boot_nand_para_t) ) != 0 ){
@@ -161,7 +160,10 @@ __s32  BOOT_AnalyzeNandSystem(void)
 	if(result)
 		return -1;
 
-	//read nand flash chip ID from boot chip
+	/* nand chip id is stored in boot0 header, maybe we don`t need read and check it */
+#if 0
+	__u8  tmpChipID[8];
+	/* read nand flash chip ID from boot chip */
 	result = PHY_ReadNandId(BOOT_CHIP_SELECT_NUM, tmpChipID);
 	if(result)
 		return -1;
@@ -186,7 +188,14 @@ __s32  BOOT_AnalyzeNandSystem(void)
 		NFC_ChangMode(&nfc_info);
 		NandIndex = 0;
 	}
-
+#endif
+	NandIndex = 0;
+	/* printf("NAND_ACCESS_FREQUENCE %d\n", NAND_ACCESS_FREQUENCE); */
+	/* change clock */
+	if (NAND_ACCESS_FREQUENCE && (NAND_ACCESS_FREQUENCE <= 50)) {
+		_change_ndfc_clk_v1(NandIndex, 3, NAND_ACCESS_FREQUENCE, 3,
+				    NAND_ACCESS_FREQUENCE * 2);
+	}
 	PHY_ChangeMode(1);
 
 	if( SUPPORT_READ_RETRY

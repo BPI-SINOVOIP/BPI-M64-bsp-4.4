@@ -169,10 +169,14 @@ int SPINAND_GetClk(__u32 nand_index)
 
 void SPINAND_PIORequest(__u32 nand_index)
 {
-	writel(0x44774474, GPIO_BASE_ADDR + 0x48);
-	writel(0x47777777, GPIO_BASE_ADDR + 0x4c);
-	writel(0x4, GPIO_BASE_ADDR + 0x50);
-	writel(0x40005000, GPIO_BASE_ADDR + 0x64);
+	writel(0x77774444, GPIO_BASE_ADDR + 0x48);
+	writel(0x04477477, GPIO_BASE_ADDR + 0x4c);
+/*
+ *    writel(0x4, GPIO_BASE_ADDR + 0x50);
+ *    writel(0x40005000, GPIO_BASE_ADDR + 0x64);
+ *
+ */
+	writel(0x14000004, GPIO_BASE_ADDR + 0x64);
 
 	/*	printf("(GPIO_BASE_ADDR + 0x48): 0x%x\n", *(volatile __u32
 	   *)(GPIO_BASE_ADDR + 0x48));

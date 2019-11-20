@@ -43,6 +43,63 @@ int sunxi_advert_logo_load(char *fatname, char *filename);
 
 
 DECLARE_GLOBAL_DATA_PTR;
+
+static int process_bmp_agrv(char *loader_addr, char *file_name, char **bmp_argv)
+{
+	static char part_info[16];
+	static char addr[16];
+	int partno = -1;
+	partno = sunxi_partition_get_partno_byname("bootloader"); /*android*/
+	if (partno < 0) {
+		partno = sunxi_partition_get_partno_byname("boot-resource");/*linux*/
+		if (partno < 0) {
+			printf("Get bootloader and boot-resource "
+			       "partition number fail!\n");
+			return -1;
+		}
+	}
+	if (loader_addr == NULL) {
+		printf("[bmp]:alloc buffer for %s fail\n", file_name);
+		return -1;
+	}
+	sprintf(part_info, "%x:0", partno);
+	sprintf(addr, "%lx", (ulong)loader_addr);
+	bmp_argv[0] = "fatload";
+	bmp_argv[1] = "sunxi_flash";
+	bmp_argv[2] = part_info;
+	bmp_argv[3] = addr;
+	bmp_argv[4] = file_name;
+	bmp_argv[5] = NULL;
+	return 0;
+}
+
+static int process_bmp_agrv_2(char *fat_name, char *loader_addr, char *file_name, char **bmp_argv)
+{
+	static char part_info[16];
+	static char addr[16];
+	int partno = -1;
+	partno = sunxi_partition_get_partno_byname(fat_name);
+	if (partno < 0) {
+		printf("Get bootloader and boot-resource "
+		       "partition number fail!\n");
+		return -1;
+	}
+	if (loader_addr == NULL) {
+		printf("[bmp]:alloc buffer for %s fail\n", file_name);
+		return -1;
+	}
+	sprintf(part_info, "%x:0", partno);
+	sprintf(addr, "%lx", (ulong)loader_addr);
+	bmp_argv[0] = "fatload";
+	bmp_argv[1] = "sunxi_flash";
+	bmp_argv[2] = part_info;
+	bmp_argv[3] = addr;
+	bmp_argv[4] = file_name;
+	bmp_argv[5] = NULL;
+	return 0;
+}
+
+
 /*
  * Allocate and decompress a BMP image using gunzip().
  *
@@ -65,14 +122,11 @@ static int do_sunxi_bmp_info(cmd_tbl_t * cmdtp, int flag, int argc, char * const
 	}
 	else if(argc == 3)
 	{
-		char  load_addr[8];
-		char  filename[32];
-		char *const bmp_argv[6] = { "fatload", "sunxi_flash", "0:0", load_addr, filename, NULL };
-
+		char *bmp_argv[6] = {0};
+		if (process_bmp_agrv(argv[1], argv[2], bmp_argv)) {
+			return -1;
+		}
 		addr = simple_strtoul(argv[1], NULL, 16);
-		memcpy(load_addr, argv[1], 8);
-		memset(filename, 0, 32);
-		memcpy(filename, argv[2], strlen(argv[2]));
 #ifdef DEBUG
 	    int i;
 
@@ -126,14 +180,11 @@ static int do_sunxi_bmp_display(cmd_tbl_t * cmdtp, int flag, int argc, char * co
 	}
 	else if(argc == 4)
 	{
-		char  load_addr[8];
-		char  filename[32];
-		char *const bmp_argv[6] = { "fatload", "sunxi_flash", "0:0", load_addr, filename, NULL };
-
+		char *bmp_argv[6] = {0};
+		if (process_bmp_agrv(argv[1], argv[3], bmp_argv)) {
+			return -1;
+		}
 		addr = simple_strtoul(argv[1], NULL, 16);
-		memcpy(load_addr, argv[1], 8);
-		memset(filename, 0, 32);
-		memcpy(filename, argv[3], strlen(argv[3]));
 		de_addr = simple_strtoul(argv[2], NULL, 16);
 #ifdef DEBUG
 	    int i;
@@ -303,29 +354,17 @@ int sunxi_bmp_display(char *name)
 {
 	int ret = 0;
 	char *argv[6];
-	char bmp_head[32];
-	char bmp_name[32];
 	char *bmp_head_addr = (char *)CONFIG_SYS_SDRAM_BASE;
 
-	if (NULL != bmp_head_addr) {
-		sprintf(bmp_head, "%lx", (ulong)bmp_head_addr);
-	} else {
-		printf("sunxi bmp: alloc buffer for %s fail\n", name);
+	printf("bmp_name=%s\n", name);
+	if (process_bmp_agrv(bmp_head_addr, name, argv)) {
 		return -1;
 	}
-	strncpy(bmp_name, name, sizeof(bmp_name));
-	printf("bmp_name=%s\n", bmp_name);
-
-	argv[0] = "fatload";
-	argv[1] = "sunxi_flash";
-#ifdef CONFIG_GPT_SUPPORT
-	argv[2] = "1:0";
-#else
-	argv[2] = "0:0";
+#ifdef CONFIG_SUNXI_MULITCORE_BOOT
+	while (gd->logo_status_multiboot != DISPLAY_LOGO_LOAD_OK)
+			; /*wait display init finish*/
 #endif
-	argv[3] = bmp_head;
-	argv[4] = bmp_name;
-	argv[5] = NULL;
+	board_display_layer_close();
 	if (do_fat_fsload(0, 0, 5, argv)) {
 		printf("sunxi bmp info error : unable to open logo file %s\n", argv[4]);
 		return -1;
@@ -418,24 +457,15 @@ int sunxi_Eink_Get_bmp_buffer(char *name, char *bmp_gray_buf)
 {
 	int ret;
 	sunxi_bmp_store_t bmp_info;
-	char  bmp_addr[32] = {0};
-	char  bmp_name[32];
-	char *bmp_argv[6] = {"fatload", "sunxi_flash", "0:0", "00000000", bmp_name, NULL};
-
-#ifdef CONFIG_GPT_SUPPORT
-	bmp_argv[2] = "1:0";
-#endif
-
+	char *bmp_argv[6] = {0};
+	if (process_bmp_agrv(bmp_gray_buf, name, bmp_argv)) {
+			return -1;
+	}
 	if (bmp_gray_buf == NULL) {
 		printf("sunxi_Eink_Get_bmp_buffer: bmp_gray_buffor is null for %s\n", name);
 		return -1;
 	}
 
-	sprintf(bmp_addr, "%lx", (ulong)bmp_gray_buf);
-	bmp_argv[3] = bmp_addr;
-
-	memset(bmp_name, 0, 32);
-	strcpy(bmp_name, name);
 	if (do_fat_fsload(0, 0, 5, bmp_argv)) {
 		printf("sunxi_Eink_Get_bmp_buffer error : unable to open logo file %s\n", bmp_argv[4]);
 		return -1;
@@ -459,25 +489,17 @@ int sunxi_bmp_display(char *name)
 {
 	sunxi_bmp_store_t bmp_info;
 	char *argv[6];
-	char  bmp_head[32];
-	char  bmp_name[32] = {0};
 	ulong bmp_buff = CONFIG_SYS_SDRAM_BASE;
 	int  ret = -1;
 
 	/* set bmp decode addr is CONFIG_SYS_SDRAM_BASE */
-	sprintf(bmp_head, "%lx", (ulong)bmp_buff);
-	strncpy(bmp_name, name, sizeof(bmp_name));
-
-	argv[0] = "fatload";
-	argv[1] = "sunxi_flash";
-#ifdef CONFIG_GPT_SUPPORT
-	argv[2] = "1:0";
-#else
-	argv[2] = "0:0";
+	if (process_bmp_agrv((char *)bmp_buff, name, argv)) {
+		return -1;
+	}
+#ifdef CONFIG_SUNXI_MULITCORE_BOOT
+	while (gd->logo_status_multiboot != DISPLAY_LOGO_LOAD_OK)
+			; /*wait display init finish*/
 #endif
-	argv[3] = bmp_head;
-	argv[4] = bmp_name;
-	argv[5] = NULL;
 	board_display_layer_close();
 	if (do_fat_fsload(0, 0, 5, argv))
 	{
@@ -667,35 +689,10 @@ static int sunxi_bmp_show(sunxi_bmp_store_t bmp_info)
 
 static int fat_read_file_ex(char *fatname, char *filename, char *addr)
 {
-	char file_name[32];
-	char fat_name[32];
-	char partition[32];
-	int partition_num = -1;
-	char *bmp_buff = NULL;
-	char bmp_addr[32] = {0};
-
-	memset(file_name, 0, 32);
-	strcpy(file_name, filename);
-
-	memset(fat_name, 0, 32);
-	strcpy(fat_name, fatname);
-
-	partition_num = sunxi_partition_get_partno_byname(fat_name);
-	if (partition_num < 0) {
-		printf("[boot disp] can not find the partition %s\n", fat_name);
-		return -1;
+	char *bmp_argv[6] = {0};
+	if (process_bmp_agrv_2(fatname, addr, filename, bmp_argv)) {
+			return -1;
 	}
-	sprintf(partition, "%x:0", partition_num);
-	bmp_buff = addr;
-	if (bmp_buff == NULL) {
-		printf("sunxi bmp: alloc buffer fail\n");
-		return -1;
-	}
-	char *bmp_argv[6] = {"fatload",  "sunxi_flash", "0:0",
-			     "00000000", file_name,     NULL};
-	bmp_argv[2] = partition;
-	sprintf(bmp_addr, "%lx", (ulong)bmp_buff);
-	bmp_argv[3] = bmp_addr;
 	if (do_fat_fsload(0, 0, 5, bmp_argv)) {
 		printf("sunxi bmp info error : unable to open logo file %s\n",
 		       bmp_argv[1]);
@@ -821,8 +818,6 @@ int sunxi_bmp_load(char *name)
 {
 	int ret = 0;
 	char *argv[6];
-	char bmp_head[32];
-	char bmp_name[32];
 	char *bmp_head_addr = (char *)CONFIG_SYS_SDRAM_BASE;
 
 #ifdef ENABLE_ADVERT_PICTURE
@@ -836,21 +831,10 @@ int sunxi_bmp_load(char *name)
 	}
 #endif
 
-	if (NULL != bmp_head_addr) {
-		sprintf(bmp_head, "%lx", (ulong)bmp_head_addr);
-	} else {
-		printf("sunxi bmp: alloc buffer for %s fail\n", name);
-		return -1;
+	printf("bmp_name=%s\n", name);
+	if (process_bmp_agrv(bmp_head_addr, name, argv)) {
+			return -1;
 	}
-	strncpy(bmp_name, name, sizeof(bmp_name));
-	printf("bmp_name=%s\n", bmp_name);
-
-	argv[0] = "fatload";
-	argv[1] = "sunxi_flash";
-	argv[2] = "0:0";
-	argv[3] = bmp_head;
-	argv[4] = bmp_name;
-	argv[5] = NULL;
 	if (do_fat_fsload(0, 0, 5, argv)) {
 		printf("sunxi bmp info error : unable to open logo file %s\n",
 		       argv[4]);

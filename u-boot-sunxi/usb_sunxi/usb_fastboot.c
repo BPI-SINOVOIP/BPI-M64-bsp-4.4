@@ -1198,7 +1198,7 @@ static char sunxi_read_oem_unlock_ability(void)
 		printf("cant find part named frp\n");
 	} else {
 		part_sectors = sunxi_partition_get_size_byname("frp");
-#if DEBUG
+#ifdef DEBUG
 		printf("start block = 0x%x, part_sectors = %d\n", start_block, part_sectors);
 #endif
 		/*read the last block of frp part to addr[]*/
@@ -1415,6 +1415,50 @@ static int sunxi_fastboot_init(void)
 	printf("send addr 0x%lx\n", (ulong)trans_data.base_send_buffer);
 	printf("start to display fastbootlogo.bmp\n");
 	sunxi_bmp_display("fastbootlogo.bmp");
+#ifndef CONFIG_FASTBOOT_STATIC_SERIAL_NUM
+	char buffer1[4096];
+	char fail_flag = 0;
+	memset(buffer1, 0x0, 4096);
+#ifdef CONFIG_SUNXI_SECURE_STORAGE
+	int ret, data_len = 0;
+	ret = sunxi_secure_storage_init();
+	if (ret < 0) {
+		printf("%s secure storage init err\n", __func__);
+		fail_flag = 1;
+	} else {
+		ret = sunxi_secure_object_read("sn", buffer1, 4096, &data_len);
+		if (ret < 0) {
+			printf("line:%d private data %s is not exist\n", __LINE__, "sn");
+			fail_flag = 1;
+		}
+	}
+#else
+	fail_flag = 1;
+#endif
+#ifdef CONFIG_SUNXI_SERIAL
+	extern int get_serial_num_from_file(char *serial);
+	extern int get_serial_num_from_chipid(char *serial);
+	if (fail_flag == 1) {
+		char serial_num[128];
+		memset(serial_num, 0, 128);
+		if (get_serial_num_from_file(serial_num))
+			get_serial_num_from_chipid(serial_num);
+			strncpy(buffer1, serial_num, 24);
+		}
+		strncpy(sunxi_usb_fastboot_dev[2], buffer1, 24);
+#else
+	if (!fail_flag) {
+		strncpy(sunxi_usb_fastboot_dev[2], buffer1, 24);
+	}
+#endif
+#ifdef BEBUG
+	for (ret = 0 ; ret < 6 ; ret++)
+		printf("sunxi_usb_fastboot_dev[%d]:%x  \t %s\n",
+			ret, (uint)sunxi_usb_fastboot_dev[ret],
+			sunxi_usb_fastboot_dev[ret]);
+#endif
+#endif
+
 
     return 0;
 }

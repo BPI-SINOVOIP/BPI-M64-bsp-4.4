@@ -1,51 +1,39 @@
 /*
- * (C) Copyright 2007-2016
- * Allwinnertech Technology Co., Ltd <www.allwinnertech.com>
- *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- *
- */
+ *  * Copyright 2000-2009
+ *   * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *    *
+ *     * SPDX-License-Identifier:	GPL-2.0+
+ *     */
+
 #ifndef __SUNXI_IR_H__
 #define __SUNXI_IR_H__
 
 extern void ir_clk_cfg(void);
 
-#define MAX_IR_ADDR_NUM (64)
+#define MAX_IR_ADDR_NUM (32)
 
 #define IR_DETECT_NULL (1)
 #define IR_DETECT_OK (2)
 #define IR_DETECT_END (3)
 
-/*#define SUNXI_IR_DEBUG */
+/* //#define SUNXI_IR_DEBUG */
 
 #ifdef SUNXI_IR_DEBUG
-#define print_debug(fmt, args...) printf(fmt, ##args)
+#define print_debug(fmt...) printf(fmt...)
 #else
 #define print_debug(fmt...)
 #endif
 
 #define CONFIG_FPGA_V4_PLATFORM
 
-/* Registers */
+/* //Registers */
 #define IR_REG(x) (x)
-#define IR_CTRL_REG IR_REG(0x00)   /* IR Control */
-#define IR_RXCFG_REG IR_REG(0x10)  /* Rx Config */
-#define IR_RXDAT_REG IR_REG(0x20)  /* Rx Data */
-#define IR_RXINTE_REG IR_REG(0x2C) /* Rx Interrupt Enable */
-#define IR_RXINTS_REG IR_REG(0x30) /* Rx Interrupt Status */
-#define IR_SPLCFG_REG IR_REG(0x34) /* IR Sample Config */
+#define IR_CTRL_REG IR_REG(0x00) /* //IR Control */
+#define IR_RXCFG_REG IR_REG(0x10) /* //Rx Config */
+#define IR_RXDAT_REG IR_REG(0x20) /* //Rx Data */
+#define IR_RXINTE_REG IR_REG(0x2C) /* //Rx Interrupt Enable */
+#define IR_RXINTS_REG IR_REG(0x30) /* //Rx Interrupt Status */
+#define IR_SPLCFG_REG IR_REG(0x34) /* //IR Sample Config */
 
 #define IR_FIFO_SIZE (64) /* 64Bytes */
 #if (defined CONFIG_FPGA_V4_PLATFORM) || (defined CONFIG_FPGA_V7_PLATFORM)
@@ -53,24 +41,24 @@ extern void ir_clk_cfg(void);
 #endif
 
 #ifdef CIR_24M_CLK_USED
-#define IR_SIMPLE_UNIT (21333)      /* simple in ns */
-#define IR_CLK (24000000)	   /* fpga clk output is fixed */
-#define IR_CIR_MODE (0x3 << 4)      /* CIR mode enable */
+#define IR_SIMPLE_UNIT (21333) /* simple in ns */
+#define IR_CLK (24000000) /* fpga clk output is fixed */
+#define IR_CIR_MODE (0x3 << 4) /* CIR mode enable */
 #define IR_ENTIRE_ENABLE (0x3 << 0) /* IR entire enable */
-#define IR_SAMPLE_DEV (0x3 << 0)    /* 24MHz/512 =46875Hz (21333ns) */
+#define IR_SAMPLE_DEV (0x3 << 0) /* 24MHz/512 =46875Hz (21333ns) */
 #define IR_FIFO_32 (((IR_FIFO_SIZE >> 1) - 1) << 8)
 #define IR_IRQ_STATUS ((0x1 << 4) | 0x3)
 #else
 #define IR_SIMPLE_UNIT (32000) /* simple in ns */
 #define IR_CLK (8000000)
-#define IR_CIR_MODE (0x3 << 4)      /* CIR mode enable */
+#define IR_CIR_MODE (0x3 << 4) /* CIR mode enable */
 #define IR_ENTIRE_ENABLE (0x3 << 0) /* IR entire enable */
-#define IR_SAMPLE_DEV (0x2 << 0)    /* 4MHz/256 =31250Hz (32000ns) */
+#define IR_SAMPLE_DEV (0x2 << 0) /* 4MHz/256 =31250Hz (32000ns) */
 #define IR_FIFO_32 (((IR_FIFO_SIZE >> 1) - 1) << 8)
 #define IR_IRQ_STATUS ((0x1 << 4) | 0x3)
 #endif
 
-/* Bit Definition of IR_RXINTS_REG Register */
+/* //Bit Definition of IR_RXINTS_REG Register */
 #define IR_RXINTS_RXOF (0x1 << 0) /* Rx FIFO Overflow */
 #define IR_RXINTS_RXPE (0x1 << 1) /* Rx Packet End */
 #define IR_RXINTS_RXDA (0x1 << 4) /* Rx FIFO Data Available */
@@ -80,15 +68,14 @@ extern void ir_clk_cfg(void);
 #define IR_RXIDLE_VAL                                                          \
 	(((5) & 0xff)                                                          \
 	 << 8) /* Idle Threshold = (5+1)*128*21.3 = ~16.4ms > 9ms */
-#define IR_ACTIVE_T ((0 & 0xff) << 16)   /* Active Threshold */
+#define IR_ACTIVE_T ((0 & 0xff) << 16) /* Active Threshold */
 #define IR_ACTIVE_T_C ((1 & 0xff) << 23) /* Active Threshold */
 #else
 #define IR_RXFILT_VAL                                                          \
 	(((12) & 0x3f) << 2) /* Filter Threshold = 12*32 = ~384us < 500us */
 #define IR_RXIDLE_VAL                                                          \
-	(((2) & 0xff) << 8) /* Idle Threshold = (2+1)*128*32 = ~23.8ms > 9ms   \
-			       */
-#define IR_ACTIVE_T ((99 & 0xff) << 16)  /* Active Threshold */
+	(((2) & 0xff) << 8) /* Idle Threshold = (2+1)*128*32 = ~23.8ms > 9ms */
+#define IR_ACTIVE_T ((99 & 0xff) << 16) /* Active Threshold */
 #define IR_ACTIVE_T_C ((0 & 0xff) << 23) /* Active Threshold */
 #endif
 
@@ -123,18 +110,18 @@ struct ir_raw_event {
 			u8 duty_cycle;
 		};
 	};
-	unsigned pulse:1;
-	unsigned reset:1;
-	unsigned timeout:1;
-	unsigned carrier_report:1;
+	unsigned pulse;
+	unsigned reset;
+	unsigned timeout;
+	unsigned carrier_report;
 };
 
 #define DEFINE_IR_RAW_EVENT(event)                                             \
-	struct ir_raw_event event = {{.duration = 0},                          \
-				     .pulse = 0,                               \
-				     .reset = 0,                               \
-				     .timeout = 0,                             \
-				     .carrier_report = 0}
+	struct ir_raw_event event = { {.duration = 0 },                        \
+				      .pulse	  = 0,                     \
+				      .reset	  = 0,                     \
+				      .timeout	= 0,                     \
+				      .carrier_report = 0 }
 
 static inline void init_ir_raw_event(struct ir_raw_event *ev)
 {
@@ -172,7 +159,7 @@ static inline bool geq_margin(unsigned d1, unsigned d2, unsigned margin)
 
 static inline bool eq_margin(unsigned d1, unsigned d2, unsigned margin)
 {
-	return (d1 > (d2 - margin)) && (d1 < (d2 + margin));
+	return (bool)((d1 > (d2 - margin)) && (d1 < (d2 + margin)));
 }
 
 static inline bool is_transition(struct ir_raw_event *x, struct ir_raw_event *y)

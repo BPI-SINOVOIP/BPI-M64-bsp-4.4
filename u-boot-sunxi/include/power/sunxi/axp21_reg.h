@@ -44,6 +44,7 @@
 #define   BOOT_POWER21_DLDO2OUT_VOL				(0x9A)
 
 #define   BOOT_POWER21_PWRON_STATUS              	(0x20)
+#define   BOOT_POWER21_VSYS_MIN					(0x14)
 #define   BOOT_POWER21_VBUS_VOL_SET             		(0x15)
 #define   BOOT_POWER21_VBUS_CUR_SET             		(0x16)
 #define   BOOT_POWER21_VOFF_SET            			(0x24)

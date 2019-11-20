@@ -1,4 +1,9 @@
-
+/*
+ *  * Copyright 2000-2009
+ *   * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *    *
+ *     * SPDX-License-Identifier:	GPL-2.0+
+ *     */
 #include <common.h>
 
 /*
@@ -74,4 +79,59 @@ int sunxi_str_replace(char *dest_buf, char *goal, char *replace)
 
 	return 0;
 
+}
+
+
+int sunxi_str_replace_all(char *dest_buf, char *goal, char *replace)
+{
+	char tmp[128];
+	char tmp_str[16];
+	int  goal_len, rep_len, dest_len;
+	int  i, j = 0, k;
+	char first_flag = 0;
+	if ((goal == NULL) || (dest_buf == NULL)) {
+		return -1;
+	}
+
+	memset(tmp, 0, 128);
+	strcpy(tmp, dest_buf);
+
+	goal_len = strlen(goal);
+	dest_len = strlen(dest_buf);
+
+	if (replace != NULL) {
+		rep_len = strlen(replace);
+	} else {
+		rep_len = 0;
+	}
+	for (i = 0 ; tmp[i] ;) {
+		k = 0;
+		while (((tmp[i] != ' ') && (tmp[i] != ';') && (tmp[i] != 0)) || (tmp[i+1] == ' ')) {
+		tmp_str[k++] = tmp[i];
+		i++;
+		if (i >= dest_len)
+			break;
+	}
+	i++;
+	tmp_str[k] = 0;
+	if (!strcmp(tmp_str, goal)) {
+		if (rep_len != 0 && first_flag == 1)
+			j += (rep_len - goal_len);
+		if (rep_len) {
+			strcpy(dest_buf + j, replace);
+			if (tmp[j + goal_len]) {
+				memcpy(dest_buf + j + rep_len, tmp + j + goal_len, dest_len - j - goal_len);
+				dest_buf[dest_len - goal_len + rep_len] = 0;
+			}
+		} else {
+			if (tmp[j + goal_len]) {
+				memcpy(dest_buf + j, tmp + j + goal_len, dest_len - j - goal_len);
+				dest_buf[dest_len - goal_len + rep_len] = 0;
+			}
+		}
+			first_flag = 1;
+		}
+		j = i;
+	}
+	return 0;
 }

@@ -9,7 +9,8 @@
 #include "spinand.h"
 #include "spinand_osal_boot0.h"
 
-__u32 SPIC_IO_BASE;
+
+__u32 SPIC_IO_BASE = 0;
 
 __s32 Wait_Tc_Complete(void)
 {

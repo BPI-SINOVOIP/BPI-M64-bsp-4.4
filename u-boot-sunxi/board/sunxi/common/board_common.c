@@ -30,6 +30,7 @@
 #include <cputask.h>
 #endif
 #include "../../../drivers/ir/sunxi-ir.h"
+#include "android_image.h"
 
 #ifdef CONFIG_SUNXI_READ_MAC_FROM_PRIVATE
 #include <fs.h>
@@ -37,9 +38,10 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define PARTITION_SETS_MAX_SIZE	 1024
+#define PARTITION_SETS_MAX_SIZE 1024
 #define PARTITION_NAME_MAX_SIZE  16
 #define ROOT_PART_NAME_MAX_SIZE  (PARTITION_NAME_MAX_SIZE + 5)
+__maybe_unused static uint8_t misc_active_slot;
 
 int __attribute__((weak)) sunxi_fastboot_status_read(void)
 {
@@ -189,10 +191,88 @@ void sunxi_fastboot_init(void)
 	root_partition = getenv("root_partition");
 	if(root_partition)
 		printf("root_partition is %s\n",root_partition);
+#ifdef CONFIG_A_B_SYSTEM
+	char  misc_args[MISC_SIZE];
+	char  misc_system[16];
+	struct bootloader_message *misc_info;
+	memset(misc_args, 0, MISC_SIZE);
+	memset(misc_system, 0, 16);
+	u32 misc_offset = sunxi_partition_get_offset_byname("misc");
+	if (!misc_offset) {
+		pr_error("no misc partition is found\n");
+	} else {
+		pr_msg("misc partition found\n");
+		sunxi_flash_read(misc_offset, MISC_SIZE/512, misc_args);
+	}
+	misc_info = (struct bootloader_message *)misc_args;
+	printf("misc_info->reserved[0]:%d\n", misc_info->reserved[0]);
+	if (misc_info->slot_suffix.slot_info[1].successful_boot == 1 &&
+		misc_info->slot_suffix.active_slot == SYSTEM_B) {
+		misc_info->slot_suffix.slot_info[0].successful_boot = 0;
+		misc_active_slot = 1;
+		misc_info->reserved[0] = 0;
+	} else if (misc_info->slot_suffix.slot_info[0].successful_boot == 1 &&
+		misc_info->slot_suffix.active_slot == SYSTEM_A) {
+		misc_info->slot_suffix.slot_info[1].successful_boot = 0;
+		misc_active_slot = 0;
+		misc_info->reserved[0] = 0;
+	} else if (misc_info->reserved[0] < 3) {
+		misc_info->reserved[0]++;
+		if (misc_info->slot_suffix.active_slot == SYSTEM_B) {
+			misc_active_slot = 1;
+		} else{
+			misc_active_slot = 0;
+		}
+	} else {
+		char  boot_args[512];
+		memset(boot_args, 0, 512);
+		u32 boot_offest;
+		if (misc_info->slot_suffix.active_slot == SYSTEM_A) {
+			boot_offest = sunxi_partition_get_offset_byname("boot_b");
+			sunxi_flash_read(boot_offest, 1, boot_args);
+			if (!strncmp(boot_args, ANDR_BOOT_MAGIC, sizeof(ANDR_BOOT_MAGIC))) {
+				misc_info->slot_suffix.active_slot = SYSTEM_B;
+				misc_info->slot_suffix.slot_info[0].successful_boot = 0;
+				misc_info->slot_suffix.slot_info[1].successful_boot = 1;
+				misc_active_slot = 1;
+			} else {
+				pr_error("bad boot_b image magic, maybe not a boot.img to be run SYSTEM A\n");
+				misc_info->slot_suffix.active_slot = SYSTEM_A;
+				misc_info->slot_suffix.slot_info[0].successful_boot = 1;
+				misc_info->slot_suffix.slot_info[1].successful_boot = 0;
+				misc_active_slot = 0;
+			}
+		} else {
+			boot_offest = sunxi_partition_get_offset_byname("boot_a");
+			sunxi_flash_read(boot_offest, 1, boot_args);
+			if (!strncmp(boot_args, ANDR_BOOT_MAGIC, sizeof(ANDR_BOOT_MAGIC))) {
+				misc_info->slot_suffix.active_slot = SYSTEM_A;
+				misc_info->slot_suffix.slot_info[0].successful_boot = 1;
+				misc_info->slot_suffix.slot_info[1].successful_boot = 0;
+				misc_active_slot = 0;
+			} else {
+				pr_error("bad boot_a image magic, maybe not a boot.img to be run SYSTEM B\n");
+				misc_info->slot_suffix.active_slot = SYSTEM_B;
+				misc_info->slot_suffix.slot_info[0].successful_boot = 0;
+				misc_info->slot_suffix.slot_info[1].successful_boot = 1;
+				misc_active_slot = 1;
+			}
 
+		}
+	}
+
+	if (misc_active_slot == 1) {
+		strncpy(misc_system, "system_b", sizeof("system_b"));
+	} else {
+		strncpy(misc_system, "system_a", sizeof("system_a"));
+	}
+	if (misc_offset) {
+		sunxi_flash_write(misc_offset, MISC_SIZE/512, misc_args);
+	}
+#endif
 	printf("--------fastboot partitions--------\n");
 	part_total = sunxi_partition_get_total_num();
-	part_type = sunxi_partition_get_type();
+	part_type  = sunxi_partition_get_uboot_used_type();
 	if ((part_total <= 0) || (part_total > SUNXI_MBR_MAX_PART_COUNT)) {
 		printf("mbr not exist\n");
 
@@ -233,6 +313,18 @@ void sunxi_fastboot_init(void)
 			break;
 		}
 		/* fastboot_flash_add_ptn(&fb_part); */
+#ifdef CONFIG_A_B_SYSTEM
+		if (!strncmp(fb_part.name, misc_system, strlen(misc_system))) {
+			sprintf(partition_index, "/dev/%s", part_name);
+			if (storage_type == STORAGE_NAND) {
+				setenv("nand_root", partition_index);
+			} else if (storage_type == STORAGE_SD ||
+				storage_type == STORAGE_EMMC ||
+				storage_type == STORAGE_EMMC3) {
+				setenv("mmc_root", partition_index);
+			}
+		}
+#endif
 		sprintf(partition_index, "%s@%s:", fb_part.name, part_name);
 		offset += temp_offset;
 		partition_index = partition_sets + offset;
@@ -510,7 +602,7 @@ int check_physical_key_early(void)
 		pr_error("[key recovery] can't find recovery_key config.\n");
 		return 0;
 	}
-	gpio_recovery.mul_sel = 0; 
+	gpio_recovery.mul_sel = 0; /*Ç¿ÖÆÉèÖÃ³ÉÊäÈë */
 	gpio_hd = gpio_request(&gpio_recovery, 1);
 	if (!gpio_hd) {
 		pr_error("[key recovery] gpio request fail!\n");
@@ -630,6 +722,35 @@ int update_bootcmd(void)
 
 	boot_mode = detect_other_boot_mode();
 
+#ifdef CONFIG_A_B_SYSTEM
+	char setargs_flash[1024];
+	char *setargs_temp = NULL;
+	char boot_normal_commond[128];
+	memset(boot_normal_commond, 0x0, 128);
+	strcpy(boot_normal_commond, getenv("boot_normal"));
+	if (misc_active_slot == 1) {
+		sunxi_str_replace_all(boot_normal_commond, "boot", "boot_b");
+		setenv("slot_suffix", "_b");
+	} else {
+		sunxi_str_replace_all(boot_normal_commond, "boot", "boot_a");
+		setenv("slot_suffix", "_a");
+	}
+	setenv("boot_normal", boot_normal_commond);
+	setenv("skip_initramfs", "skip_initramfs");
+	if ((storage_type == STORAGE_SD) ||
+	(storage_type == STORAGE_EMMC) ||
+	(storage_type == STORAGE_EMMC3)) {
+		setargs_temp = getenv("setargs_mmc");
+		strcpy(setargs_flash, setargs_temp);
+		strcat(setargs_flash, " ${skip_initramfs} androidboot.slot_suffix=${slot_suffix}");
+		setenv("setargs_mmc", setargs_flash);
+	} else if (storage_type == STORAGE_NAND) {
+		setargs_temp = getenv("setargs_nand");
+		strcpy(setargs_flash, setargs_temp);
+		strcat(setargs_flash, " ${skip_initramfs} androidboot.slot_suffix=${slot_suffix}");
+		setenv("setargs_nand", setargs_flash);
+	}
+#endif
 #ifdef CONFIG_DETECT_RTC_BOOT_MODE
 	if (set_bootcmd_from_rtc(boot_mode, boot_commond) < 0)
 #endif
@@ -896,6 +1017,10 @@ int set_bootcmd_from_rtc(int mode, char *bootcmd)
 		break;
 	case SUNXI_BOOT_RECOVERY_FLAG:
 		pr_msg("Recovery detected, will boot recovery\n");
+#ifdef CONFIG_A_B_SYSTEM
+		setenv("boot_recovery", getenv("boot_normal"));
+		setenv("skip_initramfs", "");
+#endif
 		sunxi_str_replace(bootcmd, "boot_normal", "boot_recovery");
 		break;
 	case SUNXI_FASTBOOT_FLAG:
@@ -969,6 +1094,10 @@ char *set_bootcmd_from_misc(int mode, char *bootcmd)
 		sunxi_str_replace(bootcmd, "boot_normal", "boot_recovery");
 	} else if (!strcmp(misc_message->command, "recovery")) {
 		puts("Recovery detected, will boot recovery\n");
+#ifdef CONFIG_A_B_SYSTEM
+		setenv("boot_recovery", getenv("boot_normal"));
+		setenv("skip_initramfs", "");
+#endif
 		sunxi_str_replace(bootcmd, "boot_normal", "boot_recovery");
 	} else if (!strcmp(misc_message->command, "bootloader")) {
 		puts("Fastboot detected, will boot fastboot\n");
@@ -1320,6 +1449,11 @@ int board_late_init(void)
 		/* update mac/wifi serial info in env */
 		extern int update_user_data(void);
 		update_user_data();
+#endif
+
+#ifdef CONFIG_SUNXI_MAC
+		extern int update_sunxi_mac(void);
+		update_sunxi_mac();
 #endif
 
 #ifdef CONFIG_SUNXI_SERIAL

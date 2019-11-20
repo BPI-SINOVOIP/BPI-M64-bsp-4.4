@@ -352,6 +352,64 @@ int bsp_hdmi_video_get_div(unsigned int pixel_clk)
 	return div;
 }
 
+int bsp_hdcp_enable(u32 enable, struct video_para *video)
+{
+	unsigned int id = get_vid(video->vic);
+
+	printf("[%s]: en [%d]\n", __func__, enable);
+	hdmi_write(0x10010, 0x45);
+	hdmi_write(0x10011, 0x45);
+	hdmi_write(0x10012, 0x52);
+	hdmi_write(0x10013, 0x54);
+	if (enable) {
+		hdmi_write(0x00C1, hdmi_read(0x00C1) | 0x02);/*_DisableEncryption*/
+		hdmi_write(0x0081, hdmi_read(0x0081) | 0x40);/*mc_hdcp_clock_enable*/
+		hdmi_write(0x0040, hdmi_read(0x0040) | 0x80);/*fc_video_hdcp_keepout*/
+		hdmi_write(0x00C0, video->is_hdmi ? (hdmi_read(0x00C0) | 0x01) : (hdmi_read(0x00C0) & 0xfe));/*hdmi mode*/
+	/*	hdmi_write(0x40C1, hdmi_read(0x40C1) | 0x02);_HSyncPolarity*/
+	/*	hdmi_write(0x40C1, hdmi_read(0x40C1) | 0x08);_VSyncPolarity*/
+		hdmi_write(0x40C1, (ptbl[id].para[3] < 96) ? 0x10 : 0x1a);
+	/*	hdmi_write(0x40C1, hdmi_read(0x40C1) | 0x10);//_DataEnablePolarity*/
+		hdmi_write(0x8081, hdmi_read(0x8081) & 0xdf);/*bypass hdcp_block*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xfd);/*_EnableFeature11*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xef);/*_RiCheck*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xbf);/*_EnableI2cFastMode*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0x7f);/*_EnhancedLinkVerification*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xf7);/*_EnableAvmute*/
+		hdmi_write(0x40C1, hdmi_read(0x40C1) | 0x40);/*_UnencryptedVideoColor*/
+		hdmi_write(0x00C1, hdmi_read(0x00C1) | 0x04);/*_EncodingPacketHeader*/
+		hdmi_write(0xC0C0, 0x40);/*_OessWindowSize*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xdf);/*_BypassEncryption*/
+		hdmi_write(0x00C1, hdmi_read(0x00C1) & 0xfe);/*hdcp_sw_reset*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) | 0x04);/*hdcp_rxdetect*/
+		hdmi_write(0x80C2, 0xff);/*_InterruptClear*/
+		hdmi_write(0x40C0, 0x00);/*_InterruptMask*/
+		hdmi_write(0x0081, hdmi_read(0x0081) & 0xbf);/*mc_hdcp_clock_enable*/
+	} else {
+		hdmi_write(0x00C1, hdmi_read(0x00C1) | 0x02);/*_DisableEncryption(true)*/
+		hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xfb);/*hdcp_rxdetect(flase)*/
+		hdmi_write(0x0081, hdmi_read(0x0081) | 0x40);/*mc_hdcp_clock_enable(disable)*/
+	}
+
+	return 0;
+}
+
+int bsp_hdcp_initialize(struct video_para *video)
+{
+	hdmi_write(0x10010, 0x45);
+	hdmi_write(0x10011, 0x45);
+	hdmi_write(0x10012, 0x52);
+	hdmi_write(0x10013, 0x54);
+	hdmi_write(0xC0C0, 0x40);/*_OessWindowSize */
+	hdmi_write(0x0040, hdmi_read(0x0040) | 0x80);/* fc_video_hdcp_keepout */
+	hdmi_write(0x00C0, video->is_hdmi ? (hdmi_read(0x00C0) | 0x01) : (hdmi_read(0x00C0) & 0xfe));
+	hdmi_write(0x00C0, hdmi_read(0x00C0) | 0x20);/*_BypassEncryption*/
+	hdmi_write(0x00C0, hdmi_read(0x00C0) & 0xfb);/*hdcp_rxdetect */
+	hdmi_write(0x40C1, hdmi_read(0x40C1) & 0xef);/*_DataEnablePolarity*/
+	hdmi_write(0x00C1, hdmi_read(0x00C1) | 0x02);/*_DisableEncryption*/
+	return 0;
+}
+
 int bsp_hdmi_video(struct video_para *video)
 {
 	unsigned int count;
@@ -483,30 +541,19 @@ int bsp_hdmi_video(struct video_para *video)
 			       : (ptbl[id].para[0] & 0x7f));
 	}
 
-	if (video->is_hcts) {
-		hdmi_write(0x00C0, video->is_hdmi ? 0x91 : 0x90);
-		hdmi_write(0x00C1, 0x05);
-		hdmi_write(0x40C1, (ptbl[id].para[3] < 96) ? 0x10 : 0x1a);
-		hdmi_write(0x80C2, 0xff);
-		hdmi_write(0x40C0, 0xfd);
-		hdmi_write(0xC0C0, 0x40);
-		hdmi_write(0x00C1, 0x04);
-		hdmi_write(0x10010, 0x45);
-		hdmi_write(0x10011, 0x45);
-		hdmi_write(0x10012, 0x52);
-		hdmi_write(0x10013, 0x54);
-		hdmi_write(0x0040, hdmi_read(0x0040) | 0x80);
-		hdmi_write(0x00C0, video->is_hdmi ? 0x95 : 0x94);
-		hdmi_write(0x10010, 0x52);
-		hdmi_write(0x10011, 0x54);
-		hdmi_write(0x10012, 0x41);
-		hdmi_write(0x10013, 0x57);
-	}
-
 	hdmi_write(0x0082, 0x00);
 	hdmi_write(0x0081, 0x00);
 
 	hdmi_write(0x0840, 0x00);
+
+
+	/* fix hdcp reboot flush screen */
+	bsp_hdcp_initialize(video);
+
+	if (video->is_hcts)
+		bsp_hdcp_enable(1, video);
+	else
+		bsp_hdcp_enable(0, video);
 
 	return 0;
 }
@@ -516,7 +563,7 @@ int bsp_hdmi_audio(struct audio_para *audio)
 	unsigned int i;
 	unsigned int n;
 	unsigned int count;
-	unsigned id = get_vid(audio->vic);
+	unsigned int id = get_vid(audio->vic);
 
 	count = sizeof(ptbl) / sizeof(struct para_tab);
 

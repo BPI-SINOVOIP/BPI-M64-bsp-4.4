@@ -27,6 +27,7 @@ typedef struct
 	uint   partition_logic_offset;
 	uint   partition_init_flag;
 	int    partition_type;
+	int    partition_type_uboot_used;
 
 	int  (*partition_get_total_num)(void);
 	int  (*partition_get_name)(int index, char *buf);
@@ -444,6 +445,11 @@ int sunxi_partition_get_type(void)
 	return partition_op->partition_type;
 }
 
+int sunxi_partition_get_uboot_used_type(void)
+{
+	return partition_op->partition_type_uboot_used;
+}
+
 int sunxi_partition_init(void)
 {
 	char *part_buff = NULL;
@@ -479,6 +485,7 @@ int sunxi_partition_init(void)
 		partition_op->partition_buf_size = SUNXI_GPT_SIZE;
 		partition_op->partition_init_flag = 1;
 		partition_op->partition_type = PART_TYPE_GPT;
+		partition_op->partition_type_uboot_used = PART_TYPE_GPT;
 
 		partition_op->partition_get_total_num    = gpt_partition_get_total_num;
 		partition_op->partition_get_name         = gpt_partition_get_name;
@@ -499,6 +506,7 @@ int sunxi_partition_init(void)
 		partition_op->partition_buf = part_buff;
 		partition_op->partition_buf_size = SUNXI_MBR_SIZE;
 		partition_op->partition_init_flag = 1;
+		partition_op->partition_type_uboot_used = PART_TYPE_AW;
 		partition_op->partition_type = PART_TYPE_AW;
 
 		partition_op->partition_get_total_num    = aw_partition_get_total_num;

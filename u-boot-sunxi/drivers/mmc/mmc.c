@@ -3304,6 +3304,11 @@ int mmc_exit(void)
 		MMCINFO("mmc %d exit failed\n", mmc->cfg->host_no);
 		return err;
 	}
+	/* change variable "speed_mode" to 0, because the host has reset,
+	 * but the varible has not turn to 0. Otherwise the controller which
+	 * used phase offset would have the "mmc_exit failed" proble
+	 * */
+	mmc->speed_mode = DS26_SDR12;
 	mmc_set_bus_width(mmc, 1);
 	mmc_set_clock(mmc, 1);
 

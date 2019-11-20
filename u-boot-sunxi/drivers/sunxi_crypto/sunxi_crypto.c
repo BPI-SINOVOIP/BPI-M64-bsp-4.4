@@ -158,7 +158,7 @@ int  sunxi_md5_calc(u8 *dst_addr, u32 dst_len, u8 *src_addr, u32 src_len)
 
 	if (ss_get_ver() < 2) {
 		/* CE1.0 */
-		src_align_len = __sha_padding(src_len, (u8 *)src_addr, 1);
+		src_align_len = __sha_padding(src_len, (u8 *)src_addr, 0);
 		word_len = src_align_len>>2;
 
 		task0.task_id = 0;

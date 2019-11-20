@@ -43,7 +43,7 @@
 #include <fdt_support.h>
 #include <sys_config_old.h>
 #include <arisc.h>
-
+#include <efuse_map.h>
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nannd flash, mmc2.
  * We check where we boot from by checking the config
@@ -179,6 +179,7 @@ int sunxi_probe_securemode(void)
 	}
 	return 0;
 }
+
 /*
 ************************************************************************************************************
 *
@@ -198,6 +199,7 @@ int sunxi_probe_securemode(void)
 int sunxi_set_secure_mode(void)
 {
 	int mode;
+	int ret = 0;
 
 	if ((gd->securemode == SUNXI_NORMAL_MODE) &&
 		(gd->bootfile_mode == SUNXI_BOOT_FILE_TOC))
@@ -206,6 +208,17 @@ int sunxi_set_secure_mode(void)
 		if(!mode)
 		{
 			sid_set_security_mode();
+			mode = sid_probe_security_mode();
+			if (mode) {
+				ret = sunxi_check_rotpk_hash();
+				if (ret != 0) {
+					printf("rotpk is not equal to zero\n");
+					return -1;
+				}
+			} else {
+				printf("sunxi set security mode fail\n");
+				return -1;
+			}
 			gd->bootfile_mode = SUNXI_BOOT_FILE_TOC;
 		}
 	}

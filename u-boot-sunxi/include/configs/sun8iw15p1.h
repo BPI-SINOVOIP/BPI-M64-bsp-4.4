@@ -19,6 +19,7 @@
 
 /* #define DEBUG */
 /*#define FPGA_PLATFORM*/
+#define CONFIG_SUNXI_MAC
 
 #define CONFIG_TARGET_NAME      sun8iw15p1
 #define CONFIG_ARCH_SUN8IW15P1

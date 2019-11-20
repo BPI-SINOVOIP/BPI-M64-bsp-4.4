@@ -230,6 +230,12 @@ export RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o    \
 export RCS_TAR_IGNORE := --exclude SCCS --exclude BitKeeper --exclude .svn \
 			 --exclude CVS --exclude .pc --exclude .hg --exclude .git
 
+buildconfig = ../../../../.buildconfig
+ifeq ($(buildconfig), $(wildcard $(buildconfig)))
+	LICHEE_BUSSINESS=$(shell cat ../../../../.buildconfig | grep -w "LICHEE_BUSSINESS" | awk -F= '{printf $$2}')
+	LICHEE_CHIP_CONFIG_DIR=$(shell cat ../../../../.buildconfig | grep -w "LICHEE_CHIP_CONFIG_DIR" | awk -F= '{printf $$2}')
+endif
+
 # ===========================================================================
 # Rules shared between *config targets and build targets
 
@@ -602,9 +608,25 @@ u-boot.bin: u-boot FORCE
 
 u-boot-$(CONFIG_TARGET_NAME).bin:   u-boot.bin
 	@cp -v $<    $@
-	@cp -v $@ $(objtree)/../../tools/pack/chips/$(CONFIG_SYS_BOARD)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin
-	@if [ -d nand_sunxi/$(SOC)/lib-nand ];  then \
-		cp -v  nand_sunxi/$(SOC)/lib-nand/built-in.o nand_sunxi/$(SOC)/libnand-$(SOC); \
+	@-if [ "x$(TARGET_BUILD_VARIANT)" = "xtina" ] ; then \
+		if [ "x$(TINA_BUILD_SYS)" = "xYocto" ] ; then \
+			cp -v $@ $(objtree)/../../../../sources/meta-tina/recipes-bsp/tina-board/$(TARGET_PLATFORM)-common/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+		else \
+			if [ -d $(objtree)/../../../target/allwinner/$(TARGET_PLATFORM)-common/bin ]; then \
+				cp -v $@ $(objtree)/../../../target/allwinner/$(TARGET_PLATFORM)-common/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+			elif [ -d $(objtree)/../../../device/config/chips/$(TARGET_PLATFORM)/bin ]; then\
+				cp -v $@ $(objtree)/../../../device/config/chips/$(TARGET_PLATFORM)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+			fi \
+		fi \
+	else \
+		if [ "x$(LICHEE_BUSSINESS)" != "x" ];then \
+			cp -v $@ $(LICHEE_CHIP_CONFIG_DIR)/$(LICHEE_BUSSINESS)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+		else \
+			cp -v $@ $(LICHEE_CHIP_CONFIG_DIR)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+		fi;\
+		if [ -d nand_sunxi/$(SOC)/lib-nand ];  then \
+			cp -v  nand_sunxi/$(SOC)/lib-nand/built-in.o nand_sunxi/$(SOC)/libnand-$(SOC); \
+		fi \
 	fi
 
 u-boot.ldr:	u-boot

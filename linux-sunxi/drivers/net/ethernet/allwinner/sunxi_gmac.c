@@ -160,6 +160,60 @@ struct geth_priv {
 
 static u64 geth_dma_mask = DMA_BIT_MASK(32);
 
+struct geth_stats {
+	char stat_string[ETH_GSTRING_LEN];
+	unsigned long stat_offset;
+};
+
+#define GETH_STAT(m) \
+		{ #m, offsetof(struct geth_extra_stats, m)}
+
+static const struct geth_stats geth_string_stats[] = {
+	/* Transmit errors */
+	GETH_STAT(tx_underflow),
+	GETH_STAT(tx_carrier),
+	GETH_STAT(tx_losscarrier),
+	GETH_STAT(vlan_tag),
+	GETH_STAT(tx_deferred),
+	GETH_STAT(tx_vlan),
+	GETH_STAT(tx_jabber),
+	GETH_STAT(tx_frame_flushed),
+	GETH_STAT(tx_payload_error),
+	GETH_STAT(tx_ip_header_error),
+
+	/* Receive errors */
+	GETH_STAT(rx_desc),
+	GETH_STAT(sa_filter_fail),
+	GETH_STAT(overflow_error),
+	GETH_STAT(ipc_csum_error),
+	GETH_STAT(rx_collision),
+	GETH_STAT(rx_crc),
+	GETH_STAT(dribbling_bit),
+	GETH_STAT(rx_length),
+	GETH_STAT(rx_mii),
+	GETH_STAT(rx_multicast),
+	GETH_STAT(rx_gmac_overflow),
+	GETH_STAT(rx_watchdog),
+	GETH_STAT(da_rx_filter_fail),
+	GETH_STAT(sa_rx_filter_fail),
+	GETH_STAT(rx_missed_cntr),
+	GETH_STAT(rx_overflow_cntr),
+	GETH_STAT(rx_vlan),
+
+	/* Tx/Rx IRQ errors */
+	GETH_STAT(tx_undeflow_irq),
+	GETH_STAT(tx_process_stopped_irq),
+	GETH_STAT(tx_jabber_irq),
+	GETH_STAT(rx_overflow_irq),
+	GETH_STAT(rx_buf_unav_irq),
+	GETH_STAT(rx_process_stopped_irq),
+	GETH_STAT(rx_watchdog_irq),
+	GETH_STAT(tx_early_irq),
+	GETH_STAT(fatal_bus_error_irq),
+};
+
+#define GETH_STATS_LEN ARRAY_SIZE(geth_string_stats)
+
 void sunxi_udelay(int n)
 {
 	udelay(n);
@@ -180,7 +234,7 @@ static ssize_t adjust_bgs_show(struct device *dev, struct device_attribute *attr
 
 	if (priv->phy_ext == INT_PHY) {
 		value = readl(priv->base_phy) >> 28;
-		if (sunxi_efuse_read(EFUSE_OEM_NAME, &efuse_value) != 0)
+		if (0 != sunxi_efuse_read(EFUSE_OEM_NAME, &efuse_value))
 			pr_err("get PHY efuse fail!\n");
 		else
 #if defined(CONFIG_ARCH_SUN50IW2)
@@ -206,7 +260,7 @@ static ssize_t adjust_bgs_write(struct device *dev, struct device_attribute *att
 
 	if (priv->phy_ext == INT_PHY) {
 		clk_value &= ~(0xF << 28);
-		if (sunxi_efuse_read(EFUSE_OEM_NAME, &efuse_value) != 0)
+		if (0 != sunxi_efuse_read(EFUSE_OEM_NAME, &efuse_value))
 			pr_err("get PHY efuse fail!\n");
 		else
 #if defined(CONFIG_ARCH_SUN50IW2)
@@ -222,7 +276,7 @@ static ssize_t adjust_bgs_write(struct device *dev, struct device_attribute *att
 }
 
 static struct device_attribute adjust_reg[] = {
-	__ATTR(adjust_bgs, 0664, adjust_bgs_show, adjust_bgs_write),
+	__ATTR(adjust_bgs, 0777, adjust_bgs_show, adjust_bgs_write),
 };
 
 static int geth_create_attrs(struct net_device *ndev)
@@ -267,12 +321,12 @@ static ssize_t gphy_test_show(struct device *dev,
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 
-	if (!dev) {
+	if (dev == NULL) {
 		pr_err("Argment is invalid\n");
 		return 0;
 	}
 
-	if (!ndev) {
+	if (ndev == NULL) {
 		pr_err("Net device is null\n");
 		return 0;
 	}
@@ -294,12 +348,12 @@ static ssize_t gphy_test_store(struct device *dev,
 	int ret = 0;
 	u16 data = 0;
 
-	if (!dev) {
+	if (dev == NULL) {
 		pr_err("Argument is invalid\n");
 		return count;
 	}
 
-	if (!ndev) {
+	if (ndev == NULL) {
 		pr_err("Net device is null\n");
 		return count;
 	}
@@ -340,7 +394,7 @@ static int geth_power_on(struct geth_priv *priv)
 		for (i = 0; i < POWER_CHAN_NUM; i++) {
 			if (IS_ERR_OR_NULL(priv->gmac_power[i]))
 				continue;
-			if (regulator_enable(priv->gmac_power[i]) != 0) {
+			if (0 != regulator_enable(priv->gmac_power[i])) {
 				pr_err("gmac-power%d enable error\n", i);
 				return -EINVAL;
 			}
@@ -427,6 +481,7 @@ static void geth_adjust_link(struct net_device *ndev)
 			priv->speed = phydev->speed;
 		}
 
+
 		if (priv->link == 0) {
 			new_state = 1;
 			priv->link = phydev->link;
@@ -463,9 +518,9 @@ static int geth_phy_init(struct net_device *ndev)
 		goto resume;
 
 	/* Fixup the phy interface type */
-	if (priv->phy_ext == INT_PHY) {
+	if (priv->phy_ext == INT_PHY)
 		priv->phy_interface = PHY_INTERFACE_MODE_MII;
-	} else {
+	else {
 		/* If config gpio to reset the phy device, we should reset it */
 		if (gpio_is_valid(priv->phyrst)) {
 			gpio_direction_output(priv->phyrst,
@@ -1629,6 +1684,36 @@ static void geth_ethtool_getdrvinfo(struct net_device *ndev,
 	info->fw_version[0] = '\0';
 }
 
+static void geth_ethtool_stats(struct net_device *ndev,
+		struct ethtool_stats *dummy, u64 *data)
+{
+	struct geth_priv *priv = netdev_priv(ndev);
+	void *xstats = (void *)&priv->xstats;
+	int i = 0;
+
+	/* Update the DMA HW counters for dwmac10/100 */
+	for (i = 0; i < GETH_STATS_LEN; i++) {
+		data[i] = (*(unsigned long *)(xstats +
+					geth_string_stats[i].stat_offset));
+	}
+}
+
+static void geth_get_strings(struct net_device *dev, u32 stringset, u8 *buf)
+{
+	int i;
+	u8 *p = buf;
+
+	switch (stringset) {
+	case ETH_SS_STATS:
+		for (i = 0; i < GETH_STATS_LEN; i++) {
+			memcpy(p, geth_string_stats[i].stat_string,
+				ETH_GSTRING_LEN);
+			p += ETH_GSTRING_LEN;
+		}
+		break;
+	}
+}
+
 static const struct ethtool_ops geth_ethtool_ops = {
 	.begin = geth_check_if_running,
 	.get_settings = geth_ethtool_getsettings,
@@ -1636,8 +1721,8 @@ static const struct ethtool_ops geth_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 	.get_pauseparam = NULL,
 	.set_pauseparam = NULL,
-	.get_ethtool_stats = NULL,
-	.get_strings = NULL,
+	.get_ethtool_stats = geth_ethtool_stats,
+	.get_strings = geth_get_strings,
 	.get_wol = NULL,
 	.set_wol = NULL,
 	.get_sset_count = geth_get_sset_count,
@@ -1672,7 +1757,7 @@ static int geth_hw_init(struct platform_device *pdev)
 	}
 
 	priv->base = devm_ioremap_resource(&pdev->dev, res);
-	if (!priv->base) {
+	if (IS_ERR_OR_NULL(priv->base)) {
 		pr_err("%s: ERROR: gmac memory mapping failed", __func__);
 		return -ENOMEM;
 	}
@@ -1685,7 +1770,7 @@ static int geth_hw_init(struct platform_device *pdev)
 	}
 
 	priv->base_phy = devm_ioremap_resource(&pdev->dev, res);
-	if (unlikely(!priv->base_phy)) {
+	if (IS_ERR_OR_NULL(priv->base_phy)) {
 		pr_err("%s: ERROR: phy memory mapping failed", __func__);
 		ret = -ENOMEM;
 		goto mem_err;

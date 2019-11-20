@@ -32,6 +32,48 @@
 
 extern int set_rtc_voltage(int set_vol);
 
+static void switch_cpu_axi_to_osc(u32 reg_addr)
+{
+	__u32 reg_val;
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 16);
+	reg_val |= (0x01 << 16);
+	writel(reg_val, reg_addr);
+	__usdelay(5);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x3 << 0);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+}
+
+static void switch_ahb1_apb1_to_osc(u32 reg_addr)
+{
+	__u32 reg_val;
+	reg_val = readl(reg_addr);
+	reg_val &= ~(0x03 << 12);
+	reg_val |= (0x01 << 12);
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+
+	reg_val = readl(reg_addr);
+	reg_val &= ~((0x03 << 8) | (0x3 << 6) | (0x3 << 4));
+	writel(reg_val, reg_addr);
+	__usdelay(1);
+}
+
+static void switch_mbus_to_osc(void)
+{
+	__u32 reg_val;
+
+	reg_val = readl(CCMU_MBUS_CLK_REG);
+	reg_val &= ~(0x3 << 24);
+	writel(reg_val, CCMU_MBUS_CLK_REG);
+	__usdelay(10);
+
+}
+
+
 void enable_pll_lock_bit(__u32 lock_bit)
 {
 	__u32 reg_val;
@@ -56,7 +98,7 @@ void set_pll_cpux_axi(void)
 	//cpu/axi /sys apb  clock ratio
 	writel((1<<16) | (3<<8) | (2<<0), CCMU_CPUX_AXI_CFG_REG);
 	__usdelay(20);
-    
+
 	//set PLL_CPUX, the  default  clk is 408M  ,PLL_OUTPUT= 24M*N*K/( M*P)
 	disable_pll_lock_bit(LOCK_EN_PLL_CPUX);
 	writel((0x1000), CCMU_PLL_CPUX_CTRL_REG);
@@ -72,7 +114,7 @@ void set_pll_cpux_axi(void)
 	//set and change cpu clk src to PLL_CPUX,  PLL_CPUX:AXI0 = 408M:136M
 	reg_val = readl(CCMU_CPUX_AXI_CFG_REG);
 	reg_val &=  ~(3 << 16);
-	reg_val |=  (2 << 16);    
+	reg_val |=  (2 << 16);
 	writel(reg_val, CCMU_CPUX_AXI_CFG_REG);
 	__usdelay(1000);
 }
@@ -173,11 +215,14 @@ void set_pll( void )
 void reset_pll( void )
 {
 	printf("reset pll start\n");
-	writel(0x10300, CCMU_CPUX_AXI_CFG_REG);
-	__msdelay(10);
+	switch_cpu_axi_to_osc(CCMU_CPUX_AXI_CFG_REG);
+	__msdelay(5);
 
-	writel(0x01010, CCMU_AHB1_APB1_CFG_REG);
-	__msdelay(10);
+	switch_ahb1_apb1_to_osc(CCMU_AHB1_APB1_CFG_REG);
+	__msdelay(5);
+
+	switch_mbus_to_osc();
+	__msdelay(5);
 
 	writel(0x00001000, CCMU_PLL_CPUX_CTRL_REG);
 	__msdelay(10);

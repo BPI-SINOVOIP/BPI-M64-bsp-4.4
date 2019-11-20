@@ -25,6 +25,7 @@
 #ifndef _RECOVERY_BOOTLOADER_H
 #define _RECOVERY_BOOTLOADER_H
 
+#include <common.h>
 /* Bootloader Message
  *
  * This structure describes the content of a block in flash
@@ -43,10 +44,33 @@
  * for the system to send a message to recovery or the
  * other way around.
  */
+
+struct BrilloSlotinfo {
+	uint8_t bootable:1;
+	uint8_t successful_boot:1;
+	uint8_t reserved[3];
+};
+
+struct BrilloBootinfo {
+	char bootctrl_suffix[4];
+	uint8_t magic[3];
+	uint8_t version;
+	uint8_t active_slot;
+	struct BrilloSlotinfo slot_info[2];
+	uint8_t reserved[15];
+};
+
 struct bootloader_message {
     char command[32];
     char status[32];
+#ifdef CONFIG_A_B_SYSTEM
+	char recovery[768];
+	char stage[32];
+    char reserved[1184];
+	struct BrilloBootinfo slot_suffix;
+#else
     char recovery[1024];
+#endif
 };
 
 /* Read and write the bootloader command from the "misc" partition.

@@ -3,6 +3,7 @@
  *
  * Based on bitrev from the Linux kernel, by Akinobu Mita
  */
+#include <common.h>
 
 extern u8 const byte_rev_table[256];
 

@@ -324,6 +324,9 @@ int sunxi_board_shutdown(void)
 	axp_set_hardware_poweroff_vol();
 	axp_set_power_off();
 
+	while (1) {
+		asm volatile ("wfi");
+	}
 	return 0;
 
 }
@@ -363,6 +366,9 @@ int sunxi_board_run_fel(void)
 #endif
 	printf("sunxi_board_close_source\n");
 	sunxi_board_close_source();
+#ifdef CONFIG_SUNXI_MULITCORE_BOOT
+	sunxi_secondary_cpu_poweroff();
+#endif
 	sunxi_flush_allcaches();
 	printf("reset cpu\n");
 	reset_cpu(0);

@@ -219,6 +219,16 @@ int load_fip(int *use_monitor)
 			toc1_flash_read(toc1_item->data_offset / 512,
 					(toc1_item->data_len + 511) / 512,
 					(void *)CONFIG_SUNXI_FDT_ADDR);
+#ifdef SUNXI_DISPLAY_FRAME_BUFFER_ADDR
+			}
+		/* this is for showing logo, when boot0 start kernel  */
+		else if (strncmp(toc1_item->name, ITEM_LOGO_NAME,
+				 sizeof(ITEM_LOGO_NAME)) == 0) {
+			toc1_flash_read(
+			    toc1_item->data_offset / 512,
+			    (toc1_item->data_len + 511) / 512,
+			    (void *)SUNXI_DISPLAY_FRAME_BUFFER_ADDR);
+#endif
 #else
 			toc1_flash_read(toc1_item->data_offset / 512,
 					(toc1_item->data_len + 511) / 512,

@@ -76,6 +76,7 @@ s32 pmu_disable_soften3_signal(void);
 s32 enable_vbus_adc_channel(void);
 s32 set_dcdc1_pwm_mode(void);
 s32 set_chgcur_limit(void);
+int pmu_set_vsys_min(void);
 
 
 
@@ -143,6 +144,7 @@ int pmu_init(u8 power_mode)
 		set_dcdc1_pwm_mode();
 		/* keep DCDC4 stable by disable soften3_signal */
 		pmu_disable_soften3_signal();
+		pmu_set_vsys_min();
 		pmu_reset_enable();
 		set_sys_voltage(BT0_head.prvt_head.reserve[0] * 10, VOL_ON);
 		return AXP21_CHIP_ID;
@@ -195,6 +197,19 @@ s32 set_dcdc1_pwm_mode(void)
 		return -1;
 	return 0;
 }
+
+int pmu_set_vsys_min(void)
+{
+	u8 reg;
+	pmu_bus_read(RSB_RUNTIME_ADDR, BOOT_POWER21_VSYS_MIN, &reg);
+	reg &= ~(0x7<<4);
+	if (pmu_bus_write(RSB_RUNTIME_ADDR, BOOT_POWER21_VSYS_MIN, reg)) {
+		pmu_err("set vsys_min error\n");
+		return -1;
+	}
+	return 0;
+}
+
 
 s32 pmu_disable_soften3_signal(void)
 {

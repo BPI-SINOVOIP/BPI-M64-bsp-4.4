@@ -205,6 +205,10 @@ int sunxi_partition_get_type(void)
 	return PART_TYPE_AW;
 }
 
+int sunxi_partition_get_uboot_used_type(void)
+{
+	return sunxi_partition_get_type();
+}
 
 int sunxi_partition_init(void)
 {

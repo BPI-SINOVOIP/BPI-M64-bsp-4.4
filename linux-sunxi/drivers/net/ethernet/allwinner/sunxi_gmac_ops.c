@@ -65,6 +65,7 @@
 #define RX_FLUSH		0x01
 #define RX_MD			0x02
 #define RX_RUNT_FRM		0x04
+#define RX_ERR_FRM              0x08
 #define RX_TH			0x0030
 
 #define TX_INT			0x00001
@@ -442,6 +443,12 @@ int sunxi_mac_init(void *iobase, int txmode, int rxmode)
 		else
 			value |= 0x30;
 	}
+
+	/*
+	 * Forward frames with error and undersized good frame.
+	 */
+	value |= (RX_ERR_FRM | RX_RUNT_FRM);
+
 	writel(value, iobase + GETH_RX_CTL1);
 
 	return 0;
@@ -455,9 +462,7 @@ void sunxi_hash_filter(void *iobase, unsigned long low, unsigned long high)
 
 void sunxi_set_filter(void *iobase, unsigned long flags)
 {
-	int tmp_flags;
-
-	tmp_flags = readl(iobase + GETH_RX_FRM_FLT);
+	int tmp_flags = 0;
 
 	tmp_flags |= ((flags >> 31) |
 			((flags >> 9) & 0x00000002) |
@@ -571,12 +576,15 @@ void desc_init(struct dma_desc *desc)
 int desc_get_tx_status(struct dma_desc *desc, struct geth_extra_stats *x)
 {
 	int ret = 0;
+	struct net_device_stats *stats = (struct net_device_stats *)x->ex_stats;
 
 	if (desc->desc0.tx.under_err) {
+		stats->tx_fifo_errors++;
 		x->tx_underflow++;
 		ret = -1;
 	}
 	if (desc->desc0.tx.no_carr) {
+		stats->tx_carrier_errors++;
 		x->tx_carrier++;
 		ret = -1;
 	}
@@ -616,8 +624,10 @@ int desc_rx_frame_len(struct dma_desc *desc)
 int desc_get_rx_status(struct dma_desc *desc, struct geth_extra_stats *x)
 {
 	int ret = good_frame;
+	struct net_device_stats *stats = (struct net_device_stats *)x->ex_stats;
 
 	if (desc->desc0.rx.last_desc == 0) {
+		stats->rx_length_errors++;
 		return discard_frame;
 	}
 
@@ -628,25 +638,33 @@ int desc_get_rx_status(struct dma_desc *desc, struct geth_extra_stats *x)
 		if (desc->desc0.rx.sou_filter)
 			x->sa_filter_fail++;
 
-		if (desc->desc0.rx.over_err)
+		if (desc->desc0.rx.over_err) {
 			x->overflow_error++;
+			stats->rx_over_errors++;
+		}
 
 		if (desc->desc0.rx.ipch_err)
 			x->ipc_csum_error++;
 
-		if (desc->desc0.rx.late_coll)
+		if (desc->desc0.rx.late_coll) {
+			stats->collisions++;
 			x->rx_collision++;
+		}
 
-		if (desc->desc0.rx.crc_err)
+		if (desc->desc0.rx.crc_err) {
+			stats->rx_crc_errors++;
 			x->rx_crc++;
+		}
 
 		ret = discard_frame;
 	}
 
 	if (desc->desc0.rx.len_err) {
+		x->rx_length++;
 		ret = discard_frame;
 	}
 	if (desc->desc0.rx.mii_err) {
+		x->rx_mii++;
 		ret = discard_frame;
 	}
 

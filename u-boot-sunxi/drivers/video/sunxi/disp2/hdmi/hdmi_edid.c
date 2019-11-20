@@ -1,3 +1,13 @@
+/*
+ * Allwinner SoCs hdmi driver.
+ *
+ * Copyright (C) 2019 Allwinner.
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2.  This program is licensed "as is" without any
+ * warranty of any kind, whether express or implied.
+ */
+
 #include "hdmi_core.h"
 
 static s32 is_hdmi;
@@ -229,7 +239,10 @@ static s32 edid_parse_vsdb(u8 * pbuf,u8 size)
 	/* check if it's HDMI VSDB */
 	if ((pbuf[0] ==0x03) &&	(pbuf[1] ==0x0c) &&	(pbuf[2] ==0x00)) {
 		is_hdmi = 1;
-		__inf("Find HDMI Vendor Specific DataBlock\n");
+		__inf("Find HDMI1.4 Vendor Speocific DataBlock\n");
+	} else if ((pbuf[0] == 0xd8) && (pbuf[1] == 0x5d) && (pbuf[2] == 0xc4)) {
+		is_hdmi = 1;
+		__inf("Find HDMI2.0 Vendor Speocific DataBlock\n");
 	} else {
 		is_hdmi = 0;
 		is_yuv = 0;

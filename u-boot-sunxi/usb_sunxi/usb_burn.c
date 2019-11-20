@@ -2005,6 +2005,7 @@ static int sunxi_pburn_state_loop(void  *buffer)
 				}
 				else
 				{
+					sunxi_flash_flush();
 					csw.bCSWStatus = 0;
   				}
 				sunxi_usb_pburn_write_enable = 0;

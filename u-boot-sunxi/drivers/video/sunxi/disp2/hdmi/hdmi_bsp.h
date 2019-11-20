@@ -127,5 +127,6 @@ int bsp_hdmi_cec_send(char *buf, unsigned char bytes);
 void bsp_hdmi_cec_free_time_set(unsigned char value);
 int bsp_hdmi_cec_sta_check(void);
 int bsp_hdmi_set_bias_source(unsigned int src);
+int bsp_hdcp_enable(u32 enable, struct video_para *video);
 
 #endif

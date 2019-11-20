@@ -52,4 +52,6 @@ extern int sunxi_partition_get_partno_byname(const char *part_name);
 
 extern int sunxi_partition_get_type(void);
 
+extern int sunxi_partition_get_uboot_used_type(void);
+
 #endif //__SYS_PARTITION_H

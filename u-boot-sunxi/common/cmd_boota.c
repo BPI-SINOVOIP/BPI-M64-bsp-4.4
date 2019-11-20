@@ -196,7 +196,7 @@ void update_bootargs(void)
 {
 	int dram_clk = 0;
 	char *str;
-	char cmdline[1024] = {0};
+	char cmdline[2048] = {0};
 	char tmpbuf[128] = {0};
 	char *verifiedbootstate_info = getenv("verifiedbootstate");
 	str = getenv("bootargs");
@@ -217,6 +217,25 @@ void update_bootargs(void)
 	str = getenv("snum");
 	sprintf(tmpbuf," androidboot.serialno=%s",str);
 	strcat(cmdline,tmpbuf);
+#endif
+#ifdef CONFIG_SUNXI_MAC
+	str = getenv("mac");
+	if (str && !strstr(cmdline, " mac_addr=")) {
+		sprintf(tmpbuf, " mac_addr=%s", str);
+		strcat(cmdline, tmpbuf);
+	}
+
+	str = getenv("wifi_mac");
+	if (str && !strstr(cmdline, " wifi_mac=")) {
+		sprintf(tmpbuf, " wifi_mac=%s", str);
+		strcat(cmdline, tmpbuf);
+	}
+
+	str = getenv("bt_mac");
+	if (str && !strstr(cmdline, " bt_mac=")) {
+		sprintf(tmpbuf, " bt_mac=%s", str);
+		strcat(cmdline, tmpbuf);
+	}
 #endif
 	//harware info
 	sprintf(tmpbuf," androidboot.hardware=%s",board_hardware_info());

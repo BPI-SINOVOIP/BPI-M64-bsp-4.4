@@ -30,6 +30,7 @@ obj-y	+= sys_partition.o
 endif
 
 obj-y   += sunxi_string.o
+obj-$(CONFIG_SUNXI_MAC)          += sunxi_mac.o
 obj-$(CONFIG_SUNXI_MODULE_AXP)   += power_probe.o power_check.o
 obj-y   += sunxi_debug.o
 obj-y   += check_key_uart.o

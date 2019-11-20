@@ -105,39 +105,3 @@ static uint sid_read_key(uint key_index)
 
 	return reg_val;
 }
-/*
-************************************************************************************************************
-*
-*                                             function
-*
-*    name          :
-*
-*    parmeters     :
-*
-*    return        :
-*
-*    note          :
-*
-*
-************************************************************************************************************
-*/
-void sid_write_customer_id (void)
-{
-	 uint reg_val;
-	 int val = 0x2D;
-
-	 reg_val = sid_read_key(EFUSE_CUSTOMER_ID);
-	 if (reg_val == 0) {
-		 sid_program_key(EFUSE_CUSTOMER_ID, val);
-	}
-
-	reg_val = sid_read_key(EFUSE_CUSTOMER_ID);
-	if (reg_val != val) {
-		printf("write customer id err0 =%d\n", reg_val);
-	}
-
-	if (reg_val == val) {
-		printf("write customer id sucess =%d\n", reg_val);
-	}
-	return;
- }
