@@ -31,12 +31,12 @@ kernel:
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 $(KERNEL_CONFIG)
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output Image.gz dtbs
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules
-	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 TARGET_PLATFORM="" KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0
+	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules_install
 	$(Q)scripts/install_kernel_headers.sh $(K_CROSS_COMPILE)
 
 kernel-clean:
-	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 TARGET_PLATFORM="" KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0 clean
+	$(Q)$(MAKE) -C linux-sunxi/modules/gpu/mali-utgard/kernel_mode/driver/src/devicedrv/mali CROSS_COMPILE=$(K_CROSS_COMPILE) ARCH=arm64 KDIR=${LICHEE_KDIR} LICHEE_KDIR=${LICHEE_KDIR} USING_DT=1 BUILD=release USING_UMP=0 clean
 	$(Q)$(MAKE) -C linux-sunxi ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J distclean
 	rm -rf linux-sunxi/output/
 
@@ -47,6 +47,7 @@ kernel-config:
 
 ## clean all build
 clean: u-boot-clean kernel-clean
+	rm -rf out
 	rm -f chosen_board.mk
 	rm -f env.sh
 

@@ -1,8 +1,14 @@
 #!/bin/bash
 
+[ -s "./env.sh" ] || die "please run ./configure first."
+
+. ./env.sh
+
+board=$(echo ${BOARD%-*} | tr '[A-Z]' '[a-z]')
+
 DEVICE=
 VARIANT=
-TARGET=SD/bpi-m64
+TARGET=SD/${board}
 
 if [ ! -d ${TARGET} ]; then
 	echo -e "\033[31mNo download files exits, check build and pack. \033[0m"
@@ -11,7 +17,8 @@ fi
 
 echo "--------------------------------------------------------------------------------"
 echo "  1. HDMI 720P"
-echo "  2. LCD7 Panel"
+echo "  2. HDMI 1080P"
+echo "  3. LCD7 Panel"
 echo "--------------------------------------------------------------------------------"
 
 read -p "Please choose a type to install(1-5): " type
@@ -24,7 +31,8 @@ fi
 
 case ${type} in
         1) VARIANT="720P";;
-	2) VARIANT="LCD7";;
+	2) VARIANT="1080P";;
+	3) VARIANT="LCD7";;
 esac
 
 read -p "Please type the SD device(/dev/sdX): " DEVICE
@@ -49,7 +57,7 @@ esac
 
 echo
 
-BOOTLOADER=${TARGET}/100MB/BPI-M64-${VARIANT}-linux4.4-8k.img.gz
+BOOTLOADER=${TARGET}/100MB/${BOARD%-*}-${VARIANT}-linux4.4-8k.img.gz
 
 ## download bootloader
 if [ ! -f ${BOOTLOADER} ]; then

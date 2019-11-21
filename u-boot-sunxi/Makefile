@@ -858,7 +858,7 @@ u-boot-$(CONFIG_TARGET_NAME).bin:   u-boot.bin
 	@if [ "x$(TINA_BUILD_SYS)" = "xYocto" ] ; then \
 		cp -v $@ $(objtree)/../../../../sources/meta-tina/recipes-bsp/tina-board/$(TARGET_PLATFORM)-common/bin/$@; \
 	else \
-		cp -v $@ $(objtree)/../target/allwinner/$(TARGET_PLATFORM)-common/bin/$@; \
+		cp -v $@ $(objtree)/../sunxi-pack/$(MACH)/bin/$@; \
 	fi
 ifdef CONFIG_SUNXI_MODULE_NAND
 	@if [ -d nand_sunxi/$(SOC)/lib-nand ];  then \

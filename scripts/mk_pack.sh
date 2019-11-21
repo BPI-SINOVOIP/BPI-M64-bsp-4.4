@@ -7,36 +7,86 @@ die() {
 
 [ -s "./env.sh" ] || die "please run ./configure first."
 
-set -e
-
 . ./env.sh
-export MACH=sun50iw1p1
+
+board=$(echo ${BOARD%-*} | tr '[A-Z]' '[a-z]')
+
+echo "pack $board"
+
+BOOTLOADER=${TOPDIR}/SD/${board}/100MB
+BOOT=${TOPDIR}/SD/${board}/BPI-BOOT
+ROOT=${TOPDIR}/SD/${board}/BPI-ROOT
+CONFIG_DIR=${TOPDIR}/sunxi-pack/${MACH}/configs
+KERN_DIR=${TOPDIR}/linux-sunxi
+
+if [ -d $TOPDIR/SD ]; then
+  rm -rf $TOPDIR/SD
+fi
+
+mkdir -p $BOOTLOADER
+mkdir -p $BOOT
+mkdir -p $ROOT
 
 PACK_ROOT="$TOPDIR/sunxi-pack"
-#PLATFORM="linux"
-#PLATFORM="dragonboard"
-PLATFORM="tina"
-
-# change sd to emmc if board bootup with emmc and sdcard is used as storage.
-STORAGE="sd"
+PLATFORM="linux"
 
 pack_bootloader()
 {
-  BOARD=$1
-  (
-  echo "MACH=$MACH, PLATFORM=$PLATFORM, TARGET_PRODUCT=${TARGET_PRODUCT} BOARD=$BOARD"
-  scripts/pack_img.sh -c ${MACH} -p ${PLATFORM} -b ${TARGET_PRODUCT} -d uart0 -s none -m normal -v none -t $TOPDIR
-#  scripts/pack_img.sh -c $chip -p $platform -b $board -d $debug -s $sigmode -m $mode -v $securemode -t $T
-  )
-  echo bootloader.sh $BOARD ${TARGET_PRODUCT}
-  $TOPDIR/scripts/bootloader.sh $BOARD ${TARGET_PRODUCT}
+  echo "pack bootloader"
+
+  BOARD_LIST=`(cd sunxi-pack/${MACH}/configs ; ls -1d ${BOARD%-*}-*)`
+ 
+  for BOARD in $BOARD_LIST ; do
+	echo "MACH=$MACH, PLATFORM=$PLATFORM, BOARD=$BOARD"
+  	scripts/pack_img.sh -c ${MACH} -p ${PLATFORM} -b ${BOARD} -d uart0 -s none -m normal -v none -t $TOPDIR
+
+  	echo bootloader.sh $BOARD
+  	${TOPDIR}/scripts/bootloader.sh $BOARD
+  done 
+
+  cp -a ${TOPDIR}/out/100MB/${BOARD%-*}-* $BOOTLOADER/
 }
 
-echo BPIMACH=$BPIMACH
-for TARGET_PRODUCT in $BPIMACH ; do
-  echo TARGET_PRODUCT=${TARGET_PRODUCT}
-  BOARDS=`(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI*)`
-  for IN in $BOARDS ; do
-    pack_bootloader $IN
-  done 
-done 
+pack_boot()
+{
+  echo "pack boot"
+
+  mkdir -p ${BOOT}/bananapi/${board}/linux4.4
+  cp -a ${CONFIG_DIR}/default/linux4.4/* ${BOOT}/bananapi/${board}/linux4.4/
+  cp -a ${CONFIG_DIR}/${BOARD%-*}-*/linux4.4/* ${BOOT}/bananapi/${board}/linux4.4/
+  cp -a ${KERN_DIR}/arch/arm64/boot/uImage ${BOOT}/bananapi/${board}/linux4.4/uImage
+}
+
+pack_root()
+{
+  echo "pack root"
+
+  # bootloader files
+  mkdir -p ${ROOT}/usr/lib/u-boot/bananapi/${board}
+  cp -a ${BOOTLOADER}/*.gz ${ROOT}/usr/lib/u-boot/bananapi/${board}/
+
+  # kernel modules files
+  mkdir -p ${ROOT}/lib/modules
+  cp -a ${KERN_DIR}/output/lib/modules/${KERNEL_MODULES} ${ROOT}/lib/modules
+
+  # kernel headers files
+  mkdir -p ${ROOT}/usr/src
+  cp -a ${KERN_DIR}/output/usr/src/${KERNEL_HEADERS} ${ROOT}/usr/src/
+}
+
+tar_packages()
+{
+  echo "tar download packages"
+
+  (cd $BOOT ; tar czvf ${TOPDIR}/SD/${board}/BPI-BOOT-${board}-linux4.4.tgz .)
+  (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_MODULES}.tgz lib/modules)
+  (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_HEADERS}.tgz usr/src/${KERNEL_HEADERS})
+  (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/BOOTLOADER-${board}-linux4.4.tgz usr/lib/u-boot/bananapi)
+}
+
+pack_bootloader
+pack_boot
+pack_root
+tar_packages
+
+echo "pack finish"

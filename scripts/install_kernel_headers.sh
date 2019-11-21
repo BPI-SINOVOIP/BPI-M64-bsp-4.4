@@ -10,11 +10,7 @@ die() {
 
 [ -s "./env.sh" ] || die "please run ./configure first."
 
-set -e
-
 . ./env.sh
-
-set -e
 
 LINUX="$TOPDIR/linux-sunxi"
 DEST="$LINUX/output"

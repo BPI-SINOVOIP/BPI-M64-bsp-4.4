@@ -5,9 +5,10 @@ dtb-$(CONFIG_ARCH_SUN50IW1P1) += sun50iw1p1-fpga.dtb  sun50iw1p1-perf1_v1_0.dtb 
 				sun50iw1p1-r18-noma.dtb \
 				sun50iw1p1-r18-mozart.dtb \
 				sun50iw1p1-r18-mozart-1.dtb \
-				sun50iw1p1-a64-m64.dtb \
 				sun50iw1p1-r18-hena.dtb \
-				sun50iw1p1-r18-sgw.dtb
+				sun50iw1p1-r18-sgw.dtb \
+				sun50iw1p1-bpi-m64.dtb \
+				sun50iw1p1-bpi-noma.dtb
 dtb-$(CONFIG_ARCH_SUN50IW2P1) += sun50iw2p1-fpga.dtb sun50iw2p1-perf1_v1_0.dtb \
 				sun50iw2p1-perf2_v1_0.dtb sun50iw2p1-p1.dtb \
 				sun50iw2p1-sata.dtb sun50iw2p1-soc.dtb

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-#gunzip -c BPI_M3_1080P.img.gz | dd of=/dev/mmcblk0 conv=sync,noerror bs=1k
-
 die() {
         echo "$*" >&2
         exit 1
@@ -9,16 +7,13 @@ die() {
 
 [ -s "./env.sh" ] || die "please run ./configure first."
 . ./env.sh
+
 O=$1
 if [ ! -z $O ] ; then
 	BOARD=$O
 fi
-T=$2
-if [ ! -z $T ] ; then
-	TARGET_PRODUCT=$T
-fi
-P=$TOPDIR/out/${TARGET_PRODUCT}/image/
-#U=$TOPDIR/out/${TARGET_PRODUCT}/100MB
+
+P=$TOPDIR/out/${BOARD}/image/
 U=$TOPDIR/out/100MB
 
 mkdir -p $U

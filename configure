@@ -2,22 +2,20 @@
 
 set -e
 
-BPIMACH="tulip-m64 tulip-noma"
 SOC=a64
 MACH=sun50iw1p1
-PLATFORM=
 BOARD=
 board=
+kernel_modules=
+kernel_headers=
 TOPDIR=`pwd`
-TARGET_PLATFORM="tulip"
-TARGET_PRODUCT="tulip-m64"
 
 CUR_DIR=$PWD
-U_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-linaro/bin
-K_CROSS_COMPILE=$CUR_DIR/allwinner-tools/gcc-aarch64/bin
+U_CROSS_COMPILE=$CUR_DIR/toolchain/gcc-linaro/bin
+K_CROSS_COMPILE=$CUR_DIR/toolchain/gcc-aarch64/bin
 
 list_boards() {
-	(cd sunxi-pack/allwinner/${TARGET_PRODUCT}/configs ; ls -1d BPI* )
+	(cd sunxi-pack/${MACH}/configs ; ls -1d BPI* )
 }
 
 # keep the output `sh` friendly
@@ -32,8 +30,6 @@ generate_board_mk() {
 	K_COMPILE_TOOL=$K_CROSS_COMPILE
 	UBOOT_CONFIG=$MACH
 	KERNEL_CONFIG=${MACH}smp_${board}_defconfig
-	TARGET_PLATFORM=${TARGET_PLATFORM}
-	STAGING_DIR=$TOPDIR
 	EOT
 
 }
@@ -42,19 +38,16 @@ generate_board_mk() {
 generate_board_envsh() {
 	
 	cat <<-EOT
-	#export ARCH=arm64
-	export BPIMACH="$BPIMACH"
 	export BOARD=$BOARD
 	export SOC=$SOC
 	export MACH=$MACH
 	export UBOOT_CONFIG=${MACH}_config
 	export KERNEL_CONFIG=${MACH}smp_${board}_defconfig
+	export KERNEL_MODULES=${kernel_modules}
+	export KERNEL_HEADERS=${kernel_headers}
 	export LICHEE_PLATFORM="linux"
 	export GPU_TYPE="mali400"
 	export TOPDIR=${TOPDIR}
-	export TARGET_PLATFORM=${TARGET_PLATFORM}
-	export TARGET_PRODUCT=${TARGET_PRODUCT}
-	export STAGING_DIR=$TOPDIR
 	EOT
 
 }
@@ -65,7 +58,7 @@ usage() {
 
 	supported boards:
 	EOT
-	list_boards  #DK, update later
+	list_boards
 }
 
 if [ $# -eq 0 ]; then
@@ -75,22 +68,24 @@ fi
 
 BOARD=$1
 
+if [ ! -d ${TOPDIR}/sunxi-pack/${MACH}/configs/${BOARD} ]; then
+	echo -e "\033[31m ${BOARD} not support, exit   \033[0m"
+	exit 1
+fi
+
 case $BOARD in
   BPI-M64*)
     MACH=sun50iw1p1
     board="bpi-m64"
-    TARGET_PLATFORM="tulip"
-    TARGET_PRODUCT="tulip-m64"
+    kernel_modules="4.4.89-BPI-M64-Kernel"
+    kernel_headers="linux-headers-4.4.89-BPI-M64-Kernel"
     ;;    
-  BPI-R18*)
+  BPI-NOMA*)
     MACH=sun50iw1p1
-    board="bpi-m64"
-    TARGET_PLATFORM="tulip"
-    TARGET_PRODUCT="tulip-noma"
+    board="bpi-noma"
+    kernel_modules="4.4.89-BPI-NOMA-Kernel"
+    kernel_headers="linux-headers-4.4.89-BPI-NOMA-Kernel"
     ;;    
-  *)
-    board=$(echo $BOARD | tr '[A-Z]' '[a-z]')
-    ;;
 esac
 
 generate_board_envsh "$1" > env.sh

@@ -612,8 +612,8 @@ u-boot-$(CONFIG_TARGET_NAME).bin:   u-boot.bin
 		if [ "x$(TINA_BUILD_SYS)" = "xYocto" ] ; then \
 			cp -v $@ $(objtree)/../../../../sources/meta-tina/recipes-bsp/tina-board/$(TARGET_PLATFORM)-common/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
 		else \
-			if [ -d $(objtree)/../../../target/allwinner/$(TARGET_PLATFORM)-common/bin ]; then \
-				cp -v $@ $(objtree)/../../../target/allwinner/$(TARGET_PLATFORM)-common/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
+			if [ -d $(objtree)/../../../sunxi-pack/$(MACH)/bin ]; then \
+				cp -v $@ $(objtree)/../../../sunxi-pack/$(MACH)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
 			elif [ -d $(objtree)/../../../device/config/chips/$(TARGET_PLATFORM)/bin ]; then\
 				cp -v $@ $(objtree)/../../../device/config/chips/$(TARGET_PLATFORM)/bin/u-boot-crashdump-$(CONFIG_TARGET_NAME).bin; \
 			fi \
