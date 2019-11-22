@@ -79,7 +79,14 @@ tar_packages()
   echo "tar download packages"
 
   (cd $BOOT ; tar czvf ${TOPDIR}/SD/${board}/BPI-BOOT-${board}-linux4.4.tgz .)
+
+  # split for github 100M limitation
+  #(cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_MODULES}.tgz lib/modules)
+  (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_MODULES}-net.tgz lib/modules/${KERNEL_MODULES}/kernel/net)
+  (cd $ROOT ; mv lib/modules/${KERNEL_MODULES}/kernel/net ${ROOT}/net)
   (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_MODULES}.tgz lib/modules)
+  (cd $ROOT ; mv ${ROOT}/net lib/modules/${KERNEL_MODULES}/kernel/net)
+
   (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/${KERNEL_HEADERS}.tgz usr/src/${KERNEL_HEADERS})
   (cd $ROOT ; tar czvf ${TOPDIR}/SD/${board}/BOOTLOADER-${board}-linux4.4.tgz usr/lib/u-boot/bananapi)
 }
