@@ -260,15 +260,12 @@ function fetch_multiconfig()
 	echo "Multiconfig num:"$MULTI_CONFIG_INDEX
 }
 
-
 ENV_SUFFIX=
-
 function do_early_prepare()
 {
 	# Cleanup
 	rm -rf ${ROOT_DIR}/image
 	mkdir -p ${ROOT_DIR}/image
-	do_prepare
 	fetch_multiconfig
 }
 
@@ -509,14 +506,8 @@ function do_pack_linux()
 
 
 do_early_prepare
-
-while [ $MULTI_CONFIG_INDEX -ge 0 ]; do
-	update_suffix
-	do_prepare
-	do_ini_to_dts
-	do_common
-	let "MULTI_CONFIG_INDEX=MULTI_CONFIG_INDEX-1"
-done
-
+do_prepare
+do_ini_to_dts
+do_common
 do_pack_${PACK_PLATFORM}
 do_finish
