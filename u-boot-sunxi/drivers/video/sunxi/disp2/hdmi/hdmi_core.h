@@ -33,6 +33,7 @@
 #define HDMI1920_720        (4 + 0x110)
 #define HDMI1024_600        (5 + 0x110)
 #define HDMI1280_800        (6 + 0x110)
+#define HDMI800_480         (7 + 0x110)
 
 #define HDMI_DT0             (0 + 0x120)
 #define HDMI_DT1             (1 + 0x120)

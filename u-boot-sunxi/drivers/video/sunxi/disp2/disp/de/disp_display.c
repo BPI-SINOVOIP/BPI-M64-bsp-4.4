@@ -848,6 +848,10 @@ s32 bsp_disp_get_screen_width_from_output_type(u32 disp, u32 output_type, u32 ou
 			width = 900;
 			height = 540;
 			break;
+		case DISP_TV_MOD_800_480P:
+			width = 800;
+			height = 480;
+			break;
 		case DISP_TV_MOD_1024_600P:
 			width = 1024;
 			height = 600;
@@ -970,6 +974,10 @@ s32 bsp_disp_get_screen_height_from_output_type(u32 disp, u32 output_type, u32 o
 		case DISP_TV_MOD_900_540P_60HZ:
 			width = 900;
 			height = 540;
+			break;
+		case DISP_TV_MOD_800_480P:
+			width = 800;
+			height = 480;
 			break;
 		case DISP_TV_MOD_1024_600P:
 			width = 1024;
